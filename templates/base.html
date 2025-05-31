@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TeacherPlanner - Planification simplifiée{% endblock %}</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- CSS personnalisé -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <i class="fas fa-calendar-alt"></i>
+                <span>TeacherPlanner</span>
+            </div>
+
+            {% if current_user.is_authenticated %}
+            <div class="nav-menu">
+                <a href="{{ url_for('planning.dashboard') }}" class="nav-link {% if request.endpoint == 'planning.dashboard' %}active{% endif %}">
+                    <i class="fas fa-home"></i> Tableau de bord
+                </a>
+                <a href="{{ url_for('planning.lesson_view') }}" class="nav-link {% if request.endpoint == 'planning.lesson_view' %}active{% endif %}">
+                    <i class="fas fa-graduation-cap"></i> Cours actuel
+                </a>
+                <a href="{{ url_for('schedule.weekly_schedule') }}" class="nav-link {% if request.endpoint == 'schedule.weekly_schedule' %}active{% endif %}">
+                    <i class="fas fa-clock"></i> Horaire type
+                </a>
+                <a href="{{ url_for('planning.calendar_view') }}" class="nav-link {% if request.endpoint == 'planning.calendar_view' %}active{% endif %}">
+                    <i class="fas fa-calendar"></i> Calendrier
+                </a>
+            </div>
+
+            <div class="nav-user">
+                <div class="user-dropdown">
+                    <button class="user-btn">
+                        <i class="fas fa-user-circle"></i>
+                        <span>{{ current_user.username }}</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu">
+                        <a href="{{ url_for('setup.initial_setup') }}">
+                            <i class="fas fa-cog"></i> Paramètres
+                        </a>
+                        <a href="{{ url_for('auth.logout') }}">
+                            <i class="fas fa-sign-out-alt"></i> Déconnexion
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="nav-auth">
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline">Connexion</a>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Inscription</a>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Messages flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}">
+                        <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+                        <span>{{ message }}</span>
+                        <button class="flash-close" onclick="this.parentElement.remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Contenu principal -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2024 TeacherPlanner. Tous droits réservés.</p>
+            <p>Conçu avec <i class="fas fa-heart" style="color: #e74c3c;"></i> pour les enseignants</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

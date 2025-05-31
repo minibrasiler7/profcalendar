@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration initiale - TeacherPlanner{% endblock %}
+
+{% block extra_css %}
+<style>
+.setup-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.setup-progress {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+    position: relative;
+}
+
+.setup-progress::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--light-gray);
+    z-index: 0;
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.progress-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--light-gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--gray-color);
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.progress-step.active .progress-circle {
+    background-color: var(--primary-color);
+    color: var(--white);
+    transform: scale(1.1);
+}
+
+.progress-step.completed .progress-circle {
+    background-color: var(--success-color);
+    color: var(--white);
+}
+
+.progress-label {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+    text-align: center;
+}
+
+.setup-section {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 2rem;
+}
+
+.section-icon {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--dark-color);
+}
+
+.section-description {
+    color: var(--gray-color);
+    margin-bottom: 2rem;
+}
+
+.time-input-group {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 1rem;
+}
+
+.time-separator {
+    font-size: 1.5rem;
+    color: var(--gray-color);
+}
+
+.form-help {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+    margin-top: 0.25rem;
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="setup-container">
+    <!-- Barre de progression -->
+    <div class="setup-progress">
+        <div class="progress-step active">
+            <div class="progress-circle">1</div>
+            <span class="progress-label">Configuration</span>
+        </div>
+        <div class="progress-step">
+            <div class="progress-circle">2</div>
+            <span class="progress-label">Classes</span>
+        </div>
+        <div class="progress-step">
+            <div class="progress-circle">3</div>
+            <span class="progress-label">Vacances</span>
+        </div>
+        <div class="progress-step">
+            <div class="progress-circle">4</div>
+            <span class="progress-label">Pauses</span>
+        </div>
+        <div class="progress-step">
+            <div class="progress-circle">5</div>
+            <span class="progress-label">Horaire type</span>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('setup.initial_setup') }}">
+        {{ form.hidden_tag() }}
+        
+        <!-- Section Année scolaire -->
+        <div class="setup-section">
+            <i class="fas fa-calendar-alt section-icon"></i>
+            <h2 class="section-title">Année scolaire</h2>
+            <p class="section-description">Définissez les dates de début et de fin de votre année scolaire.</p>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.school_year_start.label(class="form-label") }}
+                    {{ form.school_year_start(class="form-control", type="date") }}
+                    {% if form.school_year_start.errors %}
+                        <div class="form-error">
+                            {% for error in form.school_year_start.errors %}
+                                <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.school_year_end.label(class="form-label") }}
+                    {{ form.school_year_end(class="form-control", type="date") }}
+                    {% if form.school_year_end.errors %}
+                        <div class="form-error">
+                            {% for error in form.school_year_end.errors %}
+                                <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section Horaires quotidiens -->
+        <div class="setup-section">
+            <i class="fas fa-clock section-icon"></i>
+            <h2 class="section-title">Horaires quotidiens</h2>
+            <p class="section-description">Configurez vos heures de cours et la durée des périodes.</p>
+            
+            <div class="form-group">
+                <label class="form-label">Heures de cours</label>
+                <div class="time-input-group">
+                    {{ form.day_start_time(class="form-control", type="time") }}
+                    <span class="time-separator">à</span>
+                    {{ form.day_end_time(class="form-control", type="time") }}
+                </div>
+                <p class="form-help">Définissez l'heure de début et de fin de votre journée de cours.</p>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.period_duration.label(class="form-label") }}
+                    <div class="input-with-addon">
+                        {{ form.period_duration(class="form-control", type="number", min="30", max="120") }}
+                        <span class="input-addon">minutes</span>
+                    </div>
+                    <p class="form-help">Durée d'une période de cours (entre 30 et 120 minutes).</p>
+                    {% if form.period_duration.errors %}
+                        <div class="form-error">
+                            {% for error in form.period_duration.errors %}
+                                <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.break_duration.label(class="form-label") }}
+                    <div class="input-with-addon">
+                        {{ form.break_duration(class="form-control", type="number", min="5", max="30") }}
+                        <span class="input-addon">minutes</span>
+                    </div>
+                    <p class="form-help">Durée de la pause entre les cours (entre 5 et 30 minutes).</p>
+                    {% if form.break_duration.errors %}
+                        <div class="form-error">
+                            {% for error in form.break_duration.errors %}
+                                <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Boutons d'action -->
+        <div class="action-buttons">
+            {% if current_user.setup_completed %}
+                <a href="{{ url_for('planning.dashboard') }}" class="btn btn-outline">
+                    <i class="fas fa-arrow-left"></i> Retour au tableau de bord
+                </a>
+            {% else %}
+                <div></div>
+            {% endif %}
+            
+            <button type="submit" class="btn btn-primary">
+                Suivant <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+.input-with-addon {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.input-addon {
+    color: var(--gray-color);
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}

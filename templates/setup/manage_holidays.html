@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des vacances - TeacherPlanner{% endblock %}
+
+{% block extra_css %}
+<style>
+.setup-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.setup-progress {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+    position: relative;
+}
+
+.setup-progress::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--primary-color);
+    z-index: 0;
+    width: 40%; /* 2/5 pour l'étape 3 */
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.progress-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--light-gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--gray-color);
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.progress-step.active .progress-circle {
+    background-color: var(--primary-color);
+    color: var(--white);
+    transform: scale(1.1);
+}
+
+.progress-step.completed .progress-circle {
+    background-color: var(--success-color);
+    color: var(--white);
+}
+
+.holiday-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.holiday-item:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.holiday-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.holiday-icon {
+    width: 40px;
+    height: 40px;
+    background-color: #FEF3C7;
+    color: #F59E0B;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius);
+    font-size: 1.25rem;
+}
+
+.holiday-details h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.holiday-details p {
+    margin: 0;
+    color: var(--gray-color);
+    font-size: 0.875rem;
+}
+
+.date-range {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.date-separator {
+    color: var(--gray-color);
+}
+
+.info-box {
+    background-color: #EFF6FF;
+    border: 1px solid #DBEAFE;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: start;
+    gap: 0.75rem;
+}
+
+.info-box i {
+    color: #3B82F6;
+    margin-top: 0.125rem;
+}
+
+.info-box p {
+    margin: 0;
+    color: #1E40AF;
+    font-size: 0.875rem;
+}
+
+.import-section {
+    background-color: #F0FDF4;
+    border: 1px solid #BBF7D0;
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.import-section h3 {
+    color: #15803D;
+    margin-bottom: 0.5rem;
+    font-size: 1.125rem;
+}
+
+.import-section p {
+    color: #166534;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    color: var(--white);
+}
+
+.btn-secondary:hover {
+    background-color: #0891B2;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="setup-container">
+    <!-- Barre de progression -->
+    <div class="setup-progress">
+        <div class="progress-step completed">
+            <div class="progress-circle"><i class="fas fa-check"></i></div>
+            <span class="progress-label">Configuration</span>
+        </div>
+        <div class="progress-step completed">
+            <div class="progress-circle"><i class="fas fa-check"></i></div>
+            <span class="progress-label">Classes</span>
+        </div>
+        <div class="progress-step active">
+            <div class="progress-circle">3</div>
+            <span class="progress-label">Vacances</span>
+        </div>
+        <div class="progress-step">
+            <div class="progress-circle">4</div>
+            <span class="progress-label">Pauses</span>
+        </div>
+        <div class="progress-step">
+            <div class="progress-circle">5</div>
+            <span class="progress-label">Horaire type</span>
+        </div>
+    </div>
+
+    <!-- Information -->
+    <div class="info-box">
+        <i class="fas fa-info-circle"></i>
+        <p>Les périodes de vacances seront automatiquement exclues de votre planification. Vous pouvez ajouter toutes les vacances scolaires et jours fériés.</p>
+    </div>
+
+    <!-- Import automatique des vacances vaudoises -->
+    {% if current_user.school_year_start %}
+    <div class="import-section">
+        <h3><i class="fas fa-download"></i> Import rapide</h3>
+        <p>Importez automatiquement les vacances scolaires du canton de Vaud pour votre année scolaire.</p>
+        <form method="POST" action="{{ url_for('setup.import_vaud_holidays') }}" style="display: flex; gap: 1rem; align-items: center;">
+            <label class="checkbox-group" style="margin: 0;">
+                <input type="checkbox" name="replace_existing" value="true">
+                <span>Remplacer les vacances existantes</span>
+            </label>
+            <button type="submit" class="btn btn-secondary">
+                <i class="fas fa-magic"></i> Importer les vacances vaudoises
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Formulaire d'ajout de vacances -->
+    <div class="add-classroom-section">
+        <h2><i class="fas fa-umbrella-beach"></i> Ajouter des vacances</h2>
+        <form method="POST" action="{{ url_for('setup.manage_holidays') }}">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.name.label(class="form-label") }}
+                {{ form.name(class="form-control", placeholder="Ex: Vacances de Noël") }}
+                {% if form.name.errors %}
+                    <div class="form-error">
+                        {% for error in form.name.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.start_date.label(class="form-label") }}
+                    {{ form.start_date(class="form-control", type="date") }}
+                    {% if form.start_date.errors %}
+                        <div class="form-error">
+                            {% for error in form.start_date.errors %}
+                                <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.end_date.label(class="form-label") }}
+                    {{ form.end_date(class="form-control", type="date") }}
+                    {% if form.end_date.errors %}
+                        <div class="form-error">
+                            {% for error in form.end_date.errors %}
+                                <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Ajouter les vacances
+            </button>
+        </form>
+    </div>
+
+    <!-- Liste des vacances -->
+    <div class="classrooms-list">
+        <h2><i class="fas fa-calendar-times"></i> Périodes de vacances</h2>
+
+        {% if holidays %}
+            {% for holiday in holidays %}
+            <div class="holiday-item">
+                <div class="holiday-info">
+                    <div class="holiday-icon">
+                        <i class="fas fa-umbrella-beach"></i>
+                    </div>
+                    <div class="holiday-details">
+                        <h3>{{ holiday.name }}</h3>
+                        <p>Du {{ holiday.start_date.strftime('%d/%m/%Y') }} au {{ holiday.end_date.strftime('%d/%m/%Y') }}</p>
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ url_for('setup.delete_holiday', id=holiday.id) }}" style="margin: 0;">
+                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ces vacances ?');">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-calendar-times"></i>
+                <p>Aucune période de vacances ajoutée.</p>
+                <p>Vous pouvez passer cette étape si vous le souhaitez.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Boutons de navigation -->
+    <div class="action-buttons" style="margin-top: 2rem;">
+        <a href="{{ url_for('setup.manage_classrooms') }}" class="btn btn-outline">
+            <i class="fas fa-arrow-left"></i> Précédent
+        </a>
+
+        <a href="{{ url_for('setup.manage_breaks') }}" class="btn btn-primary">
+            Suivant <i class="fas fa-arrow-right"></i>
+        </a>
+    </div>
+</div>
+{% endblock %}

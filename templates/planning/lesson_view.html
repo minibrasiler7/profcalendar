@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_current %}Leçon en cours{% else %}Prochain cours{% endif %} - TeacherPlanner{% endblock %}
+
+{% block extra_css %}
+<style>
+.lesson-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    height: calc(100vh - 180px);
+}
+
+.lesson-header {
+    background-color: var(--white);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.5rem;
+}
+
+.lesson-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.lesson-title h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.lesson-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.lesson-badge.current {
+    background-color: #FEF3C7;
+    color: #92400E;
+}
+
+.lesson-badge.next {
+    background-color: #DBEAFE;
+    color: #1E40AF;
+}
+
+.lesson-details {
+    display: flex;
+    gap: 2rem;
+    margin-top: 0.5rem;
+    color: var(--gray-color);
+}
+
+.lesson-detail {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.lesson-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    height: 100%;
+}
+
+.planning-section, .resources-section {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.planning-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.planning-item {
+    margin-bottom: 2rem;
+}
+
+.planning-item h3 {
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    font-size: 1.125rem;
+}
+
+.planning-description {
+    color: var(--gray-color);
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.resources-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.no-resources {
+    text-align: center;
+    padding: 3rem;
+    color: var(--gray-color);
+}
+
+.no-resources i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.resource-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    margin-bottom: 0.75rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.resource-item:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.resource-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius);
+    font-size: 1.25rem;
+}
+
+.resource-icon.pdf {
+    background-color: #FEE2E2;
+    color: #DC2626;
+}
+
+.resource-icon.doc {
+    background-color: #DBEAFE;
+    color: #2563EB;
+}
+
+.resource-icon.img {
+    background-color: #D1FAE5;
+    color: #059669;
+}
+
+.resource-details {
+    flex: 1;
+}
+
+.resource-name {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.resource-meta {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+}
+
+.add-resource-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+}
+
+.add-resource-btn:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.edit-planning-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+}
+
+.edit-planning-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.timer-widget {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--light-gray);
+    border-radius: var(--border-radius);
+}
+
+.timer-display {
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-family: monospace;
+}
+
+.timer-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.timer-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background-color: var(--white);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.timer-btn:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 1024px) {
+    .lesson-main {
+        grid-template-columns: 1fr;
+    }
+
+    .lesson-container {
+        height: auto;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="lesson-container">
+    <!-- En-tête de la leçon -->
+    <div class="lesson-header">
+        <div class="lesson-info">
+            <div>
+                <div class="lesson-title">
+                    <h1>
+                        {% if is_current %}
+                        <span class="lesson-badge current">
+                            <i class="fas fa-circle"></i> En cours
+                        </span>
+                        {% else %}
+                        <span class="lesson-badge next">
+                            <i class="fas fa-clock"></i> Prochain cours
+                        </span>
+                        {% endif %}
+                        {{ lesson.classroom.name }} - {{ lesson.classroom.subject }}
+                    </h1>
+                </div>
+                <div class="lesson-details">
+                    <div class="lesson-detail">
+                        <i class="fas fa-calendar"></i>
+                        <span>{{ lesson_date.strftime('%A %d %B %Y') }}</span>
+                    </div>
+                    <div class="lesson-detail">
+                        <i class="fas fa-clock"></i>
+                        <span>Période {{ lesson.period_number }} ({{ lesson.start_time.strftime('%H:%M') }} - {{ lesson.end_time.strftime('%H:%M') }})</span>
+                    </div>
+                </div>
+            </div>
+
+            {% if is_current %}
+            <div class="timer-widget">
+                <div class="timer-display" id="lessonTimer">{{ time_remaining }}</div>
+                <div class="timer-controls">
+                    <button class="timer-btn" onclick="toggleTimer()" title="Pause/Reprendre">
+                        <i class="fas fa-pause" id="timerIcon"></i>
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Contenu principal -->
+    <div class="lesson-main">
+        <!-- Section planification -->
+        <div class="planning-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-clipboard-list"></i> Planification du cours
+                </h2>
+                <a href="{{ url_for('planning.calendar_view', week=lesson_date.strftime('%Y-%m-%d')) }}" class="edit-planning-btn">
+                    <i class="fas fa-edit"></i> Modifier
+                </a>
+            </div>
+
+            <div class="planning-content">
+                {% if planning %}
+                <div class="planning-item">
+                    <h3>{{ planning.title or 'Cours sans titre' }}</h3>
+                    {% if planning.description %}
+                    <p class="planning-description">{{ planning.description }}</p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="no-resources">
+                    <i class="fas fa-clipboard"></i>
+                    <p>Aucune planification pour ce cours</p>
+                    <a href="{{ url_for('planning.calendar_view', week=lesson_date.strftime('%Y-%m-%d')) }}" class="btn btn-primary" style="margin-top: 1rem;">
+                        <i class="fas fa-plus"></i> Planifier ce cours
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Section ressources -->
+        <div class="resources-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-folder-open"></i> Ressources du cours
+                </h2>
+                <a href="#" class="add-resource-btn" onclick="alert('Fonctionnalité à venir : upload de fichiers')">
+                    <i class="fas fa-plus"></i> Ajouter
+                </a>
+            </div>
+
+            <div class="resources-content">
+                <div class="no-resources">
+                    <i class="fas fa-file-pdf"></i>
+                    <p>Aucune ressource disponible</p>
+                    <p style="font-size: 0.875rem; margin-top: 0.5rem;">La gestion des fichiers sera bientôt disponible</p>
+                </div>
+
+                <!-- Exemple de ressources (à implémenter) -->
+                <!--
+                <div class="resource-item">
+                    <div class="resource-icon pdf">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div class="resource-details">
+                        <div class="resource-name">Exercices chapitre 3.pdf</div>
+                        <div class="resource-meta">PDF • 2.3 MB • Modifié il y a 2 jours</div>
+                    </div>
+                </div>
+                -->
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if is_current %}
+<script>
+// Gestion du timer
+let timerInterval;
+let isPaused = false;
+let remainingSeconds = {{ remaining_seconds }};
+
+function updateTimer() {
+    if (!isPaused && remainingSeconds > 0) {
+        remainingSeconds--;
+
+        const hours = Math.floor(remainingSeconds / 3600);
+        const minutes = Math.floor((remainingSeconds % 3600) / 60);
+        const seconds = remainingSeconds % 60;
+
+        let display = '';
+        if (hours > 0) {
+            display = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        } else {
+            display = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        document.getElementById('lessonTimer').textContent = display;
+
+        if (remainingSeconds === 0) {
+            clearInterval(timerInterval);
+            alert('Le cours est terminé !');
+        }
+    }
+}
+
+function toggleTimer() {
+    isPaused = !isPaused;
+    const icon = document.getElementById('timerIcon');
+    icon.className = isPaused ? 'fas fa-play' : 'fas fa-pause';
+}
+
+// Démarrer le timer
+timerInterval = setInterval(updateTimer, 1000);
+
+// Nettoyer à la fermeture de la page
+window.addEventListener('beforeunload', () => {
+    clearInterval(timerInterval);
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,888 @@
+/* Conteneur principal du calendrier */
+.calendar-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* En-tête du calendrier */
+.calendar-header {
+    background-color: var(--white);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 2rem;
+}
+
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.nav-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background-color: var(--light-gray);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.nav-btn:hover {
+    background-color: var(--primary-color);
+    color: var(--white);
+}
+
+.current-week-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 1rem;
+    min-width: 400px;
+    text-align: center;
+}
+
+.btn-today {
+    margin-left: 2rem;
+}
+
+/* Layout principal avec deux colonnes */
+.calendar-main {
+    display: grid;
+    grid-template-columns: 1.8fr 1.2fr;
+    gap: 2rem;
+    transition: grid-template-columns 0.3s ease;
+}
+
+/* Mode vue étendue */
+.calendar-main.extended-view {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Bouton de basculement de vue */
+.btn-toggle-view {
+    margin-left: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Vue hebdomadaire */
+.weekly-view {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+
+/* En mode étendu, réduire la vue hebdomadaire */
+.extended-view .weekly-view {
+    padding: 1rem;
+}
+
+.extended-view .weekly-schedule {
+    overflow-x: auto;
+    font-size: 0.85rem;
+}
+
+.extended-view .schedule-table {
+    min-width: unset;
+    width: 100%;
+}
+
+.extended-view .schedule-table th,
+.extended-view .schedule-table td {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.8rem;
+}
+
+.extended-view .time-column {
+    width: 60px;
+}
+
+.extended-view .day-name {
+    font-size: 0.875rem;
+}
+
+.extended-view .day-date {
+    font-size: 0.75rem;
+}
+
+.extended-view .period-number {
+    font-size: 0.875rem;
+}
+
+.extended-view .period-time {
+    font-size: 0.65rem;
+}
+
+.extended-view .weekly-view .section-title {
+    font-size: 1rem;
+}
+
+.extended-view .weekly-view .schedule-table {
+    font-size: 0.875rem;
+}
+
+.extended-view .weekly-view .class-name {
+    font-size: 0.75rem;
+}
+
+.extended-view .weekly-view .planning-title,
+.extended-view .weekly-view .class-subject {
+    display: none;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+    color: var(--dark-color);
+}
+
+.weekly-schedule {
+    overflow-x: auto;
+}
+
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.schedule-table td {
+    padding: 0;
+    border: 1px solid var(--light-gray);
+    position: relative;
+}
+
+.schedule-table th {
+    padding: 0.75rem;
+    border: 1px solid var(--light-gray);
+}
+
+.schedule-table th {
+    background-color: var(--light-gray);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.time-column {
+    width: 100px;
+    background-color: #F9FAFB;
+}
+
+.day-header {
+    text-align: center;
+}
+
+.day-header.today {
+    background-color: #FEF3C7;
+}
+
+.day-name {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.day-date {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+}
+
+.time-slot {
+    background-color: #F9FAFB;
+    font-weight: 500;
+    text-align: center;
+    padding: 0.75rem;
+}
+
+.period-number {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.period-time {
+    font-size: 0.75rem;
+    color: var(--gray-color);
+    line-height: 1.2;
+}
+
+.schedule-cell {
+    position: relative;
+    height: auto;
+    min-height: 100px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    vertical-align: top;
+    padding: 2px;
+}
+
+.extended-view .schedule-cell {
+    min-height: 80px;
+}
+
+.schedule-cell:hover {
+    background-color: var(--light-gray);
+}
+
+.schedule-cell.today {
+    background-color: #FEF3C7;
+}
+
+.class-block {
+    padding: 0.5rem;
+    color: white;
+    font-size: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0.25rem;
+    overflow: visible;
+    position: static;
+    margin: 0;
+    border-radius: 0.375rem;
+    min-height: calc(100% - 4px);
+}
+
+.class-block.planned {
+    opacity: 1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.class-name {
+    font-weight: 600;
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.2;
+}
+
+.class-subject {
+    font-size: 0.75rem;
+    opacity: 0.9;
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.2;
+}
+
+.planning-title {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    white-space: normal;
+    word-wrap: break-word;
+    font-style: italic;
+    opacity: 0.9;
+    line-height: 1.2;
+}
+
+/* Vue annuelle */
+.annual-view {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+/* En mode étendu, agrandir la vue annuelle */
+.extended-view .annual-view {
+    padding: 1.5rem;
+}
+
+.extended-view .annual-calendar {
+    max-height: 700px;
+}
+
+.extended-view .annual-grid {
+    gap: 0.5rem;
+}
+
+.extended-view .annual-week {
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+}
+
+.extended-view .week-info {
+    min-width: 60px;
+}
+
+.extended-view .week-days {
+    gap: 0.25rem;
+}
+
+.extended-view .week-date {
+    font-size: 0.75rem;
+}
+
+.extended-view .week-number {
+    font-size: 0.875rem;
+}
+
+.extended-view .holiday-label {
+    font-size: 0.75rem;
+}
+
+.class-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+}
+
+.tab-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    background-color: var(--light-gray);
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+}
+
+.tab-btn:hover {
+    background-color: #E5E7EB;
+}
+
+.tab-btn.active {
+    background-color: var(--white);
+    border-bottom-width: 3px;
+}
+
+.annual-calendar {
+    max-height: 650px;
+    overflow-y: auto;
+}
+
+.annual-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.annual-week {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.annual-week.current-week {
+    background-color: #FEF3C7;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+}
+
+.annual-week.holiday-week {
+    background-color: #F3F4F6;
+    opacity: 0.8;
+}
+
+.week-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    min-width: 80px;
+    margin-right: 0.25rem;
+    flex-shrink: 0;
+}
+
+.week-date {
+    font-size: 0.625rem;
+    color: var(--gray-color);
+    margin-bottom: 0.125rem;
+}
+
+.week-number {
+    font-size: 0.75rem;
+    color: var(--gray-color);
+    text-align: right;
+    font-weight: 500;
+    width: 100%;
+}
+
+/* Style pour les numéros de semaine cliquables */
+.week-number-link {
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    display: inline-block;
+}
+
+.week-number-link:hover {
+    background-color: var(--primary-color);
+    color: var(--white);
+    transform: scale(1.1);
+}
+
+/* Indicateur visuel au survol de toute la zone cliquable */
+.week-number[onclick] {
+    cursor: pointer;
+}
+
+.week-number[onclick]:hover .week-number-link {
+    background-color: var(--primary-color);
+    color: var(--white);
+    transform: scale(1.1);
+}
+
+.holiday-label {
+    font-size: 0.5rem;
+    color: var(--warning-color);
+    font-style: italic;
+    display: block;
+    text-align: right;
+    line-height: 1.1;
+    word-wrap: break-word;
+    hyphens: auto;
+    max-width: 75px;
+}
+
+.week-days {
+    display: flex;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.holiday-block {
+    padding: 0.5rem;
+    text-align: center;
+    color: var(--warning-color);
+    font-size: 0.75rem;
+    font-style: italic;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.holiday-day-name {
+    word-wrap: break-word;
+    hyphens: auto;
+}
+
+.annual-day.holiday {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.annual-day.holiday:hover {
+    transform: none;
+}
+
+/* Titre de planification visible dans la vue hebdomadaire */
+.planning-title {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    white-space: normal;
+    word-wrap: break-word;
+    font-style: italic;
+    opacity: 0.9;
+    line-height: 1.2;
+}
+
+/* Réduire en mode étendu */
+.extended-view .weekly-view .planning-title {
+    display: none;
+}
+
+/* Animation de chargement pour la vue hebdomadaire */
+.weekly-view-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.weekly-view.loading .weekly-view-loading {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* Animation de glissement pour la vue hebdomadaire */
+@keyframes slideOutLeft {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(-20px);
+        opacity: 0;
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.weekly-view.slide-out .weekly-schedule {
+    animation: slideOutLeft 0.3s ease-out;
+}
+
+.weekly-view.slide-in .weekly-schedule {
+    animation: slideInRight 0.3s ease-out;
+}
+
+.annual-day {
+    width: 45px;
+    height: 45px;
+    background-color: var(--light-gray);
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Mode étendu - cases plus grandes */
+.extended-view .annual-day {
+    width: 72px;
+    height: auto;
+    min-height: 72px;
+    border-radius: 0.375rem;
+}
+
+.annual-day.has-class {
+    background-color: var(--primary-color);
+    cursor: pointer;
+}
+
+/* Couleur personnalisée basée sur la classe sélectionnée */
+.annual-grid[data-classroom-color] .annual-day.has-class {
+    background-color: var(--classroom-color);
+}
+
+.annual-day.today {
+    border: 2px solid var(--warning-color);
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+.annual-day:hover {
+    transform: scale(1.1);
+}
+
+.annual-day.has-class:hover {
+    filter: brightness(1.1);
+}
+
+/* Contenu des jours en vue annuelle */
+.annual-day-content {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Plannings en mode normal - afficher comme des points */
+.annual-plannings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    justify-content: center;
+    align-items: center;
+}
+
+.annual-planning-item {
+    width: 4px;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+}
+
+.annual-planning-text {
+    display: none;
+}
+
+.annual-planning-more {
+    display: none;
+}
+
+/* Mode étendu - afficher le texte */
+.extended-view .annual-day-content {
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 3px;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+}
+
+.extended-view .annual-plannings {
+    flex-direction: column;
+    width: 100%;
+    gap: 1px;
+    max-height: none;
+}
+
+.extended-view .annual-planning-item {
+    width: 100%;
+    height: auto;
+    background-color: rgba(255, 255, 255, 0.25);
+    border-radius: 2px;
+    padding: 3px 4px;
+    margin-bottom: 2px;
+    display: block;
+    overflow: hidden;
+}
+
+.extended-view .annual-planning-text {
+    display: block;
+    color: white;
+    font-size: 0.5rem;
+    line-height: 1.2;
+    white-space: normal;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow: hidden;
+    font-weight: 500;
+    max-width: 100%;
+}
+
+.extended-view .annual-planning-more {
+    display: block;
+    font-size: 0.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-align: center;
+    width: 100%;
+}
+
+.annual-legend {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--light-gray);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--gray-color);
+}
+
+.legend-box {
+    width: 20px;
+    height: 20px;
+    border-radius: 0.25rem;
+    background-color: var(--light-gray);
+}
+
+.legend-box.has-class {
+    background-color: var(--primary-color);
+}
+
+.legend-box.today {
+    border: 2px solid var(--warning-color);
+}
+
+/* Modal de planification */
+.planning-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    padding: 2rem;
+}
+
+.planning-modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.3s ease-out;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.modal-header h3 {
+    margin: 0;
+}
+
+.modal-close {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background-color: var(--light-gray);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.modal-close:hover {
+    background-color: #E5E7EB;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-top: 1px solid var(--light-gray);
+}
+
+/* Styles pour la planification journalière */
+.period-planning-section {
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    background-color: var(--light-gray);
+    margin-bottom: 1rem;
+}
+
+.period-planning-section h4 {
+    margin-bottom: 1rem;
+    color: var(--gray-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+}
+
+.period-planning-section .form-group {
+    margin-bottom: 0.75rem;
+}
+
+.period-planning-section .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.loading-spinner {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-color);
+}
+
+.loading-spinner i {
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+/* Animations */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .calendar-main {
+        grid-template-columns: 1fr;
+    }
+
+    .calendar-main.extended-view {
+        grid-template-columns: 1fr;
+    }
+
+    .annual-view {
+        order: 2;
+    }
+
+    .btn-toggle-view {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .calendar-nav {
+        flex-direction: column;
+    }
+
+    .current-week-title {
+        min-width: auto;
+        font-size: 1.25rem;
+    }
+
+    .btn-today {
+        margin-left: 0;
+    }
+}

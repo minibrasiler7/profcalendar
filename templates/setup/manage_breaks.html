@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des pauses - TeacherPlanner{% endblock %}
+
+{% block extra_css %}
+<style>
+.setup-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.setup-progress {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+    position: relative;
+}
+
+.setup-progress::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--primary-color);
+    z-index: 0;
+    width: 60%; /* 3/5 pour l'étape 4 */
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.progress-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--light-gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--gray-color);
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.progress-step.active .progress-circle {
+    background-color: var(--primary-color);
+    color: var(--white);
+    transform: scale(1.1);
+}
+
+.progress-step.completed .progress-circle {
+    background-color: var(--success-color);
+    color: var(--white);
+}
+
+.break-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.break-item:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.break-item.major-break {
+    border-color: #FCA5A5;
+    background-color: #FEF2F2;
+}
+
+.break-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.break-icon {
+    width: 40px;
+    height: 40px;
+    background-color: #E0E7FF;
+    color: #4F46E5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius);
+    font-size: 1.25rem;
+}
+
+.break-item.major-break .break-icon {
+    background-color: #FEE2E2;
+    color: #EF4444;
+}
+
+.break-details h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.break-details p {
+    margin: 0;
+    color: var(--gray-color);
+    font-size: 0.875rem;
+}
+
+.major-break-badge {
+    display: inline-block;
+    background-color: #EF4444;
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    margin-left: 0.5rem;
+}
+
+.time-input-wrapper {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.time-separator {
+    color: var(--gray-color);
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+}
+
+.checkbox-group label {
+    cursor: pointer;
+    user-select: none;
+}
+
+.info-box {
+    background-color: #EFF6FF;
+    border: 1px solid #DBEAFE;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: start;
+    gap: 0.75rem;
+}
+
+.info-box i {
+    color: #3B82F6;
+    margin-top: 0.125rem;
+}
+
+.info-box p {
+    margin: 0;
+    color: #1E40AF;
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="setup-container">
+    <!-- Barre de progression -->
+    <div class="setup-progress">
+        <div class="progress-step completed">
+            <div class="progress-circle"><i class="fas fa-check"></i></div>
+            <span class="progress-label">Configuration</span>
+        </div>
+        <div class="progress-step completed">
+            <div class="progress-circle"><i class="fas fa-check"></i></div>
+            <span class="progress-label">Classes</span>
+        </div>
+        <div class="progress-step completed">
+            <div class="progress-circle"><i class="fas fa-check"></i></div>
+            <span class="progress-label">Vacances</span>
+        </div>
+        <div class="progress-step active">
+            <div class="progress-circle">4</div>
+            <span class="progress-label">Pauses</span>
+        </div>
+        <div class="progress-step">
+            <div class="progress-circle">5</div>
+            <span class="progress-label">Horaire type</span>
+        </div>
+    </div>
+
+    <!-- Information -->
+    <div class="info-box">
+        <i class="fas fa-info-circle"></i>
+        <p>Définissez vos grandes pauses (comme la pause de midi). Si une période se termine au début d'une grande pause, la pause intercours ne sera pas comptée.</p>
+    </div>
+
+    <!-- Formulaire d'ajout de pause -->
+    <div class="add-classroom-section">
+        <h2><i class="fas fa-coffee"></i> Ajouter une pause</h2>
+        <form method="POST" action="{{ url_for('setup.manage_breaks') }}">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.name.label(class="form-label") }}
+                {{ form.name(class="form-control", placeholder="Ex: Pause de midi") }}
+                {% if form.name.errors %}
+                    <div class="form-error">
+                        {% for error in form.name.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Horaire de la pause</label>
+                <div class="time-input-wrapper">
+                    {{ form.start_time(class="form-control", type="time") }}
+                    <span class="time-separator">à</span>
+                    {{ form.end_time(class="form-control", type="time") }}
+                </div>
+                {% if form.start_time.errors %}
+                    <div class="form-error">
+                        {% for error in form.start_time.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if form.end_time.errors %}
+                    <div class="form-error">
+                        {% for error in form.end_time.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="checkbox-group">
+                {{ form.is_major_break() }}
+                {{ form.is_major_break.label }}
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top: 1.5rem;">
+                <i class="fas fa-plus"></i> Ajouter la pause
+            </button>
+        </form>
+    </div>
+
+    <!-- Liste des pauses -->
+    <div class="classrooms-list">
+        <h2><i class="fas fa-mug-hot"></i> Mes pauses</h2>
+
+        {% if breaks %}
+            {% for break in breaks %}
+            <div class="break-item {% if break.is_major_break %}major-break{% endif %}">
+                <div class="break-info">
+                    <div class="break-icon">
+                        <i class="fas {% if break.is_major_break %}fa-utensils{% else %}fa-coffee{% endif %}"></i>
+                    </div>
+                    <div class="break-details">
+                        <h3>
+                            {{ break.name }}
+                            {% if break.is_major_break %}
+                            <span class="major-break-badge">Grande pause</span>
+                            {% endif %}
+                        </h3>
+                        <p>De {{ break.start_time.strftime('%H:%M') }} à {{ break.end_time.strftime('%H:%M') }}</p>
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ url_for('setup.delete_break', id=break.id) }}" style="margin: 0;">
+                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette pause ?');">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-coffee"></i>
+                <p>Aucune pause ajoutée.</p>
+                <p>Vous pouvez passer cette étape si vous n'avez pas de grandes pauses.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Boutons de navigation -->
+    <div class="action-buttons" style="margin-top: 2rem;">
+        <a href="{{ url_for('setup.manage_holidays') }}" class="btn btn-outline">
+            <i class="fas fa-arrow-left"></i> Précédent
+        </a>
+
+        {% if not current_user.setup_completed %}
+        <form method="POST" action="{{ url_for('setup.validate_setup') }}" style="margin: 0;">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-check"></i> Valider la configuration et passer à l'horaire type
+            </button>
+        </form>
+        {% else %}
+        <a href="{{ url_for('schedule.weekly_schedule') }}" class="btn btn-primary">
+            Suivant <i class="fas fa-arrow-right"></i>
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

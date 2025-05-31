@@ -1,0 +1,553 @@
+{% extends "base.html" %}
+
+{% block title %}Horaire type - TeacherPlanner{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
+<style>
+.setup-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.setup-progress {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+    position: relative;
+}
+
+.setup-progress::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--primary-color);
+    z-index: 0;
+    width: 80%; /* 4/5 pour l'étape 5 */
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.progress-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--light-gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--gray-color);
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.progress-step.active .progress-circle {
+    background-color: var(--primary-color);
+    color: var(--white);
+    transform: scale(1.1);
+}
+
+.progress-step.completed .progress-circle {
+    background-color: var(--success-color);
+    color: var(--white);
+}
+
+.schedule-header {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 2rem;
+}
+
+.schedule-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.schedule-title h1 {
+    margin: 0;
+}
+
+.schedule-title i {
+    font-size: 2rem;
+    color: var(--primary-color);
+}
+
+.schedule-grid {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
+    overflow-x: auto;
+}
+
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+}
+
+.schedule-table th,
+.schedule-table td {
+    padding: 0.75rem;
+    text-align: center;
+    border: 1px solid var(--light-gray);
+}
+
+.schedule-table th {
+    background-color: var(--light-gray);
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+.schedule-table th:first-child {
+    width: 120px;
+}
+
+.time-slot {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+    font-weight: 500;
+}
+
+.schedule-cell {
+    position: relative;
+    height: 60px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.schedule-cell:hover {
+    background-color: var(--light-gray);
+}
+
+.schedule-cell.selected {
+    background-color: var(--selected-color, #E0E7FF);
+    border: 2px solid var(--selected-border-color, #4F46E5);
+}
+
+.class-block {
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.class-name {
+    font-weight: 600;
+}
+
+.class-subject {
+    font-size: 0.75rem;
+    opacity: 0.9;
+}
+
+.class-selector {
+    position: absolute;
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    padding: 1rem;
+    display: none;
+    z-index: 1000;
+    width: 280px;
+    max-height: 400px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.class-selector.show {
+    display: flex;
+}
+
+.class-selector h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.class-options-container {
+    overflow-y: auto;
+    max-height: 300px;
+    margin-bottom: 0.5rem;
+}
+
+.class-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-bottom: 0.25rem;
+}
+
+.class-option:hover {
+    background-color: var(--light-gray);
+}
+
+.class-color-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.class-option-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.class-option-name {
+    font-weight: 600;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.class-option-subject {
+    font-size: 0.75rem;
+    color: var(--gray-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.remove-option {
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    color: var(--danger-color);
+    border-top: 1px solid var(--light-gray);
+    text-align: center;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+.remove-option:hover {
+    background-color: #FEF2F2;
+}
+
+/* Scrollbar personnalisée pour le sélecteur */
+.class-options-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.class-options-container::-webkit-scrollbar-track {
+    background: var(--light-gray);
+    border-radius: 4px;
+}
+
+.class-options-container::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 4px;
+}
+
+.class-options-container::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+}
+
+.action-buttons {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: space-between;
+}
+
+.legend {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 0.25rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="setup-container">
+    <!-- Barre de progression -->
+    <div class="setup-progress">
+        <div class="progress-step completed">
+            <div class="progress-circle"><i class="fas fa-check"></i></div>
+            <span class="progress-label">Configuration</span>
+        </div>
+        <div class="progress-step completed">
+            <div class="progress-circle"><i class="fas fa-check"></i></div>
+            <span class="progress-label">Classes</span>
+        </div>
+        <div class="progress-step completed">
+            <div class="progress-circle"><i class="fas fa-check"></i></div>
+            <span class="progress-label">Vacances</span>
+        </div>
+        <div class="progress-step completed">
+            <div class="progress-circle"><i class="fas fa-check"></i></div>
+            <span class="progress-label">Pauses</span>
+        </div>
+        <div class="progress-step active">
+            <div class="progress-circle">5</div>
+            <span class="progress-label">Horaire type</span>
+        </div>
+    </div>
+
+    <!-- En-tête -->
+    <div class="schedule-header">
+        <div class="schedule-title">
+            <i class="fas fa-calendar-week"></i>
+            <h1>Créez votre horaire type</h1>
+        </div>
+        <p>Cliquez sur les cases pour assigner vos classes à chaque période. Cet horaire sera utilisé comme modèle pour toute l'année.</p>
+
+        {% if not current_user.schedule_completed %}
+        <div class="info-box" style="margin-top: 1rem; background-color: #FEF3C7; border-color: #FDE68A;">
+            <i class="fas fa-info-circle" style="color: #D97706;"></i>
+            <p style="color: #92400E;">Dernière étape ! Une fois votre horaire type créé, cliquez sur "Valider l'horaire" pour accéder à votre calendrier complet.</p>
+        </div>
+        {% endif %}
+
+        <!-- Légende des classes -->
+        <div class="legend">
+            {% for classroom in classrooms %}
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: {{ classroom.color }};"></div>
+                <span>{{ classroom.name }} - {{ classroom.subject }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Grille horaire -->
+    <div class="schedule-grid">
+        <table class="schedule-table">
+            <thead>
+                <tr>
+                    <th>Période</th>
+                    {% for day in days %}
+                    <th>{{ day }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for period in periods %}
+                <tr>
+                    <td class="time-slot">
+                        <strong>Période {{ period.number }}</strong><br>
+                        {{ period.start.strftime('%H:%M') }} - {{ period.end.strftime('%H:%M') }}
+                    </td>
+                    {% for day_index in range(5) %}
+                    <td class="schedule-cell"
+                        data-weekday="{{ day_index }}"
+                        data-period="{{ period.number }}"
+                        onclick="openClassSelector(this, event)">
+                        {% set key = day_index|string + '_' + period.number|string %}
+                        {% if key in schedule_grid %}
+                            {% set schedule = schedule_grid[key] %}
+                            <div class="class-block" style="background-color: {{ schedule.classroom.color }};">
+                                <div class="class-name">{{ schedule.classroom.name }}</div>
+                                <div class="class-subject">{{ schedule.classroom.subject }}</div>
+                            </div>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Boutons d'action -->
+    <div class="action-buttons">
+        <a href="{{ url_for('setup.manage_breaks') }}" class="btn btn-outline">
+            <i class="fas fa-arrow-left"></i> Précédent
+        </a>
+
+        <form method="POST" action="{{ url_for('schedule.validate_schedule') }}" style="margin: 0;">
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-check"></i> Valider l'horaire
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Sélecteur de classe -->
+<div class="class-selector" id="classSelector">
+    <h3>Sélectionner une classe</h3>
+    <div class="class-options-container" id="classOptions"></div>
+    <div class="remove-option" onclick="removeClass()">
+        <i class="fas fa-times"></i> Retirer la classe
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+<script>
+const classrooms = {{ classrooms_json | tojson }};
+let currentCell = null;
+
+function openClassSelector(cell, event) {
+    event.stopPropagation();
+    currentCell = cell;
+
+    const selector = document.getElementById('classSelector');
+    const optionsContainer = document.getElementById('classOptions');
+
+    // Vider et remplir les options
+    optionsContainer.innerHTML = '';
+    classrooms.forEach(classroom => {
+        const option = document.createElement('div');
+        option.className = 'class-option';
+        option.onclick = () => selectClass(classroom.id);
+
+        option.innerHTML = `
+            <div class="class-color-dot" style="background-color: ${classroom.color};"></div>
+            <div class="class-option-info">
+                <div class="class-option-name">${classroom.name}</div>
+                <div class="class-option-subject">${classroom.subject}</div>
+            </div>
+        `;
+
+        optionsContainer.appendChild(option);
+    });
+
+    // Positionner le sélecteur
+    const rect = cell.getBoundingClientRect();
+    const selectorHeight = 400; // Hauteur maximale du sélecteur
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    // Position horizontale - centrer sous la cellule
+    let left = rect.left + (rect.width / 2) - 140; // 140 = moitié de la largeur du sélecteur
+
+    // S'assurer que le sélecteur ne sort pas de l'écran horizontalement
+    if (left < 10) {
+        left = 10;
+    } else if (left + 280 > window.innerWidth - 10) {
+        left = window.innerWidth - 290;
+    }
+
+    selector.style.left = left + 'px';
+
+    // Position verticale - privilégier en dessous, sinon au-dessus
+    if (spaceBelow >= selectorHeight || spaceBelow > spaceAbove) {
+        // Afficher en dessous
+        selector.style.top = (rect.bottom + 5 + window.scrollY) + 'px';
+        selector.style.bottom = 'auto';
+    } else {
+        // Afficher au-dessus
+        selector.style.bottom = (window.innerHeight - rect.top + 5 - window.scrollY) + 'px';
+        selector.style.top = 'auto';
+    }
+
+    selector.classList.add('show');
+}
+
+function selectClass(classroomId) {
+    if (!currentCell) return;
+
+    const weekday = currentCell.dataset.weekday;
+    const period = currentCell.dataset.period;
+    const classroom = classrooms.find(c => c.id === classroomId);
+
+    // Sauvegarder via AJAX
+    saveSchedule(weekday, period, classroomId).then(result => {
+        if (result.success) {
+            // Mettre à jour l'affichage
+            currentCell.innerHTML = `
+                <div class="class-block" style="background-color: ${classroom.color};">
+                    <div class="class-name">${classroom.name}</div>
+                    <div class="class-subject">${classroom.subject}</div>
+                </div>
+            `;
+            closeClassSelector();
+        }
+    });
+}
+
+function removeClass() {
+    if (!currentCell) return;
+
+    const weekday = currentCell.dataset.weekday;
+    const period = currentCell.dataset.period;
+
+    // Sauvegarder via AJAX (sans classroom_id pour supprimer)
+    saveSchedule(weekday, period, null).then(result => {
+        if (result.success) {
+            currentCell.innerHTML = '';
+            closeClassSelector();
+        }
+    });
+}
+
+function closeClassSelector() {
+    document.getElementById('classSelector').classList.remove('show');
+    currentCell = null;
+}
+
+async function saveSchedule(weekday, periodNumber, classroomId) {
+    try {
+        const response = await fetch('{{ url_for("schedule.save_schedule") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                weekday: parseInt(weekday),
+                period_number: parseInt(periodNumber),
+                classroom_id: classroomId
+            })
+        });
+
+        return await response.json();
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur lors de la sauvegarde');
+        return { success: false };
+    }
+}
+
+// Fermer le sélecteur en cliquant ailleurs
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.class-selector') && !e.target.closest('.schedule-cell')) {
+        closeClassSelector();
+    }
+});
+</script>
+{% endblock %}
