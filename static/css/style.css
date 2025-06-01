@@ -400,3 +400,44 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+/* Ajoutez ces styles à la fin du fichier style.css existant */
+
+/* Indication visuelle pour le cours actuel dans la navigation */
+.nav-link.current-lesson {
+    position: relative;
+}
+
+.nav-link.current-lesson::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -10px;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background-color: var(--warning-color);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+        transform: translateY(-50%) scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: translateY(-50%) scale(1.2);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(-50%) scale(1);
+    }
+}
+
+/* Style spécial quand c'est le cours actuel */
+.nav-link.lesson-active {
+    color: var(--warning-color) !important;
+    font-weight: 600;
+}

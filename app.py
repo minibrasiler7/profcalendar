@@ -94,6 +94,35 @@ def create_app(config_class=Config):
     with app.app_context():
         db.create_all()
 
+    # Context processor pour rendre les informations de cours disponibles globalement
+    @app.context_processor
+    def inject_lesson_info():
+        from flask_login import current_user
+
+        if current_user.is_authenticated and hasattr(current_user, 'setup_completed') and current_user.setup_completed:
+            try:
+                from routes.planning import get_current_or_next_lesson
+                lesson, is_current, lesson_date = get_current_or_next_lesson(current_user)
+
+                return {
+                    'global_current_lesson': lesson if is_current else None,
+                    'global_next_lesson': lesson if not is_current else None,
+                    'global_has_current_lesson': is_current
+                }
+            except:
+                # En cas d'erreur, retourner des valeurs par défaut
+                return {
+                    'global_current_lesson': None,
+                    'global_next_lesson': None,
+                    'global_has_current_lesson': False
+                }
+
+        return {
+            'global_current_lesson': None,
+            'global_next_lesson': None,
+            'global_has_current_lesson': False
+        }
+
     # Filtres Jinja2 personnalisés
     @app.template_filter('format_date')
     def format_date(date):

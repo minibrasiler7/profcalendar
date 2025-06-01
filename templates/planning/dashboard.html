@@ -316,7 +316,7 @@
             {% if current_lesson %}
             <a href="{{ url_for('planning.lesson_view') }}" class="action-button current-lesson">
                 <i class="fas fa-graduation-cap"></i>
-                <span>Leçon en cours</span>
+                <span>Cours actuel</span>
                 <small style="font-size: 0.75rem; color: var(--gray-color); margin-top: 0.25rem;">
                     {{ current_lesson.classroom.name }} - P{{ current_lesson.period_number }}
                 </small>
@@ -330,11 +330,16 @@
                 </small>
             </a>
             {% else %}
-            <a href="{{ url_for('planning.calendar_view') }}" class="action-button">
+            <a href="{{ url_for('planning.lesson_view') }}" class="action-button">
                 <i class="fas fa-calendar-alt"></i>
-                <span>Voir le calendrier</span>
+                <span>Prochain cours</span>
             </a>
             {% endif %}
+
+            <a href="{{ url_for('planning.calendar_view') }}" class="action-button">
+                <i class="fas fa-calendar"></i>
+                <span>Voir le calendrier</span>
+            </a>
 
             <a href="{{ url_for('schedule.weekly_schedule') }}" class="action-button">
                 <i class="fas fa-edit"></i>
@@ -344,11 +349,6 @@
             <a href="{{ url_for('setup.manage_classrooms') }}" class="action-button">
                 <i class="fas fa-cog"></i>
                 <span>Gérer les classes</span>
-            </a>
-
-            <a href="{{ url_for('planning.calendar_view', week=today.strftime('%Y-%m-%d')) }}" class="action-button">
-                <i class="fas fa-calendar-day"></i>
-                <span>Semaine actuelle</span>
             </a>
         </div>
     </div>

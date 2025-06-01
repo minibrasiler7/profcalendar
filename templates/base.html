@@ -29,8 +29,13 @@
                 <a href="{{ url_for('planning.dashboard') }}" class="nav-link {% if request.endpoint == 'planning.dashboard' %}active{% endif %}">
                     <i class="fas fa-home"></i> Tableau de bord
                 </a>
-                <a href="{{ url_for('planning.lesson_view') }}" class="nav-link {% if request.endpoint == 'planning.lesson_view' %}active{% endif %}">
-                    <i class="fas fa-graduation-cap"></i> Cours actuel
+                <a href="{{ url_for('planning.lesson_view') }}" class="nav-link {% if request.endpoint == 'planning.lesson_view' %}active{% endif %} {% if global_has_current_lesson %}lesson-active current-lesson{% endif %}">
+                    <i class="fas fa-graduation-cap"></i>
+                    {% if global_has_current_lesson %}
+                        Cours actuel
+                    {% else %}
+                        Prochain cours
+                    {% endif %}
                 </a>
                 <a href="{{ url_for('schedule.weekly_schedule') }}" class="nav-link {% if request.endpoint == 'schedule.weekly_schedule' %}active{% endif %}">
                     <i class="fas fa-clock"></i> Horaire type

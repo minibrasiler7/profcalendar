@@ -34,6 +34,69 @@ def is_school_year(date, user):
     """Vérifie si une date est dans l'année scolaire"""
     return user.school_year_start <= date <= user.school_year_end
 
+def get_current_or_next_lesson(user):
+    """Trouve le cours actuel ou le prochain cours"""
+    now = datetime.now()
+    current_time = now.time()
+    current_date = now.date()
+    weekday = current_date.weekday()
+
+    # Récupérer les périodes du jour
+    periods = calculate_periods(user)
+
+    # Vérifier si on est actuellement en cours
+    for period in periods:
+        if period['start'] <= current_time <= period['end']:
+            schedule = Schedule.query.filter_by(
+                user_id=user.id,
+                weekday=weekday,
+                period_number=period['number']
+            ).first()
+
+            if schedule:
+                return schedule, True, current_date  # schedule, is_current, date
+
+    # Si pas de cours actuel, chercher le prochain aujourd'hui
+    for period in periods:
+        if period['start'] > current_time:
+            schedule = Schedule.query.filter_by(
+                user_id=user.id,
+                weekday=weekday,
+                period_number=period['number']
+            ).first()
+
+            if schedule:
+                schedule.start_time = period['start']
+                return schedule, False, current_date  # schedule, is_current, date
+
+    # Si pas de cours aujourd'hui, chercher les jours suivants
+    for days_ahead in range(1, 8):  # Chercher sur une semaine
+        future_date = current_date + timedelta(days=days_ahead)
+        future_weekday = future_date.weekday()
+
+        # Ignorer les weekends
+        if future_weekday >= 5:
+            continue
+
+        # Vérifier si c'est un jour de vacances
+        if is_holiday(future_date, user):
+            continue
+
+        # Chercher le premier cours de la journée
+        first_schedule = Schedule.query.filter_by(
+            user_id=user.id,
+            weekday=future_weekday
+        ).order_by(Schedule.period_number).first()
+
+        if first_schedule:
+            # Obtenir l'heure de début de la première période
+            future_periods = calculate_periods(user)
+            if future_periods:
+                first_schedule.start_time = future_periods[0]['start']
+            return first_schedule, False, future_date  # schedule, is_current, date
+
+    return None, False, None
+
 @planning_bp.route('/')
 @login_required
 def dashboard():
@@ -70,52 +133,16 @@ def dashboard():
     ).all()
 
     # Chercher le cours actuel ou le prochain
-    now = datetime.now()
-    current_time = now.time()
-    weekday = now.date().weekday()
-
-    current_lesson = None
-    next_lesson = None
-
-    # Récupérer les périodes du jour
-    periods = calculate_periods(current_user)
-
-    # Vérifier si on est actuellement en cours
-    for period in periods:
-        if period['start'] <= current_time <= period['end']:
-            schedule = Schedule.query.filter_by(
-                user_id=current_user.id,
-                weekday=weekday,
-                period_number=period['number']
-            ).first()
-
-            if schedule:
-                current_lesson = schedule
-                break
-
-    # Si pas de cours actuel, chercher le prochain aujourd'hui
-    if not current_lesson:
-        for period in periods:
-            if period['start'] > current_time:
-                schedule = Schedule.query.filter_by(
-                    user_id=current_user.id,
-                    weekday=weekday,
-                    period_number=period['number']
-                ).first()
-
-                if schedule:
-                    # Ajouter l'heure de début pour l'affichage
-                    schedule.start_time = period['start']
-                    next_lesson = schedule
-                    break
+    lesson, is_current_lesson, lesson_date = get_current_or_next_lesson(current_user)
 
     return render_template('planning/dashboard.html',
                          classrooms_count=classrooms_count,
                          schedules_count=schedules_count,
                          week_plannings_count=len(week_plannings),
                          today=today,
-                         current_lesson=current_lesson,
-                         next_lesson=next_lesson)
+                         current_lesson=lesson if is_current_lesson else None,
+                         next_lesson=lesson if not is_current_lesson else None,
+                         lesson_date=lesson_date)
 
 @planning_bp.route('/calendar')
 @login_required
