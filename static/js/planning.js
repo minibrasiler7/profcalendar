@@ -13,17 +13,58 @@ function openPlanningModal(cell, fromAnnualView = false) {
         return;
     }
 
+    // Vérifier si la période est passée de plus de 24h
+    const isPastPeriod = isPeriodPast(date, period);
+
     // Récupérer les données existantes
     getPlanningData(date, period).then(data => {
         if (data.success && data.planning) {
             document.getElementById('modalClassroom').value = data.planning.classroom_id || '';
             document.getElementById('modalPlanningTitle').value = data.planning.title || '';
-            document.getElementById('modalDescription').value = data.planning.description || '';
+
+            // Si la période est passée, afficher la description avec les indicateurs
+            if (isPastPeriod && data.planning.description) {
+                displayPastPeriodDescription(data.planning.description, data.planning.checklist_states);
+            } else {
+                document.getElementById('modalDescription').value = data.planning.description || '';
+            }
         } else {
             // Réinitialiser le formulaire
             document.getElementById('modalClassroom').value = '';
             document.getElementById('modalPlanningTitle').value = '';
             document.getElementById('modalDescription').value = '';
+        }
+
+        // Adapter l'interface selon si la période est passée ou non
+        const descriptionContainer = document.querySelector('.modal-body .form-group:last-child');
+        const saveButton = document.querySelector('.modal-footer .btn-primary');
+
+        if (isPastPeriod) {
+            // Mode lecture seule pour les périodes passées
+            document.getElementById('modalClassroom').disabled = true;
+            document.getElementById('modalPlanningTitle').disabled = true;
+            descriptionContainer.innerHTML = `
+                <label class="form-label">Description</label>
+                <div id="pastPeriodDescription" class="past-period-description"></div>
+            `;
+            saveButton.style.display = 'none';
+        } else {
+            // Mode édition normal
+            document.getElementById('modalClassroom').disabled = false;
+            document.getElementById('modalPlanningTitle').disabled = false;
+            if (!descriptionContainer.querySelector('textarea')) {
+                descriptionContainer.innerHTML = `
+                    <label class="form-label">Description</label>
+                    <textarea id="modalDescription" class="form-control" rows="3"
+                              placeholder="Détails du cours, exercices prévus..."></textarea>
+                    <div class="checklist-help" style="font-size: 0.75rem; color: var(--gray-color); margin-top: 0.5rem; font-style: italic;">
+                        Astuce : Commencez une ligne par "-" pour créer une case à cocher
+                    </div>
+                `;
+                // Réattacher l'événement de conversion des tirets
+                attachDashConversion();
+            }
+            saveButton.style.display = '';
         }
 
         // Mettre à jour le titre du modal
@@ -37,6 +78,105 @@ function openPlanningModal(cell, fromAnnualView = false) {
 
         // Afficher le modal
         document.getElementById('planningModal').classList.add('show');
+    });
+}
+
+// Vérifier si une période est passée de plus de 24h
+function isPeriodPast(date, periodNumber) {
+    const now = new Date();
+    const periodDate = new Date(date);
+
+    // Obtenir l'heure de fin de la période depuis les données
+    const period = periodsData.find(p => p.number === parseInt(periodNumber));
+    if (period) {
+        const [hours, minutes] = period.end.split(':');
+        periodDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    }
+
+    // Vérifier si c'est passé de plus de 24h
+    const diffHours = (now - periodDate) / (1000 * 60 * 60);
+    return diffHours > 24;
+}
+
+// Afficher la description pour une période passée avec indicateurs visuels
+function displayPastPeriodDescription(description, checklistStates = {}) {
+    const container = document.getElementById('pastPeriodDescription');
+    if (!container) return;
+
+    const lines = description.split('\n');
+    let html = '';
+    let checkboxIndex = 0;
+
+    for (const line of lines) {
+        const checkboxMatch = line.match(/^(\s*)\[([ x])\]\s*(.*)$/i);
+
+        if (checkboxMatch) {
+            const indent = checkboxMatch[1];
+            const content = checkboxMatch[3];
+            const isChecked = checklistStates[checkboxIndex.toString()] || false;
+
+            if (isChecked) {
+                html += `<div class="checklist-item completed" style="margin-left: ${indent.length * 20}px; color: #10B981;">
+                    <i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>
+                    <span style="text-decoration: line-through;">${escapeHtml(content)}</span>
+                </div>`;
+            } else {
+                html += `<div class="checklist-item not-completed" style="margin-left: ${indent.length * 20}px; color: #EF4444;">
+                    <i class="fas fa-times-circle" style="margin-right: 0.5rem;"></i>
+                    <span>${escapeHtml(content)}</span>
+                </div>`;
+            }
+            checkboxIndex++;
+        } else {
+            html += `<div style="margin: 0.5rem 0;">${escapeHtml(line)}</div>`;
+        }
+    }
+
+    container.innerHTML = html || '<p style="color: var(--gray-color);">Aucune description</p>';
+}
+
+// Fonction pour échapper le HTML
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Attacher l'événement de conversion des tirets en checkboxes
+function attachDashConversion() {
+    const textarea = document.getElementById('modalDescription');
+    if (!textarea) return;
+
+    textarea.addEventListener('input', function(e) {
+        const cursorPos = textarea.selectionStart;
+        const value = textarea.value;
+
+        // Vérifier si on vient de taper un tiret en début de ligne
+        if (e.inputType === 'insertText' && e.data === '-') {
+            const lines = value.substring(0, cursorPos).split('\n');
+            const currentLine = lines[lines.length - 1];
+
+            // Si le tiret est au début de la ligne (avec éventuellement des espaces avant)
+            if (currentLine.trim() === '-') {
+                e.preventDefault();
+
+                // Remplacer le tiret par [ ]
+                const beforeCursor = value.substring(0, cursorPos - 1);
+                const afterCursor = value.substring(cursorPos);
+                const spaces = currentLine.match(/^\s*/)[0]; // Préserver l'indentation
+
+                textarea.value = beforeCursor + spaces + '[ ] ' + afterCursor;
+
+                // Placer le curseur après [ ]
+                const newCursorPos = cursorPos - 1 + spaces.length + 4;
+                textarea.setSelectionRange(newCursorPos, newCursorPos);
+            }
+        }
     });
 }
 
@@ -138,6 +278,9 @@ async function loadDayPeriods(date, filterByClassroomId = null) {
 
                 hasRelevantPeriods = true;
 
+                // Vérifier si cette période est passée
+                const isPast = isPeriodPast(date, period.number);
+
                 // Charger les données existantes pour chaque période
                 const planningResponse = await fetch(`/planning/get_planning/${date}/${period.number}`);
                 const planningData = await planningResponse.json();
@@ -145,11 +288,13 @@ async function loadDayPeriods(date, filterByClassroomId = null) {
                 let existingClassroomId = '';
                 let existingTitle = '';
                 let existingDescription = '';
+                let existingChecklistStates = {};
 
                 if (planningData.success && planningData.planning) {
                     existingClassroomId = planningData.planning.classroom_id || '';
                     existingTitle = planningData.planning.title || '';
                     existingDescription = planningData.planning.description || '';
+                    existingChecklistStates = planningData.planning.checklist_states || {};
                 } else if (period.hasSchedule && period.defaultClassroom) {
                     // Utiliser l'horaire type par défaut
                     existingClassroomId = period.defaultClassroom;
@@ -164,44 +309,86 @@ async function loadDayPeriods(date, filterByClassroomId = null) {
                 periodDiv.className = 'period-planning-section';
                 periodDiv.style.cssText = 'border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; background-color: #f9fafb;';
 
-                periodDiv.innerHTML = `
-                    <h4 style="margin-bottom: 1rem; color: #4b5563; display: flex; align-items: center; gap: 0.5rem;">
-                        <i class="fas fa-clock"></i>
-                        Période ${period.number} (${period.start} - ${period.end})
-                    </h4>
+                if (isPast) {
+                    // Affichage pour période passée
+                    periodDiv.innerHTML = `
+                        <h4 style="margin-bottom: 1rem; color: #4b5563; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-clock"></i>
+                            Période ${period.number} (${period.start} - ${period.end})
+                            <span style="font-size: 0.75rem; color: #6B7280; margin-left: auto;">Période terminée</span>
+                        </h4>
 
-                    <div class="form-group">
-                        <label class="form-label">Classe</label>
-                        <select class="form-control" data-period="${period.number}" data-field="classroom">
-                            <option value="">-- Pas de cours --</option>
-                            ${classrooms.map(c => `
-                                <option value="${c.id}" ${existingClassroomId == c.id ? 'selected' : ''}>
-                                    ${c.name} - ${c.subject}
-                                </option>
-                            `).join('')}
-                        </select>
-                    </div>
+                        <div class="form-group">
+                            <label class="form-label">Classe</label>
+                            <input type="text" class="form-control" value="${classrooms.find(c => c.id == existingClassroomId)?.name || 'Aucune classe'}" disabled>
+                        </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Titre du cours</label>
-                        <input type="text" class="form-control"
-                               data-period="${period.number}"
-                               data-field="title"
-                               value="${existingTitle}"
-                               placeholder="Ex: Introduction aux fractions">
-                    </div>
+                        <div class="form-group">
+                            <label class="form-label">Titre du cours</label>
+                            <input type="text" class="form-control" value="${existingTitle}" disabled>
+                        </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" rows="2"
-                                  data-period="${period.number}"
-                                  data-field="description"
-                                  placeholder="Détails du cours, exercices prévus...">${existingDescription}</textarea>
-                    </div>
-                `;
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <div class="past-period-description" id="past-desc-${period.number}"></div>
+                        </div>
+                    `;
 
-                container.appendChild(periodDiv);
+                    container.appendChild(periodDiv);
+
+                    // Afficher la description formatée pour période passée
+                    if (existingDescription) {
+                        setTimeout(() => {
+                            displayPastPeriodDescriptionInContainer(existingDescription, existingChecklistStates, `past-desc-${period.number}`);
+                        }, 0);
+                    }
+                } else {
+                    // Affichage normal pour période future
+                    periodDiv.innerHTML = `
+                        <h4 style="margin-bottom: 1rem; color: #4b5563; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-clock"></i>
+                            Période ${period.number} (${period.start} - ${period.end})
+                        </h4>
+
+                        <div class="form-group">
+                            <label class="form-label">Classe</label>
+                            <select class="form-control" data-period="${period.number}" data-field="classroom">
+                                <option value="">-- Pas de cours --</option>
+                                ${classrooms.map(c => `
+                                    <option value="${c.id}" ${existingClassroomId == c.id ? 'selected' : ''}>
+                                        ${c.name} - ${c.subject}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Titre du cours</label>
+                            <input type="text" class="form-control"
+                                   data-period="${period.number}"
+                                   data-field="title"
+                                   value="${existingTitle}"
+                                   placeholder="Ex: Introduction aux fractions">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control day-planning-description" rows="2"
+                                      data-period="${period.number}"
+                                      data-field="description"
+                                      placeholder="Détails du cours, exercices prévus...">${existingDescription}</textarea>
+                            <div class="checklist-help" style="font-size: 0.75rem; color: var(--gray-color); margin-top: 0.5rem; font-style: italic;">
+                                Astuce : Commencez une ligne par "-" pour créer une case à cocher
+                            </div>
+                        </div>
+                    `;
+
+                    container.appendChild(periodDiv);
+                }
             }
+
+            // Attacher les événements de conversion des tirets pour toutes les textareas
+            attachDashConversionToAll();
 
             if (!hasRelevantPeriods && filterByClassroomId) {
                 container.innerHTML = `
@@ -221,6 +408,76 @@ async function loadDayPeriods(date, filterByClassroomId = null) {
         console.error('Erreur lors du chargement des périodes:', error);
         document.getElementById('dayPlanningContainer').innerHTML = '<p>Erreur lors du chargement des périodes.</p>';
     }
+}
+
+// Afficher la description formatée dans un container spécifique
+function displayPastPeriodDescriptionInContainer(description, checklistStates, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const lines = description.split('\n');
+    let html = '';
+    let checkboxIndex = 0;
+
+    for (const line of lines) {
+        const checkboxMatch = line.match(/^(\s*)\[([ x])\]\s*(.*)$/i);
+
+        if (checkboxMatch) {
+            const indent = checkboxMatch[1];
+            const content = checkboxMatch[3];
+            const isChecked = checklistStates[checkboxIndex.toString()] || false;
+
+            if (isChecked) {
+                html += `<div class="checklist-item completed" style="margin-left: ${indent.length * 20}px; color: #10B981;">
+                    <i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>
+                    <span style="text-decoration: line-through;">${escapeHtml(content)}</span>
+                </div>`;
+            } else {
+                html += `<div class="checklist-item not-completed" style="margin-left: ${indent.length * 20}px; color: #EF4444;">
+                    <i class="fas fa-times-circle" style="margin-right: 0.5rem;"></i>
+                    <span>${escapeHtml(content)}</span>
+                </div>`;
+            }
+            checkboxIndex++;
+        } else {
+            html += `<div style="margin: 0.5rem 0;">${escapeHtml(line)}</div>`;
+        }
+    }
+
+    container.innerHTML = html || '<p style="color: var(--gray-color);">Aucune description</p>';
+}
+
+// Attacher la conversion des tirets à toutes les textareas de planification journalière
+function attachDashConversionToAll() {
+    const textareas = document.querySelectorAll('.day-planning-description');
+    textareas.forEach(textarea => {
+        textarea.addEventListener('input', function(e) {
+            const cursorPos = textarea.selectionStart;
+            const value = textarea.value;
+
+            // Vérifier si on vient de taper un tiret en début de ligne
+            if (e.inputType === 'insertText' && e.data === '-') {
+                const lines = value.substring(0, cursorPos).split('\n');
+                const currentLine = lines[lines.length - 1];
+
+                // Si le tiret est au début de la ligne (avec éventuellement des espaces avant)
+                if (currentLine.trim() === '-') {
+                    e.preventDefault();
+
+                    // Remplacer le tiret par [ ]
+                    const beforeCursor = value.substring(0, cursorPos - 1);
+                    const afterCursor = value.substring(cursorPos);
+                    const spaces = currentLine.match(/^\s*/)[0]; // Préserver l'indentation
+
+                    textarea.value = beforeCursor + spaces + '[ ] ' + afterCursor;
+
+                    // Placer le curseur après [ ]
+                    const newCursorPos = cursorPos - 1 + spaces.length + 4;
+                    textarea.setSelectionRange(newCursorPos, newCursorPos);
+                }
+            }
+        });
+    });
 }
 
 // Fermer le modal de planification journalière
@@ -247,10 +504,18 @@ async function saveDayPlanning(date, buttonElement) {
         const titleInput = section.querySelector('input[data-field="title"]');
         const descriptionTextarea = section.querySelector('textarea[data-field="description"]');
 
+        // Ignorer les sections en lecture seule (périodes passées)
+        if (!classroomSelect || !titleInput || !descriptionTextarea) {
+            continue;
+        }
+
         const period = classroomSelect.dataset.period;
         const classroomId = classroomSelect.value;
         const title = titleInput.value;
         const description = descriptionTextarea.value;
+
+        // Calculer les états des checkboxes
+        const checklistStates = calculateChecklistStates(description);
 
         // Sauvegarder uniquement si une classe est sélectionnée
         if (classroomId || title || description) {
@@ -266,7 +531,8 @@ async function saveDayPlanning(date, buttonElement) {
                         period_number: parseInt(period),
                         classroom_id: classroomId ? parseInt(classroomId) : null,
                         title: title,
-                        description: description
+                        description: description,
+                        checklist_states: checklistStates
                     })
                 });
 
@@ -295,6 +561,25 @@ async function saveDayPlanning(date, buttonElement) {
     }
 }
 
+// Calculer les états initiaux des checkboxes (tous non cochés par défaut)
+function calculateChecklistStates(description) {
+    const states = {};
+    if (!description) return states;
+
+    const lines = description.split('\n');
+    let checkboxIndex = 0;
+
+    for (const line of lines) {
+        if (line.match(/^(\s*)\[([ x])\]\s*(.*)$/i)) {
+            // Par défaut, les nouvelles checkboxes sont non cochées
+            states[checkboxIndex.toString()] = false;
+            checkboxIndex++;
+        }
+    }
+
+    return states;
+}
+
 // Fermer le modal
 function closePlanningModal() {
     document.getElementById('planningModal').classList.remove('show');
@@ -311,6 +596,9 @@ async function savePlanning() {
     const title = document.getElementById('modalPlanningTitle').value;
     const description = document.getElementById('modalDescription').value;
 
+    // Calculer les états des checkboxes
+    const checklistStates = calculateChecklistStates(description);
+
     try {
         const response = await fetch('/planning/save_planning', {
             method: 'POST',
@@ -323,7 +611,8 @@ async function savePlanning() {
                 period_number: parseInt(period),
                 classroom_id: classroomId ? parseInt(classroomId) : null,
                 title: title,
-                description: description
+                description: description,
+                checklist_states: checklistStates
             })
         });
 
@@ -391,6 +680,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Attacher la conversion des tirets au modal principal
+    attachDashConversion();
 });
 
 // Fonction pour synchroniser les vues

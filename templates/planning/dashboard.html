@@ -310,54 +310,62 @@
     </div>
 
     <!-- Actions rapides -->
-    <div class="quick-actions">
-        <h2><i class="fas fa-bolt"></i> Actions rapides</h2>
-        <div class="action-buttons-grid">
-            {% if current_lesson %}
-            <a href="{{ url_for('planning.lesson_view') }}" class="action-button current-lesson">
-                <i class="fas fa-graduation-cap"></i>
-                <span>Cours actuel</span>
-                <small style="font-size: 0.75rem; color: var(--gray-color); margin-top: 0.25rem;">
-                    {{ current_lesson.classroom.name }} - P{{ current_lesson.period_number }}
-                </small>
-            </a>
-            {% elif next_lesson %}
-            <a href="{{ url_for('planning.lesson_view') }}" class="action-button">
-                <i class="fas fa-clock"></i>
-                <span>Prochain cours</span>
-                <small style="font-size: 0.75rem; color: var(--gray-color); margin-top: 0.25rem;">
-                    {{ next_lesson.classroom.name }} - {{ next_lesson.start_time.strftime('%H:%M') }}
-                </small>
-            </a>
-            {% else %}
-            <a href="{{ url_for('planning.lesson_view') }}" class="action-button">
-                <i class="fas fa-calendar-alt"></i>
-                <span>Prochain cours</span>
-            </a>
-            {% endif %}
+   <!-- Remplacez la section "Actions rapides" dans templates/planning/dashboard.html par cette version mise à jour -->
 
-            <a href="{{ url_for('planning.calendar_view') }}" class="action-button">
-                <i class="fas fa-calendar"></i>
-                <span>Voir le calendrier</span>
-            </a>
+<!-- Actions rapides -->
+<div class="quick-actions">
+    <h2><i class="fas fa-bolt"></i> Actions rapides</h2>
+    <div class="action-buttons-grid">
+        {% if current_lesson %}
+        <a href="{{ url_for('planning.lesson_view') }}" class="action-button current-lesson">
+            <i class="fas fa-graduation-cap"></i>
+            <span>Cours actuel</span>
+            <small style="font-size: 0.75rem; color: var(--gray-color); margin-top: 0.25rem;">
+                {{ current_lesson.classroom.name }} - P{{ current_lesson.period_number }}
+            </small>
+        </a>
+        {% elif next_lesson %}
+        <a href="{{ url_for('planning.lesson_view') }}" class="action-button">
+            <i class="fas fa-clock"></i>
+            <span>Prochain cours</span>
+            <small style="font-size: 0.75rem; color: var(--gray-color); margin-top: 0.25rem;">
+                {{ next_lesson.classroom.name }} - {{ next_lesson.start_time.strftime('%H:%M') }}
+            </small>
+        </a>
+        {% else %}
+        <a href="{{ url_for('planning.lesson_view') }}" class="action-button">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Prochain cours</span>
+        </a>
+        {% endif %}
 
-            <a href="{{ url_for('schedule.weekly_schedule') }}" class="action-button">
-                <i class="fas fa-edit"></i>
-                <span>Modifier l'horaire type</span>
-            </a>
+        <a href="{{ url_for('planning.calendar_view') }}" class="action-button">
+            <i class="fas fa-calendar"></i>
+            <span>Voir le calendrier</span>
+        </a>
 
-            <a href="{{ url_for('setup.initial_setup') }}" class="action-button">
-                <i class="fas fa-cog"></i>
-                <span>Paramètres</span>
-            </a>
+        <a href="{{ url_for('schedule.weekly_schedule') }}" class="action-button">
+            <i class="fas fa-edit"></i>
+            <span>Modifier l'horaire type</span>
+        </a>
 
-            <a href="{{ url_for('planning.manage_classes') }}" class="action-button">
-                <i class="fas fa-users"></i>
-                <span>Gérer les classes</span>
-            </a>
-        </div>
+        <!-- Nouveau bouton pour le gestionnaire de fichiers -->
+        <a href="{{ url_for('file_manager.index') }}" class="action-button" style="background-color: #F0F9FF; border-color: #3B82F6;">
+            <i class="fas fa-folder-open" style="color: #3B82F6;"></i>
+            <span>Gestionnaire de fichiers</span>
+        </a>
+
+        <a href="{{ url_for('setup.initial_setup') }}" class="action-button">
+            <i class="fas fa-cog"></i>
+            <span>Paramètres</span>
+        </a>
+
+        <a href="{{ url_for('planning.manage_classes') }}" class="action-button">
+            <i class="fas fa-users"></i>
+            <span>Gérer les classes</span>
+        </a>
     </div>
-
+</div>
     <!-- Activité récente -->
     <div class="recent-activity">
         <h2><i class="fas fa-history"></i> Activité récente</h2>

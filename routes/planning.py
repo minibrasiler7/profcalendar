@@ -391,7 +391,6 @@ def generate_annual_calendar(classroom):
         current_date += timedelta(days=7)
 
     return weeks
-
 @planning_bp.route('/save_planning', methods=['POST'])
 @login_required
 def save_planning():
@@ -406,6 +405,7 @@ def save_planning():
         classroom_id = data.get('classroom_id')
         title = data.get('title', '')
         description = data.get('description', '')
+        checklist_states = data.get('checklist_states', {})  # Récupérer les états des checkboxes
 
         # Convertir la date
         planning_date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -429,6 +429,7 @@ def save_planning():
                 existing.classroom_id = classroom_id
                 existing.title = title
                 existing.description = description
+                existing.set_checklist_states(checklist_states)  # Sauvegarder les états des checkboxes
             else:
                 # Créer nouveau
                 planning = Planning(
@@ -439,6 +440,7 @@ def save_planning():
                     title=title,
                     description=description
                 )
+                planning.set_checklist_states(checklist_states)  # Sauvegarder les états des checkboxes
                 db.session.add(planning)
         else:
             # Supprimer si vide
@@ -503,49 +505,6 @@ def get_available_periods(date):
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@planning_bp.route('/get_planning/<date>/<int:period>')
-@login_required
-def get_planning(date, period):
-    try:
-        planning_date = datetime.strptime(date, '%Y-%m-%d').date()
-        planning = Planning.query.filter_by(
-            user_id=current_user.id,
-            date=planning_date,
-            period_number=period
-        ).first()
-
-        if planning:
-            return jsonify({
-                'success': True,
-                'planning': {
-                    'classroom_id': planning.classroom_id,
-                    'title': planning.title,
-                    'description': planning.description
-                }
-            })
-        else:
-            # Retourner l'horaire type par défaut
-            weekday = planning_date.weekday()
-            schedule = Schedule.query.filter_by(
-                user_id=current_user.id,
-                weekday=weekday,
-                period_number=period
-            ).first()
-
-            if schedule:
-                return jsonify({
-                    'success': True,
-                    'planning': {
-                        'classroom_id': schedule.classroom_id,
-                        'title': '',
-                        'description': ''
-                    }
-                })
-
-        return jsonify({'success': True, 'planning': None})
-
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
 
 @planning_bp.route('/lesson')
 @login_required
@@ -1193,3 +1152,50 @@ def update_checklist_states():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/get_planning/<date>/<int:period>')
+@login_required
+def get_planning(date, period):
+    try:
+        planning_date = datetime.strptime(date, '%Y-%m-%d').date()
+        planning = Planning.query.filter_by(
+            user_id=current_user.id,
+            date=planning_date,
+            period_number=period
+        ).first()
+
+        if planning:
+            return jsonify({
+                'success': True,
+                'planning': {
+                    'classroom_id': planning.classroom_id,
+                    'title': planning.title,
+                    'description': planning.description,
+                    'checklist_states': planning.get_checklist_states()  # Ajouter les états des checkboxes
+                }
+            })
+        else:
+            # Retourner l'horaire type par défaut
+            weekday = planning_date.weekday()
+            schedule = Schedule.query.filter_by(
+                user_id=current_user.id,
+                weekday=weekday,
+                period_number=period
+            ).first()
+
+            if schedule:
+                return jsonify({
+                    'success': True,
+                    'planning': {
+                        'classroom_id': schedule.classroom_id,
+                        'title': '',
+                        'description': '',
+                        'checklist_states': {}
+                    }
+                })
+
+        return jsonify({'success': True, 'planning': None})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+

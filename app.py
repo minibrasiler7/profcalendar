@@ -40,11 +40,13 @@ def create_app(config_class=Config):
     from routes.setup import setup_bp
     from routes.schedule import schedule_bp
     from routes.planning import planning_bp
+    from routes.file_manager import file_manager_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(setup_bp)
     app.register_blueprint(schedule_bp)
     app.register_blueprint(planning_bp)
+    app.register_blueprint(file_manager_bp)
 
     # Route d'accueil
     @app.route('/')
@@ -91,6 +93,8 @@ def create_app(config_class=Config):
         return '', 204
 
     # Créer les tables si elles n'existent pas
+    os.makedirs(os.path.join(app.root_path, 'uploads', 'files'), exist_ok=True)
+    os.makedirs(os.path.join(app.root_path, 'uploads', 'thumbnails'), exist_ok=True)
     with app.app_context():
         db.create_all()
 
