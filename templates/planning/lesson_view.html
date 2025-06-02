@@ -7,7 +7,8 @@
 .lesson-container {
     max-width: 1400px;
     margin: 0 auto;
-    height: calc(100vh - 180px);
+    padding-bottom: 2rem;
+    min-height: calc(100vh - 200px);
 }
 
 .lesson-header {
@@ -67,19 +68,21 @@
 
 .lesson-main {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1.5fr 1fr 1fr;
     gap: 1.5rem;
-    height: 100%;
+    min-height: 500px;
+    margin-bottom: 2rem;
 }
 
-.planning-section, .resources-section {
+.planning-section, .resources-section, .attendance-section {
     background-color: var(--white);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-sm);
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    min-height: 400px;
+    height: auto;
 }
 
 .section-header {
@@ -120,6 +123,45 @@
     white-space: pre-wrap;
 }
 
+/* Styles pour les checkboxes dans la planification */
+.planning-checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+    min-height: 1.5rem;
+}
+
+.planning-checkbox {
+    margin-top: 0.125rem;
+    cursor: pointer;
+    width: 1rem;
+    height: 1rem;
+}
+
+.planning-checkbox-label {
+    flex: 1;
+    cursor: pointer;
+    user-select: none;
+}
+
+.planning-checkbox:checked + .planning-checkbox-label {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+#planningDescription {
+    font-family: monospace;
+    tab-size: 4;
+}
+
+.checklist-help {
+    font-size: 0.75rem;
+    color: var(--gray-color);
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
 .resources-content {
     flex: 1;
     overflow-y: auto;
@@ -137,96 +179,162 @@
     opacity: 0.5;
 }
 
-.resource-item {
+/* Styles pour la section présences */
+.attendance-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.attendance-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    background-color: var(--light-gray);
+}
+
+.stat-item.present {
+    background-color: #D1FAE5;
+    color: #065F46;
+}
+
+.stat-item.absent {
+    background-color: #FEE2E2;
+    color: #991B1B;
+}
+
+.stat-item.late {
+    background-color: #FEF3C7;
+    color: #92400E;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+}
+
+.students-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.student-attendance {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    border: 1px solid var(--light-gray);
-    border-radius: var(--border-radius);
-    margin-bottom: 0.75rem;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    background-color: var(--light-gray);
     transition: all 0.2s ease;
+}
+
+.student-attendance.present {
+    background-color: #D1FAE5;
+}
+
+.student-attendance.absent {
+    background-color: #FEE2E2;
+}
+
+.student-attendance.late {
+    background-color: #FEF3C7;
+}
+
+.student-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     cursor: pointer;
+    user-select: none;
 }
 
-.resource-item:hover {
-    border-color: var(--primary-color);
-    box-shadow: var(--shadow-sm);
-}
-
-.resource-icon {
-    width: 48px;
-    height: 48px;
+.student-avatar {
+    width: 32px;
+    height: 32px;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--border-radius);
-    font-size: 1.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
 }
 
-.resource-icon.pdf {
-    background-color: #FEE2E2;
-    color: #DC2626;
+.student-attendance.absent .student-avatar {
+    background-color: var(--danger-color);
 }
 
-.resource-icon.doc {
-    background-color: #DBEAFE;
-    color: #2563EB;
+.student-attendance.late .student-avatar {
+    background-color: var(--warning-color);
 }
 
-.resource-icon.img {
-    background-color: #D1FAE5;
-    color: #059669;
-}
-
-.resource-details {
-    flex: 1;
-}
-
-.resource-name {
+.student-name {
     font-weight: 500;
-    margin-bottom: 0.25rem;
 }
 
-.resource-meta {
+.student-attendance.absent .student-name {
+    color: var(--danger-color);
+    text-decoration: line-through;
+}
+
+.student-attendance.late .student-name {
+    color: var(--warning-color);
+}
+
+.late-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.late-minutes {
+    width: 60px;
+    padding: 0.25rem;
+    border: 1px solid #D1D5DB;
+    border-radius: 0.25rem;
     font-size: 0.875rem;
+    text-align: center;
+}
+
+.late-minutes:focus {
+    outline: none;
+    border-color: var(--warning-color);
+}
+
+.btn-late {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background-color: #F3F4F6;
     color: var(--gray-color);
+    border-radius: 0.25rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
 }
 
-.add-resource-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background-color: var(--primary-color);
+.btn-late:hover {
+    background-color: var(--warning-color);
     color: white;
-    border-radius: var(--border-radius);
-    text-decoration: none;
-    font-size: 0.875rem;
-    transition: all 0.3s ease;
 }
 
-.add-resource-btn:hover {
-    background-color: var(--primary-hover);
-    transform: translateY(-1px);
-}
-
-.edit-planning-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.375rem 0.75rem;
-    background-color: transparent;
-    color: var(--primary-color);
-    border: 1px solid var(--primary-color);
-    border-radius: var(--border-radius);
-    text-decoration: none;
-    font-size: 0.875rem;
-    transition: all 0.3s ease;
-}
-
-.edit-planning-btn:hover {
-    background-color: var(--primary-color);
+.student-attendance.late .btn-late {
+    background-color: var(--warning-color);
     color: white;
 }
 
@@ -268,13 +376,47 @@
     box-shadow: var(--shadow-sm);
 }
 
-@media (max-width: 1024px) {
+/* Indicateur de sauvegarde */
+.saving-indicator {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background-color: #3B82F6;
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.saving-indicator.show {
+    display: flex;
+}
+
+.saving-indicator.success {
+    background-color: #10B981;
+}
+
+.saving-indicator.error {
+    background-color: #EF4444;
+}
+
+@media (max-width: 1200px) {
     .lesson-main {
         grid-template-columns: 1fr;
+        gap: 1rem;
     }
 
     .lesson-container {
-        height: auto;
+        min-height: auto;
+        padding-bottom: 2rem;
+    }
+
+    .planning-section, .resources-section, .attendance-section {
+        min-height: 300px;
     }
 }
 </style>
@@ -333,28 +475,134 @@
                 <h2 class="section-title">
                     <i class="fas fa-clipboard-list"></i> Planification du cours
                 </h2>
-                <a href="{{ url_for('planning.calendar_view', week=lesson_date.strftime('%Y-%m-%d')) }}" class="edit-planning-btn">
-                    <i class="fas fa-edit"></i> Modifier
-                </a>
+                <button class="edit-planning-btn" onclick="togglePlanningEdit()">
+                    <i class="fas fa-edit"></i> <span id="editBtnText">Modifier</span>
+                </button>
             </div>
 
             <div class="planning-content">
-                {% if planning %}
-                <div class="planning-item">
-                    <h3>{{ planning.title or 'Cours sans titre' }}</h3>
-                    {% if planning.description %}
-                    <p class="planning-description">{{ planning.description }}</p>
-                    {% endif %}
+                <!-- Vue de lecture -->
+                <div id="planningView" {% if not planning %}style="display: none;"{% endif %}>
+                    <div class="planning-item">
+                        <h3 id="planningTitleDisplay">{{ planning.title if planning else 'Cours sans titre' }}</h3>
+                        <div class="planning-description" id="planningDescriptionDisplay">
+                            {% if planning %}
+                                {{ render_planning_with_checkboxes(planning) | safe }}
+                            {% else %}
+                                Aucune description
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-                {% else %}
-                <div class="no-resources">
+
+                <!-- Formulaire d'édition -->
+                <div id="planningEdit" style="{% if planning %}display: none;{% endif %}">
+                    <form id="planningForm" onsubmit="savePlanning(event)">
+                        <div class="form-group">
+                            <label class="form-label">Titre du cours</label>
+                            <input type="text"
+                                   id="planningTitle"
+                                   class="form-control"
+                                   placeholder="Ex: Introduction aux fractions"
+                                   value="{{ planning.title if planning else '' }}">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Description détaillée</label>
+                            <textarea id="planningDescription"
+                                      class="form-control"
+                                      rows="8"
+                                      placeholder="Objectifs du cours, activités prévues, exercices, devoirs...">{{ planning.description if planning else '' }}</textarea>
+                            <div class="checklist-help">
+                                Astuce : Commencez une ligne par "-" pour créer une case à cocher
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Enregistrer
+                            </button>
+                            <button type="button" class="btn btn-outline" onclick="cancelPlanningEdit()">
+                                Annuler
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- État vide -->
+                {% if not planning %}
+                <div id="emptyPlanning" class="no-resources">
                     <i class="fas fa-clipboard"></i>
                     <p>Aucune planification pour ce cours</p>
-                    <a href="{{ url_for('planning.calendar_view', week=lesson_date.strftime('%Y-%m-%d')) }}" class="btn btn-primary" style="margin-top: 1rem;">
-                        <i class="fas fa-plus"></i> Planifier ce cours
-                    </a>
+                    <button class="btn btn-primary" onclick="togglePlanningEdit()">
+                        <i class="fas fa-plus"></i> Créer une planification
+                    </button>
                 </div>
                 {% endif %}
+            </div>
+        </div>
+
+        <!-- Section présences -->
+        <div class="attendance-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-user-check"></i> Présences
+                </h2>
+            </div>
+
+            <div class="attendance-content">
+                <!-- Statistiques -->
+                <div class="attendance-stats">
+                    <div class="stat-item present">
+                        <div class="stat-value" id="presentCount">0</div>
+                        <div class="stat-label">Présents</div>
+                    </div>
+                    <div class="stat-item absent">
+                        <div class="stat-value" id="absentCount">0</div>
+                        <div class="stat-label">Absents</div>
+                    </div>
+                    <div class="stat-item late">
+                        <div class="stat-value" id="lateCount">0</div>
+                        <div class="stat-label">Retards</div>
+                    </div>
+                </div>
+
+                <!-- Liste des élèves -->
+                <div class="students-list">
+                    {% for student in students %}
+                    {% set attendance = attendance_records.get(student.id, {}) %}
+                    {% set status = attendance.get('status', 'present') %}
+                    {% set late_minutes = attendance.get('late_minutes', 0) %}
+
+                    <div class="student-attendance {{ status }}"
+                         id="student-{{ student.id }}"
+                         data-student-id="{{ student.id }}"
+                         data-status="{{ status }}">
+
+                        <div class="student-info" onclick="toggleAttendance({{ student.id }})">
+                            <div class="student-avatar">
+                                {{ student.first_name[0] }}{{ student.last_name[0] if student.last_name else '' }}
+                            </div>
+                            <span class="student-name">{{ student.full_name }}</span>
+                        </div>
+
+                        <div class="late-controls">
+                            <input type="number"
+                                   class="late-minutes"
+                                   id="late-{{ student.id }}"
+                                   value="{{ late_minutes if status == 'late' else '' }}"
+                                   min="1"
+                                   max="120"
+                                   placeholder="min">
+                            <button class="btn-late"
+                                    onclick="setLateStatus({{ student.id }})"
+                                    title="Marquer en retard">
+                                <i class="fas fa-clock"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
 
@@ -375,26 +623,441 @@
                     <p>Aucune ressource disponible</p>
                     <p style="font-size: 0.875rem; margin-top: 0.5rem;">La gestion des fichiers sera bientôt disponible</p>
                 </div>
-
-                <!-- Exemple de ressources (à implémenter) -->
-                <!--
-                <div class="resource-item">
-                    <div class="resource-icon pdf">
-                        <i class="fas fa-file-pdf"></i>
-                    </div>
-                    <div class="resource-details">
-                        <div class="resource-name">Exercices chapitre 3.pdf</div>
-                        <div class="resource-meta">PDF • 2.3 MB • Modifié il y a 2 jours</div>
-                    </div>
-                </div>
-                -->
             </div>
         </div>
     </div>
 </div>
 
-{% if is_current %}
+<!-- Indicateur de sauvegarde -->
+<div class="saving-indicator" id="savingIndicator">
+    <i class="fas fa-spinner fa-spin"></i>
+    <span id="savingText">Sauvegarde...</span>
+</div>
+
 <script>
+// Variables globales
+const lessonDate = '{{ lesson_date.strftime("%Y-%m-%d") }}';
+const periodNumber = {{ lesson.period_number }};
+const classroomId = {{ lesson.classroom_id }};
+let isEditingPlanning = false;
+let checklistStates = {{ (planning.get_checklist_states() if planning else {}) | tojson }};
+let checkboxUpdateTimeout = null;
+
+// Fonction pour basculer l'édition de la planification
+function togglePlanningEdit() {
+    isEditingPlanning = !isEditingPlanning;
+
+    const planningView = document.getElementById('planningView');
+    const planningEdit = document.getElementById('planningEdit');
+    const emptyPlanning = document.getElementById('emptyPlanning');
+    const editBtn = document.querySelector('.edit-planning-btn');
+    const editBtnText = document.getElementById('editBtnText');
+
+    if (isEditingPlanning) {
+        // Passer en mode édition
+        if (planningView) planningView.style.display = 'none';
+        if (emptyPlanning) emptyPlanning.style.display = 'none';
+        planningEdit.style.display = 'block';
+        editBtnText.textContent = 'Fermer';
+
+        // Focus sur le titre
+        document.getElementById('planningTitle').focus();
+    } else {
+        // Passer en mode lecture
+        planningEdit.style.display = 'none';
+        if (planningView && document.getElementById('planningTitleDisplay').textContent !== 'Cours sans titre') {
+            planningView.style.display = 'block';
+        } else if (emptyPlanning) {
+            emptyPlanning.style.display = 'block';
+        }
+        editBtnText.textContent = 'Modifier';
+    }
+}
+
+// Fonction pour gérer l'auto-conversion des tirets en checkboxes
+document.getElementById('planningDescription').addEventListener('input', function(e) {
+    const textarea = e.target;
+    const cursorPos = textarea.selectionStart;
+    const value = textarea.value;
+
+    // Vérifier si on vient de taper un tiret en début de ligne
+    if (e.inputType === 'insertText' && e.data === '-') {
+        const lines = value.substring(0, cursorPos).split('\n');
+        const currentLine = lines[lines.length - 1];
+
+        // Si le tiret est au début de la ligne (avec éventuellement des espaces avant)
+        if (currentLine.trim() === '-') {
+            e.preventDefault();
+
+            // Remplacer le tiret par [ ]
+            const beforeCursor = value.substring(0, cursorPos - 1);
+            const afterCursor = value.substring(cursorPos);
+            const spaces = currentLine.match(/^\s*/)[0]; // Préserver l'indentation
+
+            textarea.value = beforeCursor + spaces + '[ ] ' + afterCursor;
+
+            // Placer le curseur après [ ]
+            const newCursorPos = cursorPos - 1 + spaces.length + 4;
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }
+    }
+});
+
+// Fonction pour échapper le HTML
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Fonction pour mettre à jour l'état d'une checkbox
+async function updateCheckboxState(index, checked) {
+    // Mettre à jour l'état local immédiatement
+    checklistStates[index] = checked;
+
+    // Afficher l'indicateur de sauvegarde
+    showSavingIndicator();
+
+    // Annuler le timeout précédent s'il existe
+    if (checkboxUpdateTimeout) {
+        clearTimeout(checkboxUpdateTimeout);
+    }
+
+    // Sauvegarder avec un petit délai pour éviter trop de requêtes
+    checkboxUpdateTimeout = setTimeout(async () => {
+        try {
+            const response = await fetch('{{ url_for("planning.update_checklist_states") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    date: lessonDate,
+                    period_number: periodNumber,
+                    checklist_states: checklistStates
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showSavingIndicator('success', 'Sauvegardé');
+            } else {
+                // En cas d'erreur, rétablir l'état précédent
+                checklistStates[index] = !checked;
+                const checkbox = document.getElementById(`checkbox-${index}`);
+                if (checkbox) {
+                    checkbox.checked = !checked;
+                }
+                showSavingIndicator('error', 'Erreur de sauvegarde');
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            // En cas d'erreur, rétablir l'état précédent
+            checklistStates[index] = !checked;
+            const checkbox = document.getElementById(`checkbox-${index}`);
+            if (checkbox) {
+                checkbox.checked = !checked;
+            }
+            showSavingIndicator('error', 'Erreur de connexion');
+        }
+    }, 500); // Délai de 500ms pour regrouper les changements
+}
+
+// Fonction pour afficher l'indicateur de sauvegarde
+function showSavingIndicator(status = 'saving', message = 'Sauvegarde...') {
+    const indicator = document.getElementById('savingIndicator');
+    const text = document.getElementById('savingText');
+    const icon = indicator.querySelector('i');
+
+    // Réinitialiser les classes
+    indicator.className = 'saving-indicator show';
+
+    if (status === 'saving') {
+        icon.className = 'fas fa-spinner fa-spin';
+        text.textContent = message;
+    } else if (status === 'success') {
+        indicator.classList.add('success');
+        icon.className = 'fas fa-check';
+        text.textContent = message;
+    } else if (status === 'error') {
+        indicator.classList.add('error');
+        icon.className = 'fas fa-exclamation-triangle';
+        text.textContent = message;
+    }
+
+    // Masquer après 2 secondes si c'est un succès ou une erreur
+    if (status !== 'saving') {
+        setTimeout(() => {
+            indicator.classList.remove('show');
+        }, 2000);
+    }
+}
+
+// Fonction pour annuler l'édition
+function cancelPlanningEdit() {
+    // Restaurer les valeurs d'origine
+    const titleDisplay = document.getElementById('planningTitleDisplay');
+    const descriptionDisplay = document.getElementById('planningDescriptionDisplay');
+
+    if (titleDisplay && titleDisplay.textContent !== 'Cours sans titre') {
+        document.getElementById('planningTitle').value = titleDisplay.textContent;
+
+        // Récupérer la description originale depuis les données du serveur
+        {% if planning %}
+        document.getElementById('planningDescription').value = {{ planning.description | tojson }};
+        {% else %}
+        document.getElementById('planningDescription').value = '';
+        {% endif %}
+    }
+
+    togglePlanningEdit();
+}
+
+// Fonction pour sauvegarder la planification
+async function savePlanning(event) {
+    event.preventDefault();
+
+    const title = document.getElementById('planningTitle').value.trim();
+    const description = document.getElementById('planningDescription').value.trim();
+
+    const submitButton = event.target.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+
+    // Désactiver le bouton et afficher un loader
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
+
+    try {
+        const response = await fetch('{{ url_for("planning.save_lesson_planning") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                date: lessonDate,
+                period_number: periodNumber,
+                classroom_id: classroomId,
+                title: title,
+                description: description,
+                checklist_states: checklistStates
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Recharger la page pour afficher les changements
+            window.location.reload();
+        } else {
+            showPlanningNotification('error', result.message || 'Erreur lors de l\'enregistrement');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showPlanningNotification('error', 'Erreur lors de la communication avec le serveur');
+    } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalText;
+    }
+}
+
+// Fonction pour afficher une notification
+function showPlanningNotification(type, message) {
+    // Créer le conteneur de notifications s'il n'existe pas
+    let container = document.querySelector('.notifications-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'notifications-container';
+        container.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 1000;';
+        document.body.appendChild(container);
+    }
+
+    // Créer la notification
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.style.cssText = `
+        background-color: ${type === 'success' ? '#D1FAE5' : '#FEE2E2'};
+        color: ${type === 'success' ? '#065F46' : '#991B1B'};
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        animation: slideInNotification 0.3s ease;
+        max-width: 400px;
+    `;
+
+    const icon = document.createElement('i');
+    icon.className = `fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}`;
+
+    const text = document.createElement('span');
+    text.textContent = message;
+
+    notification.appendChild(icon);
+    notification.appendChild(text);
+    container.appendChild(notification);
+
+    // Supprimer la notification après 5 secondes
+    setTimeout(() => {
+        notification.style.animation = 'slideOutNotification 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
+}
+
+// Fonction pour basculer entre présent/absent
+async function toggleAttendance(studentId) {
+    const studentElement = document.getElementById(`student-${studentId}`);
+    const currentStatus = studentElement.dataset.status;
+    let newStatus;
+
+    // Cycle: present -> absent -> present (ignorer late dans le cycle)
+    if (currentStatus === 'present' || currentStatus === 'late') {
+        newStatus = 'absent';
+    } else {
+        newStatus = 'present';
+    }
+
+    // Réinitialiser le champ de retard
+    const lateInput = document.getElementById(`late-${studentId}`);
+    lateInput.value = '';
+
+    await updateAttendance(studentId, newStatus, null);
+}
+
+// Fonction pour marquer un élève en retard
+async function setLateStatus(studentId) {
+    const lateInput = document.getElementById(`late-${studentId}`);
+    const minutes = lateInput.value;
+
+    if (!minutes || minutes <= 0) {
+        alert('Veuillez entrer le nombre de minutes de retard');
+        lateInput.focus();
+        return;
+    }
+
+    await updateAttendance(studentId, 'late', parseInt(minutes));
+}
+
+// Fonction pour envoyer la mise à jour au serveur
+async function updateAttendance(studentId, status, lateMinutes) {
+    try {
+        const response = await fetch('{{ url_for("planning.update_attendance") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                student_id: studentId,
+                classroom_id: classroomId,
+                date: lessonDate,
+                period_number: periodNumber,
+                status: status,
+                late_minutes: lateMinutes
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Mettre à jour l'interface
+            const studentElement = document.getElementById(`student-${studentId}`);
+            const lateInput = document.getElementById(`late-${studentId}`);
+
+            // Retirer toutes les classes de statut
+            studentElement.classList.remove('present', 'absent', 'late');
+
+            // Ajouter la nouvelle classe
+            studentElement.classList.add(status);
+            studentElement.dataset.status = status;
+
+            // Si ce n'est pas un retard, vider le champ
+            if (status !== 'late') {
+                lateInput.value = '';
+            }
+
+            // Mettre à jour les statistiques
+            updateStats();
+
+            // Afficher une notification visuelle
+            showQuickNotification(studentElement, status);
+        } else {
+            alert('Erreur lors de la mise à jour de la présence');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la communication avec le serveur');
+    }
+}
+
+// Fonction pour afficher une notification rapide
+function showQuickNotification(element, status) {
+    element.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+        element.style.transform = 'scale(1)';
+    }, 200);
+}
+
+// Permettre d'entrer le retard avec Enter
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser les statistiques
+    updateStats();
+
+    // Ajouter l'événement Enter sur tous les champs de retard
+    document.querySelectorAll('.late-minutes').forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const studentId = this.id.replace('late-', '');
+                setLateStatus(parseInt(studentId));
+            }
+        });
+    });
+
+    // Gérer les raccourcis clavier pour la planification
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + E pour éditer la planification
+        if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+            e.preventDefault();
+            if (!isEditingPlanning) {
+                togglePlanningEdit();
+            }
+        }
+
+        // Escape pour annuler l'édition
+        if (e.key === 'Escape' && isEditingPlanning) {
+            cancelPlanningEdit();
+        }
+    });
+});
+
+// Fonction pour mettre à jour les statistiques
+function updateStats() {
+    let present = 0;
+    let absent = 0;
+    let late = 0;
+
+    document.querySelectorAll('.student-attendance').forEach(student => {
+        const status = student.dataset.status;
+        if (status === 'present') present++;
+        else if (status === 'absent') absent++;
+        else if (status === 'late') late++;
+    });
+
+    document.getElementById('presentCount').textContent = present;
+    document.getElementById('absentCount').textContent = absent;
+    document.getElementById('lateCount').textContent = late;
+}
+
+{% if is_current %}
 // Gestion du timer
 let timerInterval;
 let isPaused = false;
@@ -437,6 +1100,116 @@ timerInterval = setInterval(updateTimer, 1000);
 window.addEventListener('beforeunload', () => {
     clearInterval(timerInterval);
 });
-</script>
 {% endif %}
+</script>
+
+<style>
+.add-resource-btn, .edit-planning-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.add-resource-btn:hover, .edit-planning-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.add-resource-btn {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.add-resource-btn:hover {
+    background-color: var(--primary-hover);
+}
+
+/* Styles pour le formulaire de planification */
+#planningEdit {
+    animation: fadeIn 0.3s ease;
+}
+
+#planningForm .form-group {
+    margin-bottom: 1rem;
+}
+
+#planningForm .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--dark-color);
+}
+
+#planningForm .form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #D1D5DB;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+    font-family: inherit;
+}
+
+#planningForm .form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+#planningForm textarea.form-control {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.form-actions button {
+    flex: 1;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInNotification {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutNotification {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Animation pour le changement de vue */
+.planning-content > div {
+    transition: opacity 0.2s ease;
+}
+</style>
 {% endblock %}

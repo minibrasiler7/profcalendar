@@ -346,8 +346,13 @@
                 <span>Modifier l'horaire type</span>
             </a>
 
-            <a href="{{ url_for('setup.manage_classrooms') }}" class="action-button">
+            <a href="{{ url_for('setup.initial_setup') }}" class="action-button">
                 <i class="fas fa-cog"></i>
+                <span>Paramètres</span>
+            </a>
+
+            <a href="{{ url_for('planning.manage_classes') }}" class="action-button">
+                <i class="fas fa-users"></i>
                 <span>Gérer les classes</span>
             </a>
         </div>

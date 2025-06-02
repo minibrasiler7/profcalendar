@@ -135,11 +135,6 @@
     font-size: 0.75rem;
 }
 
-.extended-view .weekly-view .planning-title,
-.extended-view .weekly-view .class-subject {
-    display: none;
-}
-
 .section-title {
     display: flex;
     align-items: center;
@@ -284,6 +279,36 @@
     font-style: italic;
     opacity: 0.9;
     line-height: 1.2;
+}
+
+/* Styles pour les indicateurs de checklist */
+.checklist-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.65rem;
+    margin-top: 0.125rem;
+}
+
+.checklist-icon {
+    font-size: 0.75rem;
+}
+
+.checklist-icon.all-checked {
+    color: #10B981;
+}
+
+.checklist-icon.partial {
+    color: #F59E0B;
+}
+
+.checklist-icon.none-checked {
+    color: #EF4444;
+}
+
+.checklist-count {
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
 }
 
 /* Vue annuelle */
@@ -482,22 +507,6 @@
     transform: none;
 }
 
-/* Titre de planification visible dans la vue hebdomadaire */
-.planning-title {
-    font-size: 0.75rem;
-    margin-top: 0.25rem;
-    white-space: normal;
-    word-wrap: break-word;
-    font-style: italic;
-    opacity: 0.9;
-    line-height: 1.2;
-}
-
-/* Réduire en mode étendu */
-.extended-view .weekly-view .planning-title {
-    display: none;
-}
-
 /* Animation de chargement pour la vue hebdomadaire */
 .weekly-view-loading {
     position: absolute;
@@ -631,7 +640,19 @@
     display: none;
 }
 
-/* Mode étendu - afficher le texte */
+/* Indicateurs de checklist pour la vue annuelle normale */
+.annual-planning-checklist {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.annual-checklist-icon {
+    font-size: 0.5rem;
+    color: white;
+}
+
+/* Mode étendu - afficher le texte et les indicateurs */
 .extended-view .annual-day-content {
     align-items: flex-start;
     justify-content: flex-start;
@@ -655,8 +676,14 @@
     border-radius: 2px;
     padding: 3px 4px;
     margin-bottom: 2px;
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
     overflow: hidden;
+}
+
+.extended-view .annual-planning-checklist {
+    flex-shrink: 0;
 }
 
 .extended-view .annual-planning-text {
@@ -670,6 +697,7 @@
     overflow: hidden;
     font-weight: 500;
     max-width: 100%;
+    flex: 1;
 }
 
 .extended-view .annual-planning-more {
@@ -686,6 +714,7 @@
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid var(--light-gray);
+    flex-wrap: wrap;
 }
 
 .legend-item {

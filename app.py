@@ -140,6 +140,52 @@ def create_app(config_class=Config):
             return f"{months[date.month-1]} {date.year}"
         return ''
 
+    # Ajoutez cette fonction dans la fonction create_app après les filtres Jinja2 existants (vers la ligne 140)
+
+    # Fonction helper pour rendre les checkboxes dans les plannings
+    # Remplacer la fonction render_planning_with_checkboxes dans app.py (vers la ligne 145)
+
+    @app.template_global()
+    def render_planning_with_checkboxes(planning):
+        """Rendre la description d'une planification avec les checkboxes"""
+        if not planning or not planning.description:
+            return 'Aucune description'
+
+        import re
+        lines = planning.description.split('\n')
+        html = []
+        checkbox_index = 0
+        states = planning.get_checklist_states()
+
+        for line in lines:
+            # Vérifier si la ligne contient une checkbox
+            checkbox_match = re.match(r'^(\s*)\[([ x])\]\s*(.*)$', line, re.IGNORECASE)
+
+            if checkbox_match:
+                indent = checkbox_match.group(1)
+                content = checkbox_match.group(3)
+
+                # Récupérer l'état de la checkbox depuis les données sauvegardées
+                is_checked = states.get(str(checkbox_index), False)
+
+                html.append(f'''<div class="planning-checklist-item" style="margin-left: {len(indent) * 20}px;">
+                    <input type="checkbox" 
+                           class="planning-checkbox" 
+                           id="checkbox-{checkbox_index}" 
+                           data-index="{checkbox_index}"
+                           {'checked' if is_checked else ''}
+                           onchange="updateCheckboxState({checkbox_index}, this.checked)">
+                    <label for="checkbox-{checkbox_index}" class="planning-checkbox-label">{content}</label>
+                </div>''')
+
+                checkbox_index += 1
+            else:
+                # Ligne normale - échapper le HTML
+                escaped_line = line.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#039;')
+                html.append(f'<div>{escaped_line}</div>')
+
+        return '\n'.join(html)
+
     @app.template_filter('format_date_full')
     def format_date_full(date):
         if date:

@@ -204,6 +204,47 @@ def calendar_view():
         Planning.date >= week_dates[0],
         Planning.date <= week_dates[4]
     ).all()
+    # Ajouter cette section dans la fonction calendar_view après la récupération des plannings
+# (vers la ligne 160 du fichier routes/planning.py)
+
+    # Récupérer les plannings de la semaine
+    week_plannings = Planning.query.filter(
+        Planning.user_id == current_user.id,
+        Planning.date >= week_dates[0],
+        Planning.date <= week_dates[4]
+    ).all()
+
+    # Organiser les plannings par date et période avec les infos de checklist
+    planning_grid = {}
+    for planning in week_plannings:
+        key = f"{planning.date}_{planning.period_number}"
+        planning_grid[key] = planning
+
+        # Ajouter les informations de checklist pour chaque planning
+        # Cette information sera accessible dans le template
+        planning.checklist_summary = planning.get_checklist_summary()
+        planning.checklist_items = planning.get_checklist_items_with_states()
+
+# Dans la fonction generate_annual_calendar, modifier la partie qui organise les plannings
+# (vers la ligne 245)
+
+    # Organiser les plannings par date avec infos de checklist
+    plannings_by_date = {}
+    for planning in week_plannings:
+        date_str = planning.date.strftime('%Y-%m-%d')
+        if date_str not in plannings_by_date:
+            plannings_by_date[date_str] = []
+
+        # Obtenir le résumé des checkboxes
+        checklist_summary = planning.get_checklist_summary()
+
+        planning_data = {
+            'title': planning.title or f'P{planning.period_number}',
+            'period': planning.period_number,
+            'checklist_summary': checklist_summary
+        }
+
+        plannings_by_date[date_str].append(planning_data)
 
     # Organiser les plannings par date et période
     planning_grid = {}
@@ -511,12 +552,25 @@ def get_planning(date, period):
 def lesson_view():
     """Affiche la vue du cours actuel ou du prochain cours"""
     from datetime import time as time_type
+    from models.student import Student
+    from models.attendance import Attendance
 
     # Obtenir l'heure actuelle et le jour de la semaine
     now = datetime.now()
     current_time = now.time()
     current_date = now.date()
     weekday = current_date.weekday()
+
+    # Déterminer la date de recherche selon l'année scolaire
+    search_start_date = current_date
+
+    # Si on est avant le début de l'année scolaire, commencer la recherche au début
+    if current_user.school_year_start and current_date < current_user.school_year_start:
+        search_start_date = current_user.school_year_start
+        # Ajuster weekday pour la date de début
+        weekday = search_start_date.weekday()
+        # Pour la recherche du premier cours, on ne vérifie pas l'heure actuelle
+        current_time = time_type(0, 0)  # Minuit pour prendre tous les cours du jour
 
     # Récupérer les périodes du jour
     periods = calculate_periods(current_user)
@@ -525,31 +579,17 @@ def lesson_view():
     current_lesson = None
     next_lesson = None
     is_current = False
+    lesson_date = search_start_date
 
-    # Vérifier si on est actuellement en cours
-    for period in periods:
-        period_start = period['start']
-        period_end = period['end']
-
-        # Vérifier si on est dans cette période
-        if period_start <= current_time <= period_end:
-            # Chercher s'il y a un cours à cette période aujourd'hui
-            schedule = Schedule.query.filter_by(
-                user_id=current_user.id,
-                weekday=weekday,
-                period_number=period['number']
-            ).first()
-
-            if schedule:
-                current_lesson = schedule
-                is_current = True
-                break
-
-    # Si pas de cours actuel, chercher le prochain
-    if not current_lesson:
-        # D'abord chercher aujourd'hui
+    # Vérifier si on est actuellement en cours (seulement si on est à la date du jour)
+    if search_start_date == current_date:
         for period in periods:
-            if period['start'] > current_time:
+            period_start = period['start']
+            period_end = period['end']
+
+            # Vérifier si on est dans cette période
+            if period_start <= current_time <= period_end:
+                # Chercher s'il y a un cours à cette période aujourd'hui
                 schedule = Schedule.query.filter_by(
                     user_id=current_user.id,
                     weekday=weekday,
@@ -557,17 +597,54 @@ def lesson_view():
                 ).first()
 
                 if schedule:
-                    next_lesson = schedule
+                    current_lesson = schedule
+                    is_current = True
                     break
 
-        # Si pas de cours aujourd'hui, chercher les jours suivants
+    # Si pas de cours actuel, chercher le prochain
+    if not current_lesson:
+        # D'abord chercher dans la journée de départ (aujourd'hui ou début d'année)
+        for period in periods:
+            # Si on est le jour actuel, ne prendre que les périodes futures
+            if search_start_date == current_date and period['start'] <= now.time():
+                continue
+
+            schedule = Schedule.query.filter_by(
+                user_id=current_user.id,
+                weekday=weekday,
+                period_number=period['number']
+            ).first()
+
+            if schedule:
+                next_lesson = schedule
+                lesson_date = search_start_date
+                break
+
+        # Si pas de cours ce jour-là, chercher les jours suivants
         if not next_lesson:
-            for days_ahead in range(1, 8):  # Chercher sur une semaine
-                future_date = current_date + timedelta(days=days_ahead)
+            # Calculer le nombre de jours maximum à chercher
+            if current_user.school_year_end:
+                max_days = (current_user.school_year_end - search_start_date).days
+                # Limiter à 365 jours pour éviter les boucles infinies
+                max_days = min(max_days, 365)
+            else:
+                max_days = 365
+
+            for days_ahead in range(1, max_days + 1):
+                future_date = search_start_date + timedelta(days=days_ahead)
+
+                # Vérifier qu'on ne dépasse pas la fin de l'année scolaire
+                if current_user.school_year_end and future_date > current_user.school_year_end:
+                    break
+
                 future_weekday = future_date.weekday()
 
                 # Ignorer les weekends
                 if future_weekday >= 5:
+                    continue
+
+                # Vérifier si c'est un jour de vacances
+                if is_holiday(future_date, current_user):
                     continue
 
                 # Chercher le premier cours de la journée
@@ -578,7 +655,7 @@ def lesson_view():
 
                 if first_schedule:
                     next_lesson = first_schedule
-                    current_date = future_date  # Mettre à jour la date pour l'affichage
+                    lesson_date = future_date
                     break
 
     # Préparer les données pour l'affichage
@@ -593,9 +670,30 @@ def lesson_view():
     if lesson:
         planning = Planning.query.filter_by(
             user_id=current_user.id,
-            date=current_date,
+            date=lesson_date,
             period_number=lesson.period_number
         ).first()
+
+    # Récupérer les élèves de la classe
+    students = Student.query.filter_by(
+        classroom_id=lesson.classroom_id
+    ).order_by(Student.last_name, Student.first_name).all()
+
+    # Récupérer les présences existantes pour ce cours
+    attendance_records = {}
+    if lesson:
+        attendances = Attendance.query.filter_by(
+            classroom_id=lesson.classroom_id,
+            date=lesson_date,
+            period_number=lesson.period_number
+        ).all()
+
+        for attendance in attendances:
+            attendance_records[attendance.student_id] = {
+                'status': attendance.status,
+                'late_minutes': attendance.late_minutes,
+                'comment': attendance.comment
+            }
 
     # Calculer le temps restant si cours en cours
     remaining_seconds = 0
@@ -622,6 +720,476 @@ def lesson_view():
                          lesson=lesson,
                          planning=planning,
                          is_current=is_current,
-                         lesson_date=current_date,
+                         lesson_date=lesson_date,
                          time_remaining=time_remaining,
-                         remaining_seconds=remaining_seconds)
+                         remaining_seconds=remaining_seconds,
+                         students=students,
+                         attendance_records=attendance_records)
+
+# Ajoutez cette route après la route lesson_view dans votre fichier planning.py
+
+@planning_bp.route('/manage-classes')
+@login_required
+def manage_classes():
+    """Gestion des classes - élèves, notes, fichiers et chapitres"""
+    from models.student import Student, Grade, Chapter, ClassroomChapter
+
+    # Récupérer la classe sélectionnée (par défaut la première)
+    selected_classroom_id = request.args.get('classroom', type=int)
+    classrooms = current_user.classrooms.all()
+
+    if not classrooms:
+        flash('Veuillez d\'abord créer au moins une classe.', 'warning')
+        return redirect(url_for('setup.manage_classrooms'))
+
+    # Si aucune classe sélectionnée, prendre la première
+    if not selected_classroom_id or not any(c.id == selected_classroom_id for c in classrooms):
+        selected_classroom_id = classrooms[0].id
+
+    selected_classroom = Classroom.query.get(selected_classroom_id)
+
+    # Récupérer les données de la classe sélectionnée
+    students = Student.query.filter_by(classroom_id=selected_classroom_id).order_by(Student.last_name, Student.first_name).all()
+
+    # Récupérer les notes récentes
+    recent_grades = Grade.query.filter_by(classroom_id=selected_classroom_id).order_by(Grade.date.desc()).limit(10).all()
+
+    # Récupérer tous les chapitres de l'utilisateur
+    all_chapters = current_user.chapters.order_by(Chapter.order_index).all()
+
+    # Récupérer les chapitres actuels de la classe
+    current_chapters = ClassroomChapter.query.filter_by(
+        classroom_id=selected_classroom_id,
+        is_current=True
+    ).all()
+
+    return render_template('planning/manage_classes.html',
+                         classrooms=classrooms,
+                         selected_classroom=selected_classroom,
+                         selected_classroom_id=selected_classroom_id,
+                         students=students,
+                         recent_grades=recent_grades,
+                         all_chapters=all_chapters,
+                         current_chapters=current_chapters)
+
+
+@planning_bp.route('/add-student', methods=['POST'])
+@login_required
+def add_student():
+    """Ajouter un nouvel élève à une classe"""
+    from models.student import Student
+
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+
+    try:
+        # Vérifier que la classe appartient à l'utilisateur
+        classroom_id = data.get('classroom_id')
+        classroom = Classroom.query.filter_by(id=classroom_id, user_id=current_user.id).first()
+
+        if not classroom:
+            return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+
+        first_name = data.get('first_name', '').strip()
+        last_name = data.get('last_name', '').strip()
+        email = data.get('email', '').strip() if data.get('email') else None
+
+        # Validation du prénom obligatoire
+        if not first_name:
+            return jsonify({'success': False, 'message': 'Le prénom est obligatoire'}), 400
+
+        # Vérifier si un élève avec ce prénom existe déjà dans la classe
+        existing_student = Student.query.filter_by(
+            classroom_id=classroom_id,
+            first_name=first_name
+        ).first()
+
+        # Si un élève avec ce prénom existe et qu'aucun nom n'est fourni
+        if existing_student and not last_name:
+            return jsonify({
+                'success': False,
+                'message': f'Un élève nommé {first_name} existe déjà dans cette classe. Veuillez ajouter un nom de famille pour les différencier.'
+            }), 400
+
+        # Créer le nouvel élève
+        student = Student(
+            classroom_id=classroom_id,
+            first_name=first_name,
+            last_name=last_name,
+            email=email
+        )
+
+        db.session.add(student)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'{student.full_name} a été ajouté avec succès',
+            'student': {
+                'id': student.id,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'full_name': student.full_name,
+                'email': student.email,
+                'initials': student.first_name[0] + (student.last_name[0] if student.last_name else '')
+            }
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@planning_bp.route('/delete-student/<int:student_id>', methods=['DELETE'])
+@login_required
+def delete_student(student_id):
+    """Supprimer un élève"""
+    from models.student import Student
+
+    try:
+        # Vérifier que l'élève existe et appartient à une classe de l'utilisateur
+        student = Student.query.join(Classroom).filter(
+            Student.id == student_id,
+            Classroom.user_id == current_user.id
+        ).first()
+
+        if not student:
+            return jsonify({'success': False, 'message': 'Élève non trouvé'}), 404
+
+        student_name = student.full_name
+
+        # Supprimer l'élève (les notes seront supprimées automatiquement grâce à cascade)
+        db.session.delete(student)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'{student_name} a été supprimé avec succès'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@planning_bp.route('/update-student', methods=['PUT'])
+@login_required
+def update_student():
+    """Modifier un élève"""
+    from models.student import Student
+
+    data = request.get_json()
+    student_id = data.get('student_id')
+
+    if not data or not student_id:
+        return jsonify({'success': False, 'message': 'Données invalides'}), 400
+
+    try:
+        # Vérifier que l'élève existe et appartient à une classe de l'utilisateur
+        student = Student.query.join(Classroom).filter(
+            Student.id == student_id,
+            Classroom.user_id == current_user.id
+        ).first()
+
+        if not student:
+            return jsonify({'success': False, 'message': 'Élève non trouvé'}), 404
+
+        # Récupérer les nouvelles valeurs
+        first_name = data.get('first_name', '').strip()
+        last_name = data.get('last_name', '').strip()
+        email = data.get('email', '').strip() if data.get('email') else None
+
+        # Validation du prénom obligatoire
+        if not first_name:
+            return jsonify({'success': False, 'message': 'Le prénom est obligatoire'}), 400
+
+        # Si le prénom change, vérifier les doublons
+        if first_name != student.first_name:
+            existing_student = Student.query.filter(
+                Student.classroom_id == student.classroom_id,
+                Student.first_name == first_name,
+                Student.id != student_id
+            ).first()
+
+            if existing_student and not last_name:
+                return jsonify({
+                    'success': False,
+                    'message': f'Un autre élève nommé {first_name} existe déjà dans cette classe. Veuillez ajouter un nom de famille pour les différencier.'
+                }), 400
+
+        # Mettre à jour l'élève
+        student.first_name = first_name
+        student.last_name = last_name
+        student.email = email
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'{student.full_name} a été modifié avec succès',
+            'student': {
+                'id': student.id,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'full_name': student.full_name,
+                'email': student.email,
+                'initials': student.first_name[0] + (student.last_name[0] if student.last_name else '')
+            }
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@planning_bp.route('/get-student/<int:student_id>')
+@login_required
+def get_student(student_id):
+    """Récupérer les informations d'un élève"""
+    from models.student import Student
+
+    try:
+        # Vérifier que l'élève existe et appartient à une classe de l'utilisateur
+        student = Student.query.join(Classroom).filter(
+            Student.id == student_id,
+            Classroom.user_id == current_user.id
+        ).first()
+
+        if not student:
+            return jsonify({'success': False, 'message': 'Élève non trouvé'}), 404
+
+        return jsonify({
+            'success': True,
+            'student': {
+                'id': student.id,
+                'first_name': student.first_name,
+                'last_name': student.last_name or '',
+                'email': student.email or ''
+            }
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/update-attendance', methods=['POST'])
+@login_required
+def update_attendance():
+    """Mettre à jour la présence d'un élève"""
+    from models.attendance import Attendance
+    from models.student import Student
+
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+
+    try:
+        student_id = data.get('student_id')
+        classroom_id = data.get('classroom_id')
+        date_str = data.get('date')
+        period_number = data.get('period_number')
+        status = data.get('status', 'present')
+        late_minutes = data.get('late_minutes')
+
+        # Convertir la date
+        date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+        # Vérifier que l'élève appartient à une classe de l'utilisateur
+        student = Student.query.join(Classroom).filter(
+            Student.id == student_id,
+            Classroom.user_id == current_user.id
+        ).first()
+
+        if not student:
+            return jsonify({'success': False, 'message': 'Élève non trouvé'}), 404
+
+        # Chercher un enregistrement existant
+        attendance = Attendance.query.filter_by(
+            student_id=student_id,
+            date=date,
+            period_number=period_number
+        ).first()
+
+        if attendance:
+            # Mettre à jour l'existant
+            attendance.status = status
+            attendance.late_minutes = late_minutes if status == 'late' and late_minutes else None
+            attendance.updated_at = datetime.utcnow()
+        else:
+            # Créer un nouveau
+            attendance = Attendance(
+                student_id=student_id,
+                classroom_id=classroom_id,
+                user_id=current_user.id,
+                date=date,
+                period_number=period_number,
+                status=status,
+                late_minutes=late_minutes if status == 'late' and late_minutes else None
+            )
+            db.session.add(attendance)
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Présence mise à jour',
+            'attendance': {
+                'student_id': student_id,
+                'status': status,
+                'late_minutes': attendance.late_minutes
+            }
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@planning_bp.route('/get-attendance-stats/<date>/<int:period>')
+@login_required
+def get_attendance_stats(date, period):
+    """Obtenir les statistiques de présence pour un cours"""
+    from models.attendance import Attendance
+
+    try:
+        # Convertir la date
+        course_date = datetime.strptime(date, '%Y-%m-%d').date()
+
+        # Récupérer toutes les présences pour ce cours
+        attendances = Attendance.query.filter_by(
+            user_id=current_user.id,
+            date=course_date,
+            period_number=period
+        ).all()
+
+        stats = {
+            'present': 0,
+            'absent': 0,
+            'late': 0,
+            'total': 0
+        }
+
+        for attendance in attendances:
+            stats['total'] += 1
+            stats[attendance.status] += 1
+
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/save-lesson-planning', methods=['POST'])
+@login_required
+def save_lesson_planning():
+    """Sauvegarder la planification depuis la vue leçon"""
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+
+    try:
+        date_str = data.get('date')
+        period_number = data.get('period_number')
+        classroom_id = data.get('classroom_id')
+        title = data.get('title', '').strip()
+        description = data.get('description', '').strip()
+        checklist_states = data.get('checklist_states', {})
+
+        # Convertir la date
+        planning_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+        # Vérifier la classe
+        classroom = Classroom.query.filter_by(id=classroom_id, user_id=current_user.id).first()
+        if not classroom:
+            return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+
+        # Chercher un planning existant
+        existing = Planning.query.filter_by(
+            user_id=current_user.id,
+            date=planning_date,
+            period_number=period_number
+        ).first()
+
+        if existing:
+            # Mettre à jour
+            existing.classroom_id = classroom_id
+            existing.title = title
+            existing.description = description
+            existing.set_checklist_states(checklist_states)
+        else:
+            # Créer nouveau
+            planning = Planning(
+                user_id=current_user.id,
+                classroom_id=classroom_id,
+                date=planning_date,
+                period_number=period_number,
+                title=title,
+                description=description
+            )
+            planning.set_checklist_states(checklist_states)
+            db.session.add(planning)
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Planification enregistrée avec succès',
+            'planning': {
+                'title': title,
+                'description': description
+            }
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+# Vérifier que cette route existe à la fin du fichier routes/planning.py
+# Si elle n'existe pas, l'ajouter après la route save_lesson_planning
+
+@planning_bp.route('/update-checklist-states', methods=['POST'])
+@login_required
+def update_checklist_states():
+    """Mettre à jour uniquement les états des checkboxes"""
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+
+    try:
+        date_str = data.get('date')
+        period_number = data.get('period_number')
+        checklist_states = data.get('checklist_states', {})
+
+        # Convertir la date
+        planning_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+        # Chercher le planning existant
+        planning = Planning.query.filter_by(
+            user_id=current_user.id,
+            date=planning_date,
+            period_number=period_number
+        ).first()
+
+        if planning:
+            # Mettre à jour les états des checkboxes
+            planning.set_checklist_states(checklist_states)
+            db.session.commit()
+
+            return jsonify({
+                'success': True,
+                'message': 'États des checkboxes mis à jour'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Planification non trouvée'
+            }), 404
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500

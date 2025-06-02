@@ -4,6 +4,50 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
+<style>
+/* Styles additionnels pour les indicateurs de checklist */
+.checklist-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.65rem;
+    margin-top: 0.125rem;
+}
+
+.checklist-icon {
+    font-size: 0.75rem;
+}
+
+.checklist-icon.all-checked {
+    color: #10B981;
+}
+
+.checklist-icon.partial {
+    color: #F59E0B;
+}
+
+.checklist-icon.none-checked {
+    color: #EF4444;
+}
+
+.checklist-count {
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+}
+
+/* Pour la vue annuelle */
+.annual-planning-checklist {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    font-size: 0.5rem;
+    margin-bottom: 0.125rem;
+}
+
+.annual-checklist-icon {
+    font-size: 0.5rem;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -92,7 +136,21 @@
                                             <div class="class-name">{{ planning.classroom.name }}</div>
                                             <div class="class-subject">{{ planning.classroom.subject }}</div>
                                             {% if planning.title %}
-                                            <div class="planning-title">{{ planning.title }}</div>
+                                            <div class="planning-title">
+                                                {{ planning.title }}
+                                            </div>
+                                            {% endif %}
+                                            {% if planning.checklist_summary %}
+                                            <div class="checklist-summary">
+                                                {% if planning.checklist_summary.all_checked %}
+                                                    <i class="fas fa-check-circle checklist-icon all-checked"></i>
+                                                {% elif planning.checklist_summary.checked > 0 %}
+                                                    <i class="fas fa-tasks checklist-icon partial"></i>
+                                                {% else %}
+                                                    <i class="fas fa-times-circle checklist-icon none-checked"></i>
+                                                {% endif %}
+                                                <span class="checklist-count">{{ planning.checklist_summary.checked }}/{{ planning.checklist_summary.total }}</span>
+                                            </div>
                                             {% endif %}
                                         </div>
                                     {% elif schedule_key in schedule_grid %}
@@ -177,6 +235,17 @@
                                             <div class="annual-plannings">
                                                 {% for planning in week.plannings[date_str][:3] %}
                                                     <div class="annual-planning-item" title="{{ planning.title }}">
+                                                        {% if planning.checklist_summary %}
+                                                        <div class="annual-planning-checklist">
+                                                            {% if planning.checklist_summary.all_checked %}
+                                                                <i class="fas fa-check-circle annual-checklist-icon all-checked"></i>
+                                                            {% elif planning.checklist_summary.checked > 0 %}
+                                                                <i class="fas fa-tasks annual-checklist-icon partial"></i>
+                                                            {% else %}
+                                                                <i class="fas fa-times-circle annual-checklist-icon none-checked"></i>
+                                                            {% endif %}
+                                                        </div>
+                                                        {% endif %}
                                                         <span class="annual-planning-text">{{ planning.title }}</span>
                                                     </div>
                                                 {% endfor %}
@@ -208,6 +277,18 @@
                 <div class="legend-item">
                     <div class="legend-box today"></div>
                     <span>Aujourd'hui</span>
+                </div>
+                <div class="legend-item">
+                    <i class="fas fa-check-circle" style="color: #10B981;"></i>
+                    <span>Tâches complétées</span>
+                </div>
+                <div class="legend-item">
+                    <i class="fas fa-tasks" style="color: #F59E0B;"></i>
+                    <span>Tâches en cours</span>
+                </div>
+                <div class="legend-item">
+                    <i class="fas fa-times-circle" style="color: #EF4444;"></i>
+                    <span>Tâches non commencées</span>
                 </div>
             </div>
         </div>
