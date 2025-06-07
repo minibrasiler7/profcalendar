@@ -685,6 +685,124 @@ def lesson_view():
                          students=students,
                          attendance_records=attendance_records)
 
+@planning_bp.route('/get-class-resources/<int:classroom_id>')
+@login_required
+def get_class_resources(classroom_id):
+    """Récupérer les ressources d'une classe avec structure hiérarchique et épinglage"""
+    try:
+        from models.student import ClassFile
+        from models.classroom import Classroom
+        
+        # Vérifier que la classe appartient à l'utilisateur
+        classroom = Classroom.query.filter_by(
+            id=classroom_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not classroom:
+            return jsonify({'success': False, 'message': 'Classe introuvable'}), 404
+        
+        # Récupérer tous les fichiers de la classe, triés par épinglage puis par nom
+        class_files = ClassFile.query.filter_by(
+            classroom_id=classroom_id
+        ).order_by(
+            ClassFile.is_pinned.desc(),
+            ClassFile.pin_order.asc(),
+            ClassFile.original_filename.asc()
+        ).all()
+        
+        # Organiser les fichiers par structure hiérarchique
+        files_data = []
+        pinned_files = []
+        
+        for file in class_files:
+            # Extraire le chemin du dossier depuis la description
+            folder_path = ''
+            if file.description and "Copié dans le dossier:" in file.description:
+                folder_path = file.description.split("Copié dans le dossier:")[1].strip()
+            
+            file_data = {
+                'id': file.id,
+                'original_filename': file.original_filename,
+                'file_type': file.file_type,
+                'file_size': file.file_size,
+                'folder_path': folder_path,
+                'is_pinned': file.is_pinned,
+                'pin_order': file.pin_order,
+                'uploaded_at': file.uploaded_at.isoformat() if file.uploaded_at else None
+            }
+            
+            if file.is_pinned:
+                pinned_files.append(file_data)
+            else:
+                files_data.append(file_data)
+        
+        return jsonify({
+            'success': True,
+            'pinned_files': pinned_files,
+            'files': files_data,
+            'class_name': classroom.name
+        })
+        
+    except Exception as e:
+        print(f"Erreur lors de la récupération des ressources: {e}")
+        return jsonify({
+            'success': False,
+            'message': 'Erreur lors de la récupération des ressources'
+        }), 500
+
+@planning_bp.route('/toggle-pin-resource', methods=['POST'])
+@login_required
+def toggle_pin_resource():
+    """Épingler ou désépingler une ressource"""
+    try:
+        from models.student import ClassFile
+        from models.classroom import Classroom
+        
+        data = request.get_json()
+        file_id = data.get('file_id')
+        
+        if not file_id:
+            return jsonify({'success': False, 'message': 'ID de fichier manquant'}), 400
+        
+        # Vérifier que le fichier appartient à une classe de l'utilisateur
+        class_file = db.session.query(ClassFile).join(
+            Classroom, ClassFile.classroom_id == Classroom.id
+        ).filter(
+            ClassFile.id == file_id,
+            Classroom.user_id == current_user.id
+        ).first()
+        
+        if not class_file:
+            return jsonify({'success': False, 'message': 'Fichier introuvable'}), 404
+        
+        # Basculer l'état d'épinglage
+        class_file.is_pinned = not class_file.is_pinned
+        
+        if class_file.is_pinned:
+            # Si on épingle, donner le prochain ordre d'épinglage
+            max_pin_order = db.session.query(db.func.max(ClassFile.pin_order)).filter_by(
+                classroom_id=class_file.classroom_id,
+                is_pinned=True
+            ).scalar() or 0
+            class_file.pin_order = max_pin_order + 1
+        else:
+            # Si on désépingle, remettre l'ordre à 0
+            class_file.pin_order = 0
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'is_pinned': class_file.is_pinned,
+            'message': f'Fichier {"épinglé" if class_file.is_pinned else "désépinglé"}'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erreur lors de l'épinglage: {e}")
+        return jsonify({'success': False, 'message': 'Erreur lors de l\'épinglage'}), 500
+
 # Ajoutez cette route après la route lesson_view dans votre fichier planning.py
 
 @planning_bp.route('/manage-classes')
@@ -1197,5 +1315,128 @@ def get_planning(date, period):
         return jsonify({'success': True, 'planning': None})
 
     except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@planning_bp.route('/save_file_annotations', methods=['POST'])
+@login_required
+def save_file_annotations():
+    """Sauvegarde les annotations d'un fichier"""
+    try:
+        print(f"[DEBUG] === DEBUT save_file_annotations ===")
+        
+        data = request.get_json()
+        file_id = data.get('file_id')
+        annotations = data.get('annotations', [])
+        
+        print(f"[DEBUG] file_id={file_id}, nb_annotations={len(annotations)}")
+        
+        if not file_id:
+            return jsonify({'success': False, 'message': 'ID de fichier manquant'}), 400
+        
+        # Vérifier que le fichier appartient à l'utilisateur (fichier de classe)
+        from models.file_manager import UserFile, FileAnnotation
+        from models.student import ClassFile
+        
+        # D'abord chercher dans user_files
+        user_file = UserFile.query.filter_by(id=file_id, user_id=current_user.id).first()
+        file_found = bool(user_file)
+        
+        if not user_file:
+            # Vérifier si c'est un fichier de classe
+            class_file = ClassFile.query.filter_by(id=file_id).first()
+            if class_file and class_file.classroom.user_id == current_user.id:
+                file_found = True
+                print(f"[DEBUG] Fichier de classe trouvé: {class_file.original_filename}")
+            else:
+                print(f"[DEBUG] Fichier non trouvé ou accès refusé")
+                return jsonify({'success': False, 'message': 'Fichier non trouvé'}), 404
+        
+        if not file_found:
+            return jsonify({'success': False, 'message': 'Fichier non trouvé'}), 404
+        
+        print(f"[DEBUG] Fichier validé, suppression des anciennes annotations...")
+        
+        # Supprimer les anciennes annotations
+        deleted_count = FileAnnotation.query.filter_by(
+            file_id=file_id,
+            user_id=current_user.id
+        ).delete()
+        
+        print(f"[DEBUG] {deleted_count} anciennes annotations supprimées")
+        
+        # Sauvegarder les nouvelles annotations
+        if annotations:
+            print(f"[DEBUG] Création de nouvelles annotations...")
+            new_annotation = FileAnnotation(
+                file_id=file_id,
+                user_id=current_user.id,
+                annotations_data=annotations
+            )
+            db.session.add(new_annotation)
+            print(f"[DEBUG] Nouvelles annotations ajoutées à la session")
+        
+        db.session.commit()
+        print(f"[DEBUG] === FIN save_file_annotations - SUCCESS ===")
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        print(f"[ERROR] Erreur dans save_file_annotations: {e}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@planning_bp.route('/get_file_annotations/<int:file_id>')
+@login_required 
+def get_file_annotations(file_id):
+    """Récupère les annotations d'un fichier"""
+    try:
+        print(f"[DEBUG] === DEBUT get_file_annotations file_id={file_id} ===")
+        
+        # Vérifier que le fichier appartient à l'utilisateur
+        from models.file_manager import UserFile, FileAnnotation
+        from models.student import ClassFile
+        
+        # D'abord chercher dans user_files
+        user_file = UserFile.query.filter_by(id=file_id, user_id=current_user.id).first()
+        file_found = bool(user_file)
+        
+        if not user_file:
+            # Vérifier si c'est un fichier de classe
+            class_file = ClassFile.query.filter_by(id=file_id).first()
+            if class_file and class_file.classroom.user_id == current_user.id:
+                file_found = True
+                print(f"[DEBUG] Fichier de classe trouvé: {class_file.original_filename}")
+            else:
+                print(f"[DEBUG] Fichier non trouvé ou accès refusé")
+                return jsonify({'success': False, 'message': 'Fichier non trouvé'}), 404
+        
+        if not file_found:
+            return jsonify({'success': False, 'message': 'Fichier non trouvé'}), 404
+        
+        print(f"[DEBUG] Recherche des annotations...")
+        
+        # Récupérer les annotations
+        annotation = FileAnnotation.query.filter_by(
+            file_id=file_id,
+            user_id=current_user.id
+        ).first()
+        
+        annotations = annotation.annotations_data if annotation else []
+        
+        print(f"[DEBUG] {len(annotations)} annotations trouvées")
+        print(f"[DEBUG] === FIN get_file_annotations - SUCCESS ===")
+        
+        return jsonify({
+            'success': True,
+            'annotations': annotations
+        })
+        
+    except Exception as e:
+        print(f"[ERROR] Erreur dans get_file_annotations: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
 

@@ -41,12 +41,14 @@ def create_app(config_class=Config):
     from routes.schedule import schedule_bp
     from routes.planning import planning_bp
     from routes.file_manager import file_manager_bp
+    from routes.class_files import class_files_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(setup_bp)
     app.register_blueprint(schedule_bp)
     app.register_blueprint(planning_bp)
     app.register_blueprint(file_manager_bp)
+    app.register_blueprint(class_files_bp)
 
     # Route d'accueil
     @app.route('/')

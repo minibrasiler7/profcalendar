@@ -3,6 +3,15 @@
 {% block title %}{% if is_current %}Leçon en cours{% else %}Prochain cours{% endif %} - TeacherPlanner{% endblock %}
 
 {% block extra_css %}
+<!-- PDF.js pour l'affichage des PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+// Configuration du worker PDF.js
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    console.log('PDF.js worker configuré');
+}
+</script>
 <style>
 .lesson-container {
     max-width: 1400px;
@@ -72,6 +81,106 @@
     gap: 1.5rem;
     min-height: 500px;
     margin-bottom: 2rem;
+    transition: all 0.3s ease;
+}
+
+/* Dispositions alternatives - Focus Planification = 50% gauche, autres empilées à droite */
+.lesson-main.layout-planning-focus {
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: auto auto !important;
+    grid-template-areas: 
+        "planning attendance"
+        "planning resources" !important;
+}
+
+.lesson-main.layout-planning-focus .planning-section {
+    grid-area: planning;
+}
+
+.lesson-main.layout-planning-focus .attendance-section {
+    grid-area: attendance;
+}
+
+.lesson-main.layout-planning-focus .resources-section {
+    grid-area: resources;
+}
+
+/* Focus Présences = 50% droite, autres empilées à gauche */
+.lesson-main.layout-attendance-focus {
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: auto auto !important;
+    grid-template-areas: 
+        "planning attendance"
+        "resources attendance" !important;
+}
+
+.lesson-main.layout-attendance-focus .planning-section {
+    grid-area: planning;
+}
+
+.lesson-main.layout-attendance-focus .attendance-section {
+    grid-area: attendance;
+}
+
+.lesson-main.layout-attendance-focus .resources-section {
+    grid-area: resources;
+}
+
+/* Focus Ressources = 50% droite, autres empilées à gauche */
+.lesson-main.layout-resources-focus {
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: auto auto !important;
+    grid-template-areas: 
+        "planning resources"
+        "attendance resources" !important;
+}
+
+.lesson-main.layout-resources-focus .planning-section {
+    grid-area: planning;
+}
+
+.lesson-main.layout-resources-focus .attendance-section {
+    grid-area: attendance;
+}
+
+.lesson-main.layout-resources-focus .resources-section {
+    grid-area: resources;
+}
+
+/* Effets visuels discrets pour les sections focus */
+.lesson-main.layout-planning-focus .planning-section {
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e5e7eb;
+}
+
+.lesson-main.layout-resources-focus .resources-section {
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e5e7eb;
+}
+
+.lesson-main.layout-attendance-focus .attendance-section {
+    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e5e7eb;
+}
+
+.lesson-main.layout-vertical {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.lesson-main.layout-vertical .planning-section {
+    order: 1;
+}
+
+.lesson-main.layout-vertical .resources-section {
+    order: 2;
+}
+
+.lesson-main.layout-vertical .attendance-section {
+    order: 3;
 }
 
 .planning-section, .resources-section, .attendance-section {
@@ -83,6 +192,7 @@
     flex-direction: column;
     min-height: 400px;
     height: auto;
+    transition: all 0.3s ease;
 }
 
 .section-header {
@@ -338,6 +448,59 @@
     color: white;
 }
 
+.lesson-controls {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.layout-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.layout-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-color);
+}
+
+.layout-buttons {
+    display: flex;
+    gap: 0.25rem;
+    background-color: var(--light-gray);
+    padding: 0.25rem;
+    border-radius: 0.5rem;
+}
+
+.layout-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background-color: transparent;
+    color: var(--gray-color);
+    border-radius: 0.375rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+}
+
+.layout-btn:hover {
+    background-color: var(--white);
+    color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.layout-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
+}
+
 .timer-widget {
     display: flex;
     align-items: center;
@@ -404,12 +567,35 @@
     background-color: #EF4444;
 }
 
-@media (max-width: 1200px) {
-    .lesson-main {
-        grid-template-columns: 1fr;
+@media (max-width: 900px) {
+    .lesson-main,
+    .lesson-main.layout-planning-focus,
+    .lesson-main.layout-resources-focus,
+    .lesson-main.layout-attendance-focus {
+        grid-template-columns: 1fr !important;
         gap: 1rem;
     }
+}
 
+@media (min-width: 901px) and (max-width: 1200px) {
+    .lesson-main {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+    
+    .lesson-main.layout-planning-focus {
+        grid-template-columns: 2fr 1fr 1fr !important;
+    }
+
+    .lesson-main.layout-resources-focus {
+        grid-template-columns: 1fr 2fr 1fr !important;
+    }
+
+    .lesson-main.layout-attendance-focus {
+        grid-template-columns: 1fr 1fr 2fr !important;
+    }
+}
+
+@media (max-width: 1200px) {
     .lesson-container {
         min-height: auto;
         padding-bottom: 2rem;
@@ -417,6 +603,33 @@
 
     .planning-section, .resources-section, .attendance-section {
         min-height: 300px;
+    }
+    
+    .lesson-controls {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    .layout-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .layout-buttons {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 768px) {
+    .layout-label {
+        display: none;
+    }
+    
+    .layout-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 0.875rem;
     }
 }
 </style>
@@ -454,16 +667,40 @@
                 </div>
             </div>
 
-            {% if is_current %}
-            <div class="timer-widget">
-                <div class="timer-display" id="lessonTimer">{{ time_remaining }}</div>
-                <div class="timer-controls">
-                    <button class="timer-btn" onclick="toggleTimer()" title="Pause/Reprendre">
-                        <i class="fas fa-pause" id="timerIcon"></i>
-                    </button>
+            <div class="lesson-controls">
+                <!-- Contrôles de disposition -->
+                <div class="layout-controls">
+                    <span class="layout-label">Disposition :</span>
+                    <div class="layout-buttons">
+                        <button class="layout-btn active" data-layout="default" title="Disposition par défaut (3 colonnes)">
+                            <i class="fas fa-columns"></i>
+                        </button>
+                        <button class="layout-btn" data-layout="planning-focus" title="Focus planification (planification large)">
+                            <i class="fas fa-list-alt"></i>
+                        </button>
+                        <button class="layout-btn" data-layout="resources-focus" title="Focus ressources (ressources large)">
+                            <i class="fas fa-folder-open"></i>
+                        </button>
+                        <button class="layout-btn" data-layout="attendance-focus" title="Focus présences (présences large)">
+                            <i class="fas fa-user-check"></i>
+                        </button>
+                        <button class="layout-btn" data-layout="vertical" title="Disposition verticale (1 colonne)">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                    </div>
                 </div>
+                
+                {% if is_current %}
+                <div class="timer-widget">
+                    <div class="timer-display" id="lessonTimer">{{ time_remaining }}</div>
+                    <div class="timer-controls">
+                        <button class="timer-btn" onclick="toggleTimer()" title="Pause/Reprendre">
+                            <i class="fas fa-pause" id="timerIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
     </div>
 
@@ -496,7 +733,7 @@
                 </div>
 
                 <!-- Formulaire d'édition -->
-                <div id="planningEdit" style="{% if planning %}display: none;{% endif %}">
+                <div id="planningEdit" style="display: none;">
                     <form id="planningForm" onsubmit="savePlanning(event)">
                         <div class="form-group">
                             <label class="form-label">Titre du cours</label>
@@ -612,16 +849,55 @@
                 <h2 class="section-title">
                     <i class="fas fa-folder-open"></i> Ressources du cours
                 </h2>
-                <a href="#" class="add-resource-btn" onclick="alert('Fonctionnalité à venir : upload de fichiers')">
-                    <i class="fas fa-plus"></i> Ajouter
-                </a>
+                <div class="resource-controls">
+                    <button class="resource-btn" onclick="refreshResources()" title="Actualiser">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <a href="{{ url_for('file_manager.index') }}" class="add-resource-btn" target="_blank">
+                        <i class="fas fa-plus"></i> Gestionnaire
+                    </a>
+                </div>
             </div>
 
-            <div class="resources-content">
-                <div class="no-resources">
-                    <i class="fas fa-file-pdf"></i>
-                    <p>Aucune ressource disponible</p>
-                    <p style="font-size: 0.875rem; margin-top: 0.5rem;">La gestion des fichiers sera bientôt disponible</p>
+            <div class="resources-content" id="resourcesContent">
+                <!-- Chargement initial -->
+                <div class="resources-loading" id="resourcesLoading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Chargement des ressources...</p>
+                </div>
+
+                <!-- Ressources épinglées -->
+                <div class="pinned-resources" id="pinnedResources" style="display: none;">
+                    <div class="pinned-header">
+                        <i class="fas fa-thumbtack"></i>
+                        <span>Ressources épinglées</span>
+                    </div>
+                    <div class="pinned-list" id="pinnedList">
+                        <!-- Les ressources épinglées seront chargées ici -->
+                    </div>
+                </div>
+
+                <!-- Navigation des dossiers -->
+                <div class="folder-navigation" id="folderNavigation" style="display: none;">
+                    <div class="breadcrumb" id="resourceBreadcrumb">
+                        <span class="breadcrumb-item active" data-path="" onclick="navigateToFolder('')">
+                            <i class="fas fa-home"></i> Racine
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Arborescence des ressources -->
+                <div class="resources-tree" id="resourcesTree" style="display: none;">
+                    <!-- L'arborescence sera chargée ici -->
+                </div>
+
+                <!-- État vide -->
+                <div class="no-resources" id="noResources" style="display: none;">
+                    <i class="fas fa-folder-open"></i>
+                    <p>Aucune ressource dans cette classe</p>
+                    <p style="font-size: 0.875rem; margin-top: 0.5rem;">
+                        Utilisez le gestionnaire de fichiers pour ajouter des ressources à cette classe
+                    </p>
                 </div>
             </div>
         </div>
@@ -634,6 +910,115 @@
     <span id="savingText">Sauvegarde...</span>
 </div>
 
+<!-- Modal Viewer/Annotateur -->
+<div class="file-viewer-modal" id="fileViewerModal">
+    <div class="viewer-header">
+        <div class="viewer-title">
+            <span id="viewerFileName"></span>
+            <span id="pageInfo" class="page-info">Page 1 / 1</span>
+        </div>
+        <div class="viewer-tools">
+            <!-- Navigation PDF -->
+            <div class="tool-group">
+                <button class="tool-btn" id="prevPageBtn" onclick="previousPage()" title="Page précédente">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button class="tool-btn" id="nextPageBtn" onclick="nextPage()" title="Page suivante">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button class="tool-btn" onclick="togglePageThumbnails()" title="Afficher les pages">
+                    <i class="fas fa-th-large"></i>
+                </button>
+            </div>
+            
+            <!-- Zoom -->
+            <div class="tool-group">
+                <button class="tool-btn" onclick="zoomOut()" title="Zoom arrière">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <span id="zoomLevel">100%</span>
+                <button class="tool-btn" onclick="zoomIn()" title="Zoom avant">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+                <button class="tool-btn" onclick="resetZoom()" title="Réinitialiser zoom">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+            
+            <!-- Outils de dessin -->
+            <div class="tool-group">
+                <button class="tool-btn active" id="penTool" title="Stylo" data-tool="pen">
+                    <i class="fas fa-pen"></i>
+                </button>
+                <button class="tool-btn" id="highlighterTool" title="Surligneur" data-tool="highlighter">
+                    <i class="fas fa-highlighter"></i>
+                </button>
+                <button class="tool-btn" id="eraserTool" title="Gomme" data-tool="eraser">
+                    <i class="fas fa-eraser"></i>
+                </button>
+            </div>
+            
+            <!-- Couleurs -->
+            <div class="color-picker-container">
+                <div class="preset-colors">
+                    <button class="color-btn active" data-color="#000000" style="background-color: #000000" title="Noir"></button>
+                    <button class="color-btn" data-color="#EF4444" style="background-color: #EF4444" title="Rouge"></button>
+                    <button class="color-btn" data-color="#F59E0B" style="background-color: #F59E0B" title="Orange"></button>
+                    <button class="color-btn" data-color="#EAB308" style="background-color: #EAB308" title="Jaune"></button>
+                    <button class="color-btn" data-color="#22C55E" style="background-color: #22C55E" title="Vert"></button>
+                    <button class="color-btn" data-color="#3B82F6" style="background-color: #3B82F6" title="Bleu"></button>
+                </div>
+                <input type="color" id="annotationColor" value="#000000" title="Couleur personnalisée">
+            </div>
+            
+            <div class="stroke-width-container">
+                <input type="range" id="strokeWidth" min="1" max="20" value="3" title="Épaisseur">
+                <span id="strokeWidthValue">3</span>
+            </div>
+            
+            <!-- Actions -->
+            <div class="tool-group">
+                <button class="tool-btn" id="undoBtn" title="Annuler">
+                    <i class="fas fa-undo"></i>
+                </button>
+                <button class="tool-btn" id="clearAllBtn" title="Tout effacer">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        <button class="close-viewer" onclick="closeFileViewer()">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div class="viewer-content">
+        <!-- Barre latérale des pages -->
+        <div class="page-sidebar" id="pageSidebar">
+            <div class="sidebar-header">
+                <h6>Pages</h6>
+                <button class="close-sidebar" onclick="togglePageThumbnails()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="page-thumbnails" id="pageThumbnails">
+                <!-- Les miniatures seront générées ici -->
+            </div>
+        </div>
+        
+        <!-- Zone d'affichage principal -->
+        <div class="viewer-container" id="viewerContainer">
+            <div class="pdf-viewer-container">
+                <canvas id="pdfCanvas" class="pdf-canvas"></canvas>
+                <canvas id="annotationCanvas" class="annotation-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="viewer-footer">
+        <div class="save-status" id="saveStatus">
+            <i class="fas fa-check"></i> Sauvegardé automatiquement
+        </div>
+    </div>
+</div>
+
 <script>
 // Variables globales
 const lessonDate = '{{ lesson_date.strftime("%Y-%m-%d") }}';
@@ -642,6 +1027,83 @@ const classroomId = {{ lesson.classroom_id }};
 let isEditingPlanning = false;
 let checklistStates = {{ (planning.get_checklist_states() if planning else {}) | tojson }};
 let checkboxUpdateTimeout = null;
+let currentLayout = 'default';
+
+// Fonction pour changer la disposition
+function changeLayout(layout) {
+    console.log('Changement de disposition vers:', layout);
+    currentLayout = layout;
+    
+    const lessonMain = document.querySelector('.lesson-main');
+    const layoutButtons = document.querySelectorAll('.layout-btn');
+    const body = document.body;
+    
+    if (!lessonMain) {
+        console.error('Element .lesson-main non trouvé');
+        return;
+    }
+    
+    // Supprimer toutes les classes de layout
+    lessonMain.classList.remove('layout-planning-focus', 'layout-resources-focus', 'layout-attendance-focus', 'layout-vertical');
+    
+    // Ajouter la nouvelle classe si ce n'est pas default
+    if (layout !== 'default') {
+        const className = `layout-${layout}`;
+        console.log('Ajout de la classe:', className);
+        lessonMain.classList.add(className);
+        
+        console.log('Classes actuelles:', lessonMain.className);
+        
+        // Vérifier les styles calculés
+        const computedStyle = window.getComputedStyle(lessonMain);
+        console.log('Grid template columns calculé:', computedStyle.gridTemplateColumns);
+        console.log('Largeur écran:', window.innerWidth + 'px');
+    } else {
+        console.log('Disposition par défaut - aucune classe ajoutée');
+        const computedStyle = window.getComputedStyle(lessonMain);
+        console.log('Grid template columns par défaut:', computedStyle.gridTemplateColumns);
+    }
+    
+    // Mettre à jour les boutons actifs
+    layoutButtons.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.layout === layout) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Sauvegarder la préférence
+    localStorage.setItem('lessonLayout', layout);
+    
+    // Animation de confirmation visuelle
+    lessonMain.style.transform = 'scale(0.98)';
+    setTimeout(() => {
+        lessonMain.style.transform = 'scale(1)';
+    }, 150);
+}
+
+// Initialiser les contrôles de disposition
+function initLayoutControls() {
+    console.log('Initialisation des contrôles de disposition');
+    
+    // Charger la disposition sauvegardée
+    const savedLayout = localStorage.getItem('lessonLayout') || 'default';
+    console.log('Disposition sauvegardée:', savedLayout);
+    changeLayout(savedLayout);
+    
+    // Ajouter les event listeners
+    const layoutButtons = document.querySelectorAll('.layout-btn');
+    console.log('Boutons de disposition trouvés:', layoutButtons.length);
+    
+    layoutButtons.forEach((btn, index) => {
+        console.log(`Bouton ${index}:`, btn.dataset.layout);
+        btn.addEventListener('click', () => {
+            const layout = btn.dataset.layout;
+            console.log('Clic sur bouton:', layout);
+            changeLayout(layout);
+        });
+    });
+}
 
 // Fonction pour basculer l'édition de la planification
 function togglePlanningEdit() {
@@ -665,10 +1127,20 @@ function togglePlanningEdit() {
     } else {
         // Passer en mode lecture
         planningEdit.style.display = 'none';
-        if (planningView && document.getElementById('planningTitleDisplay').textContent !== 'Cours sans titre') {
-            planningView.style.display = 'block';
-        } else if (emptyPlanning) {
-            emptyPlanning.style.display = 'block';
+        
+        // Vérifier s'il y a du contenu de planification en regardant le titre
+        const titleDisplay = document.getElementById('planningTitleDisplay');
+        const hasPlanning = titleDisplay && titleDisplay.textContent.trim() && 
+                           titleDisplay.textContent !== 'Cours sans titre';
+        
+        if (hasPlanning) {
+            // Il y a une planification, afficher la vue de lecture
+            if (planningView) planningView.style.display = 'block';
+            if (emptyPlanning) emptyPlanning.style.display = 'none';
+        } else {
+            // Pas de planification, afficher l'état vide
+            if (planningView) planningView.style.display = 'none';
+            if (emptyPlanning) emptyPlanning.style.display = 'block';
         }
         editBtnText.textContent = 'Modifier';
     }
@@ -1009,6 +1481,9 @@ function showQuickNotification(element, status) {
 
 // Permettre d'entrer le retard avec Enter
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser les contrôles de disposition
+    initLayoutControls();
+    
     // Initialiser les statistiques
     updateStats();
 
@@ -1057,6 +1532,358 @@ function updateStats() {
     document.getElementById('lateCount').textContent = late;
 }
 
+// Variables pour la gestion des ressources
+let currentFolderPath = '';
+let classResources = [];
+
+// Charger les ressources de la classe au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    loadClassResources();
+});
+
+// Fonction pour charger les ressources de la classe
+async function loadClassResources() {
+    try {
+        showResourcesLoading(true);
+        
+        const response = await fetch(`{{ url_for('planning.get_class_resources', classroom_id=0) }}`.replace('0', classroomId));
+        const result = await response.json();
+        
+        if (result.success) {
+            classResources = result.files || [];
+            renderResources(result.pinned_files || [], classResources);
+        } else {
+            showNoResources();
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des ressources:', error);
+        showNoResources();
+    } finally {
+        showResourcesLoading(false);
+    }
+}
+
+// Fonction pour afficher/masquer le chargement
+function showResourcesLoading(show) {
+    const loadingElement = document.getElementById('resourcesLoading');
+    if (loadingElement) {
+        loadingElement.style.display = show ? 'block' : 'none';
+    }
+}
+
+// Fonction pour afficher l'état vide
+function showNoResources() {
+    const noResourcesElement = document.getElementById('noResources');
+    const pinnedElement = document.getElementById('pinnedResources');
+    const navigationElement = document.getElementById('folderNavigation');
+    const treeElement = document.getElementById('resourcesTree');
+    
+    if (noResourcesElement) noResourcesElement.style.display = 'block';
+    if (pinnedElement) pinnedElement.style.display = 'none';
+    if (navigationElement) navigationElement.style.display = 'none';
+    if (treeElement) treeElement.style.display = 'none';
+}
+
+// Fonction pour rendre les ressources
+function renderResources(pinnedFiles, allFiles) {
+    const pinnedElement = document.getElementById('pinnedResources');
+    const navigationElement = document.getElementById('folderNavigation');
+    const treeElement = document.getElementById('resourcesTree');
+    const noResourcesElement = document.getElementById('noResources');
+    
+    // Masquer l'état vide
+    if (noResourcesElement) noResourcesElement.style.display = 'none';
+    
+    // Afficher les ressources épinglées
+    if (pinnedFiles && pinnedFiles.length > 0) {
+        renderPinnedResources(pinnedFiles);
+        if (pinnedElement) pinnedElement.style.display = 'block';
+    } else {
+        if (pinnedElement) pinnedElement.style.display = 'none';
+    }
+    
+    // À la racine, passer tous les fichiers à renderResourceTree pour qu'elle puisse extraire les dossiers
+    // Dans un dossier spécifique, filtrer seulement les fichiers de ce dossier
+    let filesToDisplay;
+    if (!currentFolderPath) {
+        // À la racine : passer tous les fichiers
+        filesToDisplay = allFiles;
+    } else {
+        // Dans un dossier : filtrer
+        filesToDisplay = filterFilesByFolder(allFiles, currentFolderPath);
+    }
+    
+    // Afficher la navigation
+    renderBreadcrumb();
+    if (navigationElement) navigationElement.style.display = 'block';
+    
+    // Afficher l'arborescence
+    renderResourceTree(filesToDisplay);
+    if (treeElement) treeElement.style.display = 'block';
+}
+
+// Fonction pour rendre les ressources épinglées
+function renderPinnedResources(pinnedFiles) {
+    const pinnedList = document.getElementById('pinnedList');
+    if (!pinnedList) return;
+    
+    pinnedList.innerHTML = pinnedFiles.map(file => {
+        const isAnnotatable = ['pdf', 'png', 'jpg', 'jpeg'].includes(file.file_type.toLowerCase());
+        
+        return `
+            <div class="resource-item pinned" data-file-id="${file.id}">
+                <div class="resource-icon ${getResourceIconClass(file.file_type)}">
+                    <i class="fas ${getResourceIcon(file.file_type)}"></i>
+                </div>
+                <div class="resource-info">
+                    <div class="resource-main">
+                        <div class="resource-name ${isAnnotatable ? 'clickable-file' : ''}" 
+                             ${isAnnotatable ? `onclick="openFileViewer(${file.id}, '${file.original_filename}', '${file.file_type}')"` : ''}>
+                            ${file.original_filename}
+                        </div>
+                        <div class="resource-meta">
+                            <span>${formatFileSize(file.file_size)}</span>
+                            <span>Épinglé</span>
+                            ${isAnnotatable ? '<span class="annotatable-badge">✏️ Annotable</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="resource-actions">
+                        <button class="resource-action-btn pinned" onclick="togglePinResource(${file.id})" title="Désépingler">
+                            <i class="fas fa-thumbtack"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Fonction pour filtrer les fichiers par dossier
+function filterFilesByFolder(files, folderPath) {
+    return files.filter(file => {
+        if (!folderPath) {
+            // Racine : fichiers sans dossier ou dossier vide
+            return !file.folder_path || file.folder_path === '';
+        } else {
+            // Dossier spécifique : fichiers dans ce dossier exact OU dans ses sous-dossiers
+            return file.folder_path === folderPath || 
+                   (file.folder_path && file.folder_path.startsWith(folderPath + '/'));
+        }
+    });
+}
+
+// Fonction pour rendre le fil d'ariane
+function renderBreadcrumb() {
+    const breadcrumb = document.getElementById('resourceBreadcrumb');
+    if (!breadcrumb) return;
+    
+    let html = `
+        <span class="breadcrumb-item ${currentFolderPath === '' ? 'active' : ''}" 
+              data-path="" onclick="navigateToFolder('')">
+            <i class="fas fa-home"></i> Racine
+        </span>
+    `;
+    
+    if (currentFolderPath) {
+        const pathParts = currentFolderPath.split('/');
+        let currentPath = '';
+        
+        pathParts.forEach((part, index) => {
+            currentPath += (index > 0 ? '/' : '') + part;
+            const isLast = index === pathParts.length - 1;
+            
+            html += `
+                <span class="breadcrumb-separator">/</span>
+                <span class="breadcrumb-item ${isLast ? 'active' : ''}" 
+                      data-path="${currentPath}" onclick="navigateToFolder('${currentPath}')">
+                    ${part}
+                </span>
+            `;
+        });
+    }
+    
+    breadcrumb.innerHTML = html;
+}
+
+// Fonction pour rendre l'arborescence des ressources
+function renderResourceTree(files) {
+    const treeElement = document.getElementById('resourcesTree');
+    if (!treeElement) return;
+    
+    // Organiser les fichiers par dossiers et fichiers
+    const folders = new Set();
+    const regularFiles = [];
+    
+    files.forEach(file => {
+        if (file.folder_path) {
+            if (!currentFolderPath) {
+                // À la racine : extraire le premier niveau de dossier
+                const topLevelFolder = file.folder_path.split('/')[0];
+                folders.add(topLevelFolder);
+            } else if (file.folder_path.startsWith(currentFolderPath + '/') || file.folder_path === currentFolderPath) {
+                // Dans un dossier : vérifier si le fichier est exactement dans ce dossier ou dans un sous-dossier
+                if (file.folder_path === currentFolderPath) {
+                    // Fichier directement dans ce dossier
+                    regularFiles.push(file);
+                } else {
+                    // Extraire le dossier suivant
+                    const relativePath = file.folder_path.substring(currentFolderPath.length + 1);
+                    const nextFolder = relativePath.split('/')[0];
+                    if (nextFolder && nextFolder !== '') {
+                        folders.add(nextFolder);
+                    }
+                }
+            }
+        } else {
+            // Fichier sans dossier (directement à la racine)
+            if (!currentFolderPath) {
+                regularFiles.push(file);
+            }
+        }
+    });
+    
+    let html = '';
+    
+    // Afficher les dossiers
+    Array.from(folders).sort().forEach(folderName => {
+        const folderPath = currentFolderPath ? `${currentFolderPath}/${folderName}` : folderName;
+        html += `
+            <div class="resource-item folder" onclick="navigateToFolder('${folderPath}')">
+                <div class="resource-icon folder">
+                    <i class="fas fa-folder"></i>
+                </div>
+                <div class="resource-info">
+                    <div class="resource-main">
+                        <div class="resource-name">${folderName}</div>
+                        <div class="resource-meta">
+                            <span>Dossier</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    // Afficher les fichiers
+    regularFiles.forEach(file => {
+        const isPinned = file.is_pinned;
+        const isAnnotatable = ['pdf', 'png', 'jpg', 'jpeg'].includes(file.file_type.toLowerCase());
+        
+        html += `
+            <div class="resource-item ${isPinned ? 'pinned' : ''}" data-file-id="${file.id}">
+                <div class="resource-icon ${getResourceIconClass(file.file_type)}">
+                    <i class="fas ${getResourceIcon(file.file_type)}"></i>
+                </div>
+                <div class="resource-info">
+                    <div class="resource-main">
+                        <div class="resource-name ${isAnnotatable ? 'clickable-file' : ''}" 
+                             ${isAnnotatable ? `onclick="openFileViewer(${file.id}, '${file.original_filename}', '${file.file_type}')"` : ''}>
+                            ${file.original_filename}
+                        </div>
+                        <div class="resource-meta">
+                            <span>${formatFileSize(file.file_size)}</span>
+                            ${file.uploaded_at ? `<span>${formatDate(file.uploaded_at)}</span>` : ''}
+                            ${isAnnotatable ? '<span class="annotatable-badge">✏️ Annotable</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="resource-actions">
+                        <button class="resource-action-btn ${isPinned ? 'pinned' : ''}" 
+                                onclick="togglePinResource(${file.id})" 
+                                title="${isPinned ? 'Désépingler' : 'Épingler'}">
+                            <i class="fas fa-thumbtack"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    treeElement.innerHTML = html || '<p style="text-align: center; color: #6B7280; padding: 2rem;">Aucun fichier dans ce dossier</p>';
+}
+
+// Fonction pour naviguer vers un dossier
+function navigateToFolder(folderPath) {
+    currentFolderPath = folderPath;
+    
+    // Utiliser la même logique que dans renderResources
+    let filesToDisplay;
+    if (!currentFolderPath) {
+        // À la racine : passer tous les fichiers
+        filesToDisplay = classResources;
+    } else {
+        // Dans un dossier : filtrer
+        filesToDisplay = filterFilesByFolder(classResources, currentFolderPath);
+    }
+    
+    renderBreadcrumb();
+    renderResourceTree(filesToDisplay);
+}
+
+// Fonction pour épingler/désépingler une ressource
+async function togglePinResource(fileId) {
+    try {
+        const response = await fetch('{{ url_for("planning.toggle_pin_resource") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                file_id: fileId
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Recharger les ressources pour refléter les changements
+            await loadClassResources();
+        } else {
+            console.error('Erreur lors de l\'épinglage:', result.message);
+        }
+    } catch (error) {
+        console.error('Erreur lors de l\'épinglage:', error);
+    }
+}
+
+// Fonction pour actualiser les ressources
+function refreshResources() {
+    loadClassResources();
+}
+
+// Fonctions utilitaires
+function getResourceIcon(fileType) {
+    switch(fileType) {
+        case 'pdf': return 'fa-file-pdf';
+        case 'png':
+        case 'jpg':
+        case 'jpeg': return 'fa-file-image';
+        default: return 'fa-file';
+    }
+}
+
+function getResourceIconClass(fileType) {
+    switch(fileType) {
+        case 'pdf': return 'pdf';
+        case 'png':
+        case 'jpg':
+        case 'jpeg': return 'image';
+        default: return '';
+    }
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR');
+}
+
 {% if is_current %}
 // Gestion du timer
 let timerInterval;
@@ -1101,6 +1928,1278 @@ window.addEventListener('beforeunload', () => {
     clearInterval(timerInterval);
 });
 {% endif %}
+
+// =================== SYSTÈME D'ANNOTATION ===================
+
+// Variables globales pour l'annotation améliorée
+let currentFileId = null;
+let currentAnnotationTool = 'pen';
+let currentColor = '#000000';
+let currentStrokeWidth = 3;
+let isDrawing = false;
+let annotations = [];
+let currentStroke = [];
+let saveTimeout = null;
+
+// Variables PDF
+let pdfDoc = null;
+let currentPageNum = 1;
+let pageIsRendering = false;
+let pageNumIsPending = null;
+let currentScale = 1.0;
+let pdfCanvas = null;
+let pdfCtx = null;
+let annotationCanvas = null;
+let annotationCtx = null;
+
+// Charger PDF.js si pas déjà fait
+if (typeof pdfjsLib === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.onload = () => {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    };
+    document.head.appendChild(script);
+}
+
+// Ouvrir le viewer de fichier amélioré
+async function openFileViewer(fileId, filename, fileType) {
+    currentFileId = fileId;
+    
+    // Réinitialiser les variables
+    currentPageNum = 1;
+    currentScale = 1.0;
+    annotations = [];
+    
+    // Afficher le modal
+    const modal = document.getElementById('fileViewerModal');
+    const filenameElement = document.getElementById('viewerFileName');
+    
+    filenameElement.textContent = filename;
+    modal.classList.add('show');
+    
+    // Initialiser les canvas
+    initializeCanvases();
+    
+    // Charger le fichier et les annotations
+    try {
+        if (fileType.toLowerCase() === 'pdf') {
+            await loadPDF(fileId);
+        } else if (['png', 'jpg', 'jpeg'].includes(fileType.toLowerCase())) {
+            await loadImage(fileId);
+        }
+        
+        await loadAnnotations(fileId);
+        setupAnnotationTools();
+        
+    } catch (error) {
+        console.error('Erreur lors du chargement du fichier:', error);
+        showError('Erreur lors du chargement du fichier');
+    }
+}
+
+// Initialiser les canvas
+function initializeCanvases() {
+    pdfCanvas = document.getElementById('pdfCanvas');
+    annotationCanvas = document.getElementById('annotationCanvas');
+    
+    if (pdfCanvas && annotationCanvas) {
+        pdfCtx = pdfCanvas.getContext('2d');
+        annotationCtx = annotationCanvas.getContext('2d');
+        
+        // Améliorer la qualité du rendu
+        pdfCtx.imageSmoothingEnabled = true;
+        pdfCtx.imageSmoothingQuality = 'high';
+        annotationCtx.imageSmoothingEnabled = true;
+        annotationCtx.imageSmoothingQuality = 'high';
+    }
+}
+
+// Charger PDF.js de manière asynchrone
+function loadPDFJS() {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        script.onload = () => {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            resolve();
+        };
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+// Charger un PDF avec qualité améliorée
+async function loadPDF(fileId) {
+    const pdfUrl = `/file_manager/serve_file/${fileId}`;
+    
+    // Vérifier que PDF.js est chargé
+    if (typeof pdfjsLib === 'undefined') {
+        await loadPDFJS();
+    }
+    
+    try {
+        // Charger le PDF avec qualité améliorée
+        const loadingTask = pdfjsLib.getDocument({
+            url: pdfUrl,
+            cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+            cMapPacked: true,
+            useSystemFonts: true
+        });
+        
+        pdfDoc = await loadingTask.promise;
+        console.log('PDF chargé, nombre de pages:', pdfDoc.numPages);
+        
+        // Mettre à jour l'interface
+        updatePageInfo();
+        updateNavigationButtons();
+        
+        // Générer les miniatures
+        await generateThumbnails();
+        
+        // Rendre la première page
+        await renderPage(currentPageNum);
+        
+    } catch (error) {
+        console.error('Erreur lors du chargement du PDF:', error);
+        throw error;
+    }
+}
+
+// Rendre une page PDF
+async function renderPage(pageNum) {
+    if (pageIsRendering) {
+        pageNumIsPending = pageNum;
+        return;
+    }
+    
+    pageIsRendering = true;
+    
+    try {
+        const page = await pdfDoc.getPage(pageNum);
+        
+        // Calculer la viewport avec une échelle plus élevée pour la qualité
+        const baseScale = 2.0; // Base scale pour la qualité
+        const displayScale = currentScale;
+        const renderScale = baseScale * displayScale;
+        
+        const viewport = page.getViewport({ scale: renderScale });
+        
+        // Configurer les canvas
+        pdfCanvas.width = viewport.width;
+        pdfCanvas.height = viewport.height;
+        annotationCanvas.width = viewport.width;
+        annotationCanvas.height = viewport.height;
+        
+        // Appliquer le scale CSS pour l'affichage
+        const cssScale = displayScale / baseScale;
+        const transform = `scale(${cssScale})`;
+        pdfCanvas.style.transform = transform;
+        annotationCanvas.style.transform = transform;
+        pdfCanvas.style.transformOrigin = '0 0';
+        annotationCanvas.style.transformOrigin = '0 0';
+        
+        // Ajuster la taille du conteneur
+        const container = pdfCanvas.parentElement;
+        container.style.width = (viewport.width * cssScale) + 'px';
+        container.style.height = (viewport.height * cssScale) + 'px';
+        
+        // Rendre la page
+        const renderContext = {
+            canvasContext: pdfCtx,
+            viewport: viewport
+        };
+        
+        await page.render(renderContext).promise;
+        
+        // Redessiner les annotations
+        redrawAnnotations();
+        
+        pageIsRendering = false;
+        
+        // Rendre une page en attente si nécessaire
+        if (pageNumIsPending !== null) {
+            const pending = pageNumIsPending;
+            pageNumIsPending = null;
+            await renderPage(pending);
+        }
+        
+    } catch (error) {
+        console.error('Erreur lors du rendu de la page:', error);
+        pageIsRendering = false;
+    }
+}
+
+// Charger une image avec qualité améliorée
+async function loadImage(fileId) {
+    const imageUrl = `/file_manager/serve_file/${fileId}`;
+    
+    try {
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = imageUrl;
+        });
+        
+        // Configurer les canvas pour l'image
+        const scale = Math.min(800 / img.width, 600 / img.height, 2.0);
+        const width = img.width * scale;
+        const height = img.height * scale;
+        
+        pdfCanvas.width = width;
+        pdfCanvas.height = height;
+        annotationCanvas.width = width;
+        annotationCanvas.height = height;
+        
+        // Dessiner l'image avec anti-aliasing
+        pdfCtx.imageSmoothingEnabled = true;
+        pdfCtx.imageSmoothingQuality = 'high';
+        pdfCtx.drawImage(img, 0, 0, width, height);
+        
+        // Masquer les contrôles PDF
+        document.getElementById('prevPageBtn').style.display = 'none';
+        document.getElementById('nextPageBtn').style.display = 'none';
+        document.getElementById('pageInfo').style.display = 'none';
+        
+    } catch (error) {
+        console.error('Erreur lors du chargement de l\'image:', error);
+        throw error;
+    }
+}
+
+// ===== FONCTIONS DE NAVIGATION PDF =====
+
+// Navigation entre pages
+function previousPage() {
+    if (currentPageNum <= 1 || !pdfDoc) return;
+    currentPageNum--;
+    renderPage(currentPageNum);
+    updatePageInfo();
+    updateNavigationButtons();
+    updateActiveThumbnail();
+}
+
+function nextPage() {
+    if (currentPageNum >= pdfDoc.numPages || !pdfDoc) return;
+    currentPageNum++;
+    renderPage(currentPageNum);
+    updatePageInfo();
+    updateNavigationButtons();
+    updateActiveThumbnail();
+}
+
+function goToPage(pageNum) {
+    if (pageNum < 1 || pageNum > pdfDoc.numPages) return;
+    currentPageNum = pageNum;
+    renderPage(currentPageNum);
+    updatePageInfo();
+    updateNavigationButtons();
+    updateActiveThumbnail();
+}
+
+// Gestion du zoom
+function zoomIn() {
+    currentScale = Math.min(currentScale * 1.25, 3.0);
+    updateZoomDisplay();
+    if (pdfDoc) renderPage(currentPageNum);
+}
+
+function zoomOut() {
+    currentScale = Math.max(currentScale / 1.25, 0.5);
+    updateZoomDisplay();
+    if (pdfDoc) renderPage(currentPageNum);
+}
+
+function resetZoom() {
+    currentScale = 1.0;
+    updateZoomDisplay();
+    if (pdfDoc) renderPage(currentPageNum);
+}
+
+function updateZoomDisplay() {
+    document.getElementById('zoomLevel').textContent = Math.round(currentScale * 100) + '%';
+}
+
+// Mettre à jour les informations de page
+function updatePageInfo() {
+    if (pdfDoc) {
+        document.getElementById('pageInfo').textContent = `Page ${currentPageNum} / ${pdfDoc.numPages}`;
+    }
+}
+
+function updateNavigationButtons() {
+    if (!pdfDoc) return;
+    
+    document.getElementById('prevPageBtn').disabled = currentPageNum <= 1;
+    document.getElementById('nextPageBtn').disabled = currentPageNum >= pdfDoc.numPages;
+}
+
+// Générer les miniatures
+async function generateThumbnails() {
+    if (!pdfDoc) return;
+    
+    const thumbnailsContainer = document.getElementById('pageThumbnails');
+    thumbnailsContainer.innerHTML = '';
+    
+    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+        const thumbnailItem = document.createElement('div');
+        thumbnailItem.className = 'thumbnail-item';
+        if (pageNum === currentPageNum) thumbnailItem.classList.add('active');
+        
+        const thumbnailCanvas = document.createElement('canvas');
+        thumbnailCanvas.className = 'thumbnail-canvas';
+        thumbnailCanvas.onclick = () => goToPage(pageNum);
+        
+        try {
+            const page = await pdfDoc.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 0.3 });
+            
+            thumbnailCanvas.width = viewport.width;
+            thumbnailCanvas.height = viewport.height;
+            
+            const thumbnailCtx = thumbnailCanvas.getContext('2d');
+            await page.render({
+                canvasContext: thumbnailCtx,
+                viewport: viewport
+            }).promise;
+            
+        } catch (error) {
+            console.error(`Erreur lors de la génération de la miniature ${pageNum}:`, error);
+        }
+        
+        const pageLabel = document.createElement('div');
+        pageLabel.textContent = pageNum;
+        pageLabel.style.textAlign = 'center';
+        pageLabel.style.color = '#e2e8f0';
+        pageLabel.style.fontSize = '0.8rem';
+        pageLabel.style.marginTop = '0.25rem';
+        
+        thumbnailItem.appendChild(thumbnailCanvas);
+        thumbnailItem.appendChild(pageLabel);
+        thumbnailsContainer.appendChild(thumbnailItem);
+    }
+}
+
+function updateActiveThumbnail() {
+    document.querySelectorAll('.thumbnail-item').forEach((item, index) => {
+        item.classList.toggle('active', index + 1 === currentPageNum);
+    });
+}
+
+// Basculer l'affichage des miniatures
+function togglePageThumbnails() {
+    const sidebar = document.getElementById('pageSidebar');
+    sidebar.classList.toggle('show');
+}
+
+// ===== SYSTÈME D'ANNOTATION AMÉLIORÉ =====
+
+// Système d'annotation amélioré
+function setupAnnotationTools() {
+    if (!annotationCanvas) return;
+    
+    // Événements de dessin
+    annotationCanvas.addEventListener('mousedown', startDrawing);
+    annotationCanvas.addEventListener('mousemove', draw);
+    annotationCanvas.addEventListener('mouseup', stopDrawing);
+    annotationCanvas.addEventListener('mouseout', stopDrawing);
+    
+    // Support tactile
+    annotationCanvas.addEventListener('touchstart', handleTouch, { passive: false });
+    annotationCanvas.addEventListener('touchmove', handleTouch, { passive: false });
+    annotationCanvas.addEventListener('touchend', handleTouch, { passive: false });
+    
+    // Événements des outils
+    setupToolEvents();
+}
+
+function setupToolEvents() {
+    // Outils de dessin
+    document.querySelectorAll('[data-tool]').forEach(btn => {
+        btn.addEventListener('click', () => setAnnotationTool(btn.dataset.tool));
+    });
+    
+    // Couleurs
+    document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.addEventListener('click', () => setAnnotationColor(btn.dataset.color));
+    });
+    
+    document.getElementById('annotationColor').addEventListener('change', (e) => {
+        setAnnotationColor(e.target.value);
+    });
+    
+    // Épaisseur
+    const strokeWidthSlider = document.getElementById('strokeWidth');
+    const strokeWidthValue = document.getElementById('strokeWidthValue');
+    
+    strokeWidthSlider.addEventListener('input', (e) => {
+        currentStrokeWidth = parseInt(e.target.value);
+        strokeWidthValue.textContent = currentStrokeWidth;
+    });
+    
+    // Actions
+    document.getElementById('undoBtn').addEventListener('click', undo);
+    document.getElementById('clearAllBtn').addEventListener('click', clearAll);
+}
+
+// Changer d'outil d'annotation
+function setAnnotationTool(tool) {
+    currentAnnotationTool = tool;
+    
+    // Mettre à jour l'interface
+    document.querySelectorAll('[data-tool]').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    document.querySelector(`[data-tool="${tool}"]`).classList.add('active');
+    
+    // Changer le curseur
+    if (annotationCanvas) {
+        annotationCanvas.style.cursor = tool === 'eraser' ? 'grab' : 'crosshair';
+    }
+}
+
+// Changer de couleur
+function setAnnotationColor(color) {
+    currentColor = color;
+    
+    // Mettre à jour l'interface
+    document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    const colorBtn = document.querySelector(`[data-color="${color}"]`);
+    if (colorBtn) {
+        colorBtn.classList.add('active');
+    }
+    
+    document.getElementById('annotationColor').value = color;
+}
+
+// Commencer à dessiner
+function startDrawing(e) {
+    if (!annotationCtx) return;
+    
+    isDrawing = true;
+    currentStroke = [];
+    
+    const rect = annotationCanvas.getBoundingClientRect();
+    const scaleX = annotationCanvas.width / rect.width;
+    const scaleY = annotationCanvas.height / rect.height;
+    
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    currentStroke.push({ x, y });
+    
+    if (currentAnnotationTool === 'eraser') {
+        eraseAt(x, y);
+    } else {
+        annotationCtx.beginPath();
+        annotationCtx.moveTo(x, y);
+    }
+}
+
+// Dessiner
+function draw(e) {
+    if (!isDrawing || !annotationCtx) return;
+    
+    const rect = annotationCanvas.getBoundingClientRect();
+    const scaleX = annotationCanvas.width / rect.width;
+    const scaleY = annotationCanvas.height / rect.height;
+    
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    currentStroke.push({ x, y });
+    
+    if (currentAnnotationTool === 'eraser') {
+        eraseAt(x, y);
+        return;
+    }
+    
+    // Configurer le style selon l'outil
+    if (currentAnnotationTool === 'pen') {
+        annotationCtx.globalCompositeOperation = 'source-over';
+        annotationCtx.strokeStyle = currentColor;
+        annotationCtx.lineWidth = currentStrokeWidth * (currentScale || 1);
+        annotationCtx.lineCap = 'round';
+        annotationCtx.lineJoin = 'round';
+        annotationCtx.globalAlpha = 1.0;
+    } else if (currentAnnotationTool === 'highlighter') {
+        annotationCtx.globalCompositeOperation = 'multiply';
+        annotationCtx.strokeStyle = currentColor;
+        annotationCtx.lineWidth = currentStrokeWidth * 3 * (currentScale || 1);
+        annotationCtx.lineCap = 'round';
+        annotationCtx.lineJoin = 'round';
+        annotationCtx.globalAlpha = 0.3;
+    }
+    
+    annotationCtx.lineTo(x, y);
+    annotationCtx.stroke();
+    
+    if (currentAnnotationTool === 'highlighter') {
+        annotationCtx.globalAlpha = 1.0;
+    }
+}
+
+// Fonction d'effacement améliorée
+function eraseAt(x, y) {
+    const eraseRadius = currentStrokeWidth * 3 * (currentScale || 1);
+    
+    // Effacer dans un rayon autour du point
+    annotationCtx.save();
+    annotationCtx.globalCompositeOperation = 'destination-out';
+    annotationCtx.beginPath();
+    annotationCtx.arc(x, y, eraseRadius, 0, 2 * Math.PI);
+    annotationCtx.fill();
+    annotationCtx.restore();
+    
+    // Marquer les annotations comme effacées dans cette zone
+    annotations.forEach(annotation => {
+        if (annotation.page && annotation.page !== currentPageNum) return;
+        
+        annotation.points = annotation.points.filter(point => {
+            const distance = Math.sqrt(Math.pow(point.x - x, 2) + Math.pow(point.y - y, 2));
+            return distance > eraseRadius;
+        });
+    });
+    
+    // Supprimer les annotations vides
+    annotations = annotations.filter(annotation => annotation.points.length > 0);
+    
+    // Programmer la sauvegarde
+    scheduleAutoSave();
+}
+
+// Arrêter de dessiner
+function stopDrawing() {
+    if (!isDrawing) return;
+    
+    isDrawing = false;
+    
+    if (currentStroke.length > 0 && currentAnnotationTool !== 'eraser') {
+        const annotation = {
+            type: currentAnnotationTool,
+            color: currentColor,
+            strokeWidth: currentStrokeWidth,
+            points: [...currentStroke],
+            page: currentPageNum,
+            scale: currentScale,
+            timestamp: Date.now()
+        };
+        
+        annotations.push(annotation);
+        scheduleAutoSave();
+    }
+}
+
+// Gestion tactile améliorée
+function handleTouch(e) {
+    e.preventDefault();
+    
+    if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent(
+            e.type === 'touchstart' ? 'mousedown' : 
+            e.type === 'touchmove' ? 'mousemove' : 'mouseup', 
+            {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            }
+        );
+        
+        annotationCanvas.dispatchEvent(mouseEvent);
+    }
+}
+
+// Redessiner les annotations
+function redrawAnnotations() {
+    if (!annotationCtx) return;
+    
+    annotationCtx.clearRect(0, 0, annotationCanvas.width, annotationCanvas.height);
+    
+    annotations.forEach(annotation => {
+        if (annotation.points.length === 0) return;
+        if (annotation.page && annotation.page !== currentPageNum) return;
+        
+        annotationCtx.beginPath();
+        annotationCtx.moveTo(annotation.points[0].x, annotation.points[0].y);
+        
+        // Configurer le style
+        if (annotation.type === 'pen') {
+            annotationCtx.globalCompositeOperation = 'source-over';
+            annotationCtx.strokeStyle = annotation.color;
+            annotationCtx.lineWidth = annotation.strokeWidth * (currentScale || 1);
+            annotationCtx.lineCap = 'round';
+            annotationCtx.lineJoin = 'round';
+            annotationCtx.globalAlpha = 1.0;
+        } else if (annotation.type === 'highlighter') {
+            annotationCtx.globalCompositeOperation = 'multiply';
+            annotationCtx.strokeStyle = annotation.color;
+            annotationCtx.lineWidth = annotation.strokeWidth * 3 * (currentScale || 1);
+            annotationCtx.lineCap = 'round';
+            annotationCtx.lineJoin = 'round';
+            annotationCtx.globalAlpha = 0.3;
+        }
+        
+        // Dessiner le trait
+        for (let i = 1; i < annotation.points.length; i++) {
+            annotationCtx.lineTo(annotation.points[i].x, annotation.points[i].y);
+        }
+        
+        annotationCtx.stroke();
+        
+        if (annotation.type === 'highlighter') {
+            annotationCtx.globalAlpha = 1.0;
+        }
+    });
+}
+
+// Charger les annotations
+async function loadAnnotations(fileId) {
+    try {
+        const response = await fetch(`/planning/get_file_annotations/${fileId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            annotations = result.annotations || [];
+            redrawAnnotations();
+        } else {
+            annotations = [];
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des annotations:', error);
+        annotations = [];
+    }
+}
+
+// Annuler la dernière action
+function undo() {
+    if (annotations.length > 0) {
+        // Filtrer pour ne supprimer que les annotations de la page actuelle
+        const pageAnnotations = annotations.filter(annotation => annotation.page === currentPageNum);
+        if (pageAnnotations.length > 0) {
+            // Trouver l'index de la dernière annotation de cette page
+            const lastPageAnnotation = pageAnnotations[pageAnnotations.length - 1];
+            const lastIndex = annotations.indexOf(lastPageAnnotation);
+            annotations.splice(lastIndex, 1);
+            redrawAnnotations();
+            scheduleAutoSave();
+        }
+    }
+}
+
+// Tout effacer
+function clearAll() {
+    if (confirm('Êtes-vous sûr de vouloir effacer toutes les annotations de cette page ?')) {
+        annotations = annotations.filter(annotation => annotation.page !== currentPageNum);
+        redrawAnnotations();
+        scheduleAutoSave();
+    }
+}
+
+// Programmer la sauvegarde automatique
+function scheduleAutoSave() {
+    if (saveTimeout) {
+        clearTimeout(saveTimeout);
+    }
+    
+    const saveStatus = document.getElementById('saveStatus');
+    saveStatus.className = 'save-status saving';
+    saveStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde...';
+    
+    saveTimeout = setTimeout(saveAnnotations, 1000);
+}
+
+// Sauvegarder les annotations
+async function saveAnnotations() {
+    if (!currentFileId) return;
+    
+    try {
+        const response = await fetch('/planning/save_file_annotations', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                file_id: currentFileId,
+                annotations: annotations
+            })
+        });
+        
+        const result = await response.json();
+        const saveStatus = document.getElementById('saveStatus');
+        
+        if (result.success) {
+            saveStatus.className = 'save-status';
+            saveStatus.innerHTML = '<i class="fas fa-check"></i> Sauvegardé automatiquement';
+        } else {
+            saveStatus.className = 'save-status error';
+            saveStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erreur de sauvegarde';
+        }
+    } catch (error) {
+        console.error('Erreur lors de la sauvegarde:', error);
+        const saveStatus = document.getElementById('saveStatus');
+        saveStatus.className = 'save-status error';
+        saveStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erreur de connexion';
+    }
+}
+
+// Afficher une erreur
+function showError(message) {
+    const container = document.getElementById('viewerContainer');
+    container.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: #FC8181;">
+            <i class="fas fa-exclamation-triangle fa-2x"></i>
+            <p>${message}</p>
+            <button onclick="closeFileViewer()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #4F46E5; color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+                Fermer
+            </button>
+        </div>
+    `;
+}
+
+// Charger le contenu du fichier
+async function loadFileContent(fileId, fileType, container) {
+    container.innerHTML = '<div style="text-align: center; padding: 2rem;"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Chargement...</p></div>';
+    
+    console.log('Chargement du fichier:', {fileId, fileType});
+    
+    try {
+        if (fileType.toLowerCase() === 'pdf') {
+            await loadPDF(fileId, container);
+        } else if (['png', 'jpg', 'jpeg'].includes(fileType.toLowerCase())) {
+            await loadImage(fileId, container);
+        }
+        console.log('Fichier chargé avec succès');
+    } catch (error) {
+        console.error('Erreur détaillée lors du chargement:', error);
+        container.innerHTML = `
+            <div style="color: #FC8181; text-align: center; padding: 2rem;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                <h3>Erreur lors du chargement du fichier</h3>
+                <p style="margin-top: 1rem; font-size: 0.9rem;">${error.message}</p>
+                <button onclick="closeFileViewer()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #4F46E5; color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+                    Fermer
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Charger un PDF
+async function loadPDF(fileId, container) {
+    try {
+        console.log('Début du chargement PDF, fileId:', fileId);
+        
+        // Vérifier que PDF.js est chargé
+        if (typeof pdfjsLib === 'undefined') {
+            throw new Error('PDF.js n\'est pas chargé. Vérifiez les scripts.');
+        }
+        console.log('PDF.js est disponible');
+        
+        const url = `/file_manager/serve_file/${fileId}`;
+        console.log('URL de fetch:', url);
+        
+        const response = await fetch(url);
+        console.log('Réponse fetch:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        console.log('ArrayBuffer reçu, taille:', arrayBuffer.byteLength);
+        
+        if (arrayBuffer.byteLength === 0) {
+            throw new Error('Le fichier PDF est vide');
+        }
+        
+        console.log('Début du parsing PDF avec PDF.js');
+        const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+        console.log('PDF parsé avec succès, nombre de pages:', pdf.numPages);
+        
+        const page = await pdf.getPage(1); // Première page pour l'instant
+        console.log('Page 1 récupérée');
+        
+        const scale = 1.5;
+        const viewport = page.getViewport({scale});
+        
+        // Créer le canvas pour le PDF
+        const pdfCanvas = document.createElement('canvas');
+        const pdfCtx = pdfCanvas.getContext('2d');
+        
+        pdfCanvas.width = viewport.width;
+        pdfCanvas.height = viewport.height;
+        
+        await page.render({
+            canvasContext: pdfCtx,
+            viewport: viewport
+        }).promise;
+        
+        // Créer le conteneur
+        const pdfContainer = document.createElement('div');
+        pdfContainer.className = 'pdf-container';
+        pdfContainer.appendChild(pdfCanvas);
+        
+        // Créer le canvas d'annotation
+        canvas = document.createElement('canvas');
+        canvas.className = 'annotation-canvas';
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        ctx = canvas.getContext('2d');
+        
+        pdfContainer.appendChild(canvas);
+        container.innerHTML = '';
+        container.appendChild(pdfContainer);
+        
+    } catch (error) {
+        console.error('Erreur lors du chargement du PDF:', error);
+        throw error;
+    }
+}
+
+// Charger une image
+async function loadImage(fileId, container) {
+    try {
+        const img = document.createElement('img');
+        img.src = `/file_manager/serve_file/${fileId}`;
+        
+        // Ajouter un timeout pour éviter l'attente infinie
+        const loadTimeout = setTimeout(() => {
+            throw new Error('Timeout: L\'image prend trop de temps à charger');
+        }, 10000);
+        
+        img.onload = () => {
+            clearTimeout(loadTimeout);
+            
+            // Créer le conteneur
+            const imageContainer = document.createElement('div');
+            imageContainer.className = 'image-container';
+            
+            // Ajuster la taille de l'image pour qu'elle s'adapte à l'écran
+            const maxWidth = window.innerWidth * 0.8;
+            const maxHeight = window.innerHeight * 0.6;
+            
+            let { width, height } = img;
+            
+            if (width > maxWidth) {
+                height = (height * maxWidth) / width;
+                width = maxWidth;
+            }
+            
+            if (height > maxHeight) {
+                width = (width * maxHeight) / height;
+                height = maxHeight;
+            }
+            
+            img.style.width = width + 'px';
+            img.style.height = height + 'px';
+            
+            imageContainer.appendChild(img);
+            
+            // Créer le canvas d'annotation
+            canvas = document.createElement('canvas');
+            canvas.className = 'annotation-canvas';
+            canvas.width = width;
+            canvas.height = height;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx = canvas.getContext('2d');
+            
+            imageContainer.appendChild(canvas);
+            container.innerHTML = '';
+            container.appendChild(imageContainer);
+        };
+        
+        img.onerror = () => {
+            clearTimeout(loadTimeout);
+            throw new Error('Impossible de charger l\'image');
+        };
+        
+    } catch (error) {
+        console.error('Erreur lors du chargement de l\'image:', error);
+        throw error;
+    }
+}
+
+// Charger les annotations existantes
+async function loadAnnotations(fileId) {
+    try {
+        const response = await fetch(`/planning/get_file_annotations/${fileId}`);
+        const result = await response.json();
+        
+        if (result.success && result.annotations) {
+            annotations = result.annotations;
+            redrawAnnotations();
+        } else {
+            annotations = [];
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des annotations:', error);
+        annotations = [];
+    }
+}
+
+// Configurer les outils d'annotation
+function setupAnnotationTools() {
+    if (!canvas) return;
+    
+    // Événements de souris
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+    
+    // Événements tactiles (Apple Pencil)
+    canvas.addEventListener('touchstart', handleTouch);
+    canvas.addEventListener('touchmove', handleTouch);
+    canvas.addEventListener('touchend', handleTouch);
+    
+    // Empêcher le comportement par défaut du navigateur
+    canvas.addEventListener('touchstart', e => e.preventDefault());
+    canvas.addEventListener('touchmove', e => e.preventDefault());
+    
+    // Boutons d'outils
+    document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentAnnotationTool = btn.dataset.tool;
+            
+            // Changer le curseur
+            if (currentAnnotationTool === 'eraser') {
+                canvas.style.cursor = 'grab';
+            } else {
+                canvas.style.cursor = 'crosshair';
+            }
+        });
+    });
+    
+    // Boutons de couleurs prédéfinies
+    document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // Retirer l'état actif de tous les boutons
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            // Activer le bouton cliqué
+            btn.classList.add('active');
+            // Changer la couleur
+            currentColor = btn.dataset.color;
+            // Mettre à jour le color picker
+            document.getElementById('annotationColor').value = currentColor;
+        });
+    });
+    
+    // Couleur personnalisée
+    document.getElementById('annotationColor').addEventListener('change', (e) => {
+        currentColor = e.target.value;
+        // Désactiver tous les boutons prédéfinis
+        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+    });
+    
+    // Épaisseur du trait
+    const strokeWidthInput = document.getElementById('strokeWidth');
+    const strokeWidthValue = document.getElementById('strokeWidthValue');
+    
+    strokeWidthInput.addEventListener('input', (e) => {
+        currentStrokeWidth = parseInt(e.target.value);
+        strokeWidthValue.textContent = currentStrokeWidth;
+    });
+    
+    // Annuler
+    document.getElementById('undoBtn').addEventListener('click', undo);
+    
+    // Tout effacer
+    document.getElementById('clearAllBtn').addEventListener('click', clearAll);
+    
+    // Activer l'outil stylo par défaut
+    document.getElementById('penTool').classList.add('active');
+}
+
+// Commencer à dessiner
+function startDrawing(e) {
+    if (currentAnnotationTool === 'eraser') return;
+    
+    isDrawing = true;
+    currentStroke = [];
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    currentStroke.push({x, y});
+    
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+}
+
+// Dessiner
+function draw(e) {
+    if (!isDrawing || currentAnnotationTool === 'eraser') return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    currentStroke.push({x, y});
+    
+    // Configurer le style selon l'outil
+    if (currentAnnotationTool === 'pen') {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = currentColor;
+        ctx.lineWidth = currentStrokeWidth;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+    } else if (currentAnnotationTool === 'highlighter') {
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.strokeStyle = currentColor;
+        ctx.lineWidth = currentStrokeWidth * 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalAlpha = 0.3;
+    }
+    
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    
+    if (currentAnnotationTool === 'highlighter') {
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+// Arrêter de dessiner
+function stopDrawing() {
+    if (!isDrawing) return;
+    
+    isDrawing = false;
+    
+    if (currentStroke.length > 0) {
+        // Sauvegarder le trait dans l'historique
+        const annotation = {
+            type: currentAnnotationTool,
+            color: currentColor,
+            strokeWidth: currentStrokeWidth,
+            points: [...currentStroke],
+            timestamp: Date.now()
+        };
+        
+        annotations.push(annotation);
+        undoHistory.push(annotations.length - 1);
+        
+        // Sauvegarder automatiquement après un délai
+        scheduleAutoSave();
+    }
+}
+
+// Gestion des événements tactiles (Apple Pencil)
+function handleTouch(e) {
+    e.preventDefault();
+    
+    if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                         e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
+        
+        canvas.dispatchEvent(mouseEvent);
+    }
+}
+
+// Annuler la dernière action
+function undo() {
+    if (undoHistory.length > 0) {
+        const lastIndex = undoHistory.pop();
+        annotations.splice(lastIndex, 1);
+        
+        // Réajuster les index dans l'historique
+        undoHistory = undoHistory.map(index => index > lastIndex ? index - 1 : index);
+        
+        redrawAnnotations();
+        scheduleAutoSave();
+    }
+}
+
+// Tout effacer
+function clearAll() {
+    if (confirm('Êtes-vous sûr de vouloir effacer toutes les annotations ?')) {
+        annotations = [];
+        undoHistory = [];
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        scheduleAutoSave();
+    }
+}
+
+// Redessiner toutes les annotations
+function redrawAnnotations() {
+    if (!ctx) return;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    annotations.forEach(annotation => {
+        if (annotation.points.length === 0) return;
+        
+        ctx.beginPath();
+        ctx.moveTo(annotation.points[0].x, annotation.points[0].y);
+        
+        // Configurer le style
+        if (annotation.type === 'pen') {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = annotation.color;
+            ctx.lineWidth = annotation.strokeWidth;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.globalAlpha = 1.0;
+        } else if (annotation.type === 'highlighter') {
+            ctx.globalCompositeOperation = 'multiply';
+            ctx.strokeStyle = annotation.color;
+            ctx.lineWidth = annotation.strokeWidth * 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.globalAlpha = 0.3;
+        }
+        
+        // Dessiner le trait
+        for (let i = 1; i < annotation.points.length; i++) {
+            ctx.lineTo(annotation.points[i].x, annotation.points[i].y);
+        }
+        
+        ctx.stroke();
+        
+        if (annotation.type === 'highlighter') {
+            ctx.globalAlpha = 1.0;
+        }
+    });
+}
+
+// Programmer la sauvegarde automatique
+function scheduleAutoSave() {
+    // Annuler la sauvegarde précédente si elle existe
+    if (saveTimeout) {
+        clearTimeout(saveTimeout);
+    }
+    
+    // Afficher le statut de sauvegarde
+    const saveStatus = document.getElementById('saveStatus');
+    saveStatus.className = 'save-status saving';
+    saveStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde...';
+    
+    // Programmer la sauvegarde dans 1 seconde
+    saveTimeout = setTimeout(saveAnnotations, 1000);
+}
+
+// Sauvegarder les annotations
+async function saveAnnotations() {
+    if (!currentFileId) return;
+    
+    try {
+        const response = await fetch('/planning/save_file_annotations', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                file_id: currentFileId,
+                annotations: annotations
+            })
+        });
+        
+        const result = await response.json();
+        const saveStatus = document.getElementById('saveStatus');
+        
+        if (result.success) {
+            saveStatus.className = 'save-status';
+            saveStatus.innerHTML = '<i class="fas fa-check"></i> Sauvegardé automatiquement';
+        } else {
+            saveStatus.className = 'save-status error';
+            saveStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erreur de sauvegarde';
+        }
+    } catch (error) {
+        console.error('Erreur lors de la sauvegarde:', error);
+        const saveStatus = document.getElementById('saveStatus');
+        saveStatus.className = 'save-status error';
+        saveStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erreur de connexion';
+    }
+}
+
+// Fermer le viewer amélioré
+function closeFileViewer() {
+    try {
+        // Sauvegarder avant de fermer
+        if (annotations.length > 0) {
+            saveAnnotations();
+        }
+        
+        const modal = document.getElementById('fileViewerModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+        
+        // Nettoyer les variables
+        currentFileId = null;
+        annotations = [];
+        pdfDoc = null;
+        currentPageNum = 1;
+        currentScale = 1.0;
+        pdfCanvas = null;
+        pdfCtx = null;
+        annotationCanvas = null;
+        annotationCtx = null;
+        
+        if (saveTimeout) {
+            clearTimeout(saveTimeout);
+            saveTimeout = null;
+        }
+        
+        // Masquer la barre latérale
+        document.getElementById('pageSidebar').classList.remove('show');
+        
+    } catch (error) {
+        console.error('Erreur lors de la fermeture:', error);
+        const modal = document.getElementById('fileViewerModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+}
+
+// Événements globaux améliorés
+document.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('fileViewerModal');
+    if (!modal.classList.contains('show')) return;
+    
+    if (e.key === 'Escape') {
+        closeFileViewer();
+    } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        previousPage();
+    } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        nextPage();
+    } else if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        zoomIn();
+    } else if (e.key === '-') {
+        e.preventDefault();
+        zoomOut();
+    } else if (e.key === '0') {
+        e.preventDefault();
+        resetZoom();
+    }
+});
+
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('fileViewerModal');
+    if (e.target === modal && modal.classList.contains('show')) {
+        closeFileViewer();
+    }
+});
+
 </script>
 
 <style>
@@ -1210,6 +3309,816 @@ window.addEventListener('beforeunload', () => {
 /* Animation pour le changement de vue */
 .planning-content > div {
     transition: opacity 0.2s ease;
+}
+
+/* Styles pour les ressources */
+.resource-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.resource-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--primary-color);
+    background-color: transparent;
+    color: var(--primary-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.resource-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.resources-loading {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-color);
+}
+
+.resources-loading i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.pinned-resources {
+    margin-bottom: 1.5rem;
+}
+
+.pinned-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--light-gray);
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    font-size: 0.875rem;
+}
+
+.pinned-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.folder-navigation {
+    margin-bottom: 1rem;
+    background-color: #F8FAFC;
+    border: 1px solid #E5E7EB;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+}
+
+.resource-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    font-size: 0.8rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.resource-breadcrumb::-webkit-scrollbar {
+    display: none;
+}
+
+.breadcrumb-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    color: #6B7280;
+    background-color: transparent;
+    flex-shrink: 0;
+    font-weight: 400;
+}
+
+.breadcrumb-item:hover {
+    background-color: #E5E7EB;
+    color: #374151;
+}
+
+.breadcrumb-item.active {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 500;
+}
+
+.breadcrumb-separator {
+    color: #9CA3AF;
+    margin: 0 0.125rem;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.resources-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    border: 1px solid #E5E7EB;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background-color: white;
+}
+
+.resource-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background-color: white;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    border-bottom: 1px solid #F3F4F6;
+    min-height: 44px;
+}
+
+.resource-item:last-child {
+    border-bottom: none;
+}
+
+.resource-item:hover {
+    background-color: #F8FAFC;
+}
+
+.resource-item.pinned {
+    background-color: #FFFBEB;
+    border-left: 3px solid #F59E0B;
+}
+
+.resource-item.pinned:hover {
+    background-color: #FEF3C7;
+}
+
+.resource-item.folder {
+    background-color: #F0F9FF;
+    border-left: 3px solid #3B82F6;
+    font-weight: 500;
+}
+
+.resource-item.folder:hover {
+    background-color: #E0F2FE;
+}
+
+.resource-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+.resource-icon.pdf {
+    color: #DC2626;
+}
+
+.resource-icon.image {
+    color: #059669;
+}
+
+.resource-icon.folder {
+    color: #3B82F6;
+}
+
+.resource-icon.pinned {
+    color: #F59E0B;
+}
+
+.resource-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.resource-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.resource-name {
+    font-weight: 400;
+    color: var(--dark-color);
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+.resource-item.folder .resource-name {
+    font-weight: 500;
+    color: #1E40AF;
+}
+
+.resource-meta {
+    font-size: 0.75rem;
+    color: #6B7280;
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.125rem;
+    white-space: nowrap;
+}
+
+.resource-actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+}
+
+.resource-action-btn {
+    width: 24px;
+    height: 24px;
+    border: none;
+    background-color: transparent;
+    color: #9CA3AF;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    opacity: 0;
+    font-size: 0.75rem;
+}
+
+.resource-item:hover .resource-action-btn {
+    opacity: 1;
+}
+
+.resource-action-btn:hover {
+    background-color: #F3F4F6;
+    color: var(--primary-color);
+}
+
+.resource-action-btn.pinned {
+    color: #F59E0B;
+    opacity: 1;
+}
+
+.resource-action-btn.pinned:hover {
+    background-color: #FEF3C7;
+}
+
+/* Styles pour les fichiers annotables */
+.clickable-file {
+    cursor: pointer;
+    color: var(--primary-color) !important;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.clickable-file:hover {
+    text-decoration: underline;
+    color: var(--primary-hover) !important;
+}
+
+.annotatable-badge {
+    background-color: #10B981;
+    color: white;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.6rem;
+    font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .resource-meta {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .resource-actions {
+        flex-direction: column;
+    }
+}
+
+/* Styles pour le Modal Viewer/Annotateur Amélioré */
+.file-viewer-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 10000;
+    display: none;
+    flex-direction: column;
+}
+
+.file-viewer-modal.show {
+    display: flex;
+}
+
+.viewer-header {
+    background-color: #1a202c;
+    color: white;
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #4A5568;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.viewer-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.page-info {
+    font-size: 0.9rem;
+    color: #a0aec0;
+    font-weight: normal;
+}
+
+.viewer-tools {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.tool-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-right: 1rem;
+    border-right: 1px solid #4a5568;
+}
+
+.tool-group:last-child {
+    border-right: none;
+    padding-right: 0;
+}
+
+.tool-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background-color: #4A5568;
+    color: white;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.tool-btn:hover {
+    background-color: #68D391;
+    transform: scale(1.05);
+}
+
+.tool-btn.active {
+    background-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3);
+}
+
+.color-picker-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #4A5568;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+}
+
+.preset-colors {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.color-btn {
+    width: 28px;
+    height: 28px;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.color-btn:hover {
+    transform: scale(1.1);
+    border-color: white;
+}
+
+.color-btn.active {
+    border-color: white;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.color-picker-container input[type="color"] {
+    width: 32px;
+    height: 32px;
+    border: 2px solid transparent;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    background: none;
+}
+
+.stroke-width-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #4A5568;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+}
+
+.stroke-width-container input[type="range"] {
+    width: 80px;
+}
+
+#strokeWidthValue {
+    min-width: 20px;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.close-viewer {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background-color: #E53E3E;
+    color: white;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.close-viewer:hover {
+    background-color: #C53030;
+    transform: scale(1.05);
+}
+
+.viewer-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.viewer-container {
+    max-width: 100%;
+    max-height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.annotation-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: crosshair;
+    z-index: 10;
+}
+
+.pdf-container, .image-container {
+    position: relative;
+    display: inline-block;
+}
+
+.viewer-footer {
+    background-color: #2D3748;
+    color: white;
+    padding: 0.75rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top: 1px solid #4A5568;
+}
+
+.save-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #68D391;
+    font-size: 0.9rem;
+}
+
+.save-status.saving {
+    color: #F6AD55;
+}
+
+.save-status.error {
+    color: #FC8181;
+}
+
+/* Styles pour la nouvelle interface améliorée */
+#zoomLevel {
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    min-width: 50px;
+    text-align: center;
+    background-color: #4a5568;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.viewer-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Barre latérale des pages */
+.page-sidebar {
+    width: 200px;
+    background-color: #2d3748;
+    border-right: 1px solid #4a5568;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.page-sidebar.show {
+    display: flex;
+}
+
+.sidebar-header {
+    padding: 1rem;
+    border-bottom: 1px solid #4a5568;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #1a202c;
+}
+
+.sidebar-header h6 {
+    margin: 0;
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.close-sidebar {
+    background: none;
+    border: none;
+    color: #a0aec0;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    transition: color 0.2s;
+}
+
+.close-sidebar:hover {
+    color: #e2e8f0;
+}
+
+.page-thumbnails {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: #4a5568 #2d3748;
+}
+
+.page-thumbnails::-webkit-scrollbar {
+    width: 6px;
+}
+
+.page-thumbnails::-webkit-scrollbar-track {
+    background: #2d3748;
+}
+
+.page-thumbnails::-webkit-scrollbar-thumb {
+    background: #4a5568;
+    border-radius: 3px;
+}
+
+.page-thumbnails::-webkit-scrollbar-thumb:hover {
+    background: #718096;
+}
+
+.thumbnail-item {
+    margin-bottom: 0.75rem;
+    border: 2px solid transparent;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    overflow: hidden;
+    background-color: #1a202c;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.thumbnail-item:hover {
+    border-color: #4a5568;
+    transform: scale(1.02);
+}
+
+.thumbnail-item.active {
+    border-color: #3182ce;
+    box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.3);
+}
+
+.thumbnail-canvas {
+    width: 100%;
+    display: block;
+    border-radius: 0.25rem;
+}
+
+/* Zone d'affichage principal */
+.viewer-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+    padding: 1rem;
+    background-color: #f7fafc;
+    position: relative;
+}
+
+.pdf-viewer-container {
+    position: relative;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    transform-origin: center;
+    transition: transform 0.2s ease;
+}
+
+.pdf-canvas {
+    display: block;
+    border-radius: 0.5rem;
+}
+
+.annotation-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    cursor: crosshair;
+    border-radius: 0.5rem;
+}
+
+/* États des boutons */
+.tool-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.tool-btn:disabled:hover {
+    background-color: #4A5568;
+    transform: none;
+}
+
+/* Animation de chargement */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.loading {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Styles pour les erreurs */
+.error-message {
+    color: #fc8181;
+    text-align: center;
+    padding: 2rem;
+    background-color: #fed7d7;
+    border-radius: 0.5rem;
+    margin: 1rem;
+}
+
+/* Responsive pour le viewer amélioré */
+@media (max-width: 768px) {
+    .viewer-header {
+        padding: 0.75rem 1rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .viewer-tools {
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .tool-group {
+        padding-right: 0.5rem;
+        border-right: none;
+        border-bottom: 1px solid #4a5568;
+        padding-bottom: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .tool-group:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    
+    .tool-btn {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .stroke-width-container input[type="range"] {
+        width: 60px;
+    }
+    
+    .viewer-footer {
+        padding: 0.5rem 1rem;
+    }
+    
+    .page-sidebar {
+        width: 180px;
+    }
+    
+    .page-sidebar.show {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 100;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+    }
+    
+    .viewer-container {
+        padding: 0.5rem;
+    }
+    
+    .viewer-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    #zoomLevel {
+        min-width: 40px;
+        font-size: 0.8rem;
+        padding: 0.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .viewer-header {
+        padding: 0.5rem;
+    }
+    
+    .viewer-tools {
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .tool-group {
+        gap: 0.25rem;
+    }
+    
+    .tool-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+    
+    .color-btn {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .page-sidebar {
+        width: 160px;
+    }
 }
 </style>
 {% endblock %}

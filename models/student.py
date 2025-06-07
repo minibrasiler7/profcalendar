@@ -73,6 +73,8 @@ class ClassFile(db.Model):
     file_size = db.Column(db.Integer)  # Taille en octets
     description = db.Column(db.Text)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_pinned = db.Column(db.Boolean, default=False)  # Nouveau champ pour l'épinglage
+    pin_order = db.Column(db.Integer, default=0)      # Ordre d'épinglage
 
     # Relations
     classroom = db.relationship('Classroom', backref=db.backref('files', lazy='dynamic'))

@@ -84,6 +84,13 @@
     color: var(--gray-color);
 }
 
+/* Layout principal */
+.file-manager-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 1.5rem;
+}
+
 /* Explorateur de fichiers */
 .file-explorer {
     background-color: var(--white);
@@ -162,6 +169,24 @@
     background-color: rgba(79, 70, 229, 0.1);
 }
 
+/* Cases à cocher pour suppression */
+.item-checkbox {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 5;
+}
+
+.item-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary-color);
+}
+
+.file-item.delete-mode {
+    padding-left: 2.5rem;
+}
+
 /* Icônes des items */
 .item-icon {
     font-size: 3rem;
@@ -211,6 +236,10 @@
     display: flex;
 }
 
+.file-item.delete-mode .item-actions {
+    display: none !important;
+}
+
 .action-btn {
     width: 28px;
     height: 28px;
@@ -234,6 +263,294 @@
 .action-btn.danger:hover {
     background-color: #FEE2E2;
     color: var(--danger-color);
+}
+
+/* Section des classes */
+.classes-section {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.classes-header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 1rem 1.5rem;
+}
+
+.classes-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.classes-list {
+    padding: 1rem;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.class-item {
+    background-color: var(--light-gray);
+    border-radius: var(--border-radius);
+    margin-bottom: 0.75rem;
+    border: 2px dashed transparent;
+    overflow: hidden;
+}
+
+.class-header.drag-over {
+    background-color: rgba(79, 70, 229, 0.1) !important;
+    border: 2px dashed var(--primary-color) !important;
+    border-radius: var(--border-radius);
+}
+
+.class-header {
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 2px dashed transparent;
+    border-radius: var(--border-radius);
+}
+
+.class-toggle {
+    transition: transform 0.2s ease;
+    color: var(--gray-color);
+}
+
+.class-toggle.expanded {
+    transform: rotate(90deg);
+}
+
+.class-tree {
+    border-top: 1px solid #E5E7EB;
+    background-color: #F9FAFB;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.tree-folder, .tree-file {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid #E5E7EB;
+    transition: background-color 0.2s ease;
+    position: relative;
+}
+
+.tree-folder {
+    font-weight: 500;
+    background-color: #F3F4F6;
+    border: 2px dashed transparent;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.tree-folder-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.tree-folder-header:hover {
+    background-color: #E5E7EB;
+}
+
+.tree-folder.drag-over > .tree-folder-header {
+    border: 2px dashed var(--primary-color);
+    background-color: rgba(79, 70, 229, 0.1);
+}
+
+.tree-folder-content {
+    border-top: 1px solid #E5E7EB;
+}
+
+.tree-folder-toggle {
+    transition: transform 0.2s ease;
+    color: var(--gray-color);
+    width: 12px;
+    text-align: center;
+}
+
+.tree-file {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--gray-color);
+    background-color: white;
+    cursor: pointer;
+}
+
+.tree-file:hover {
+    background-color: #F9FAFB;
+}
+
+.tree-file.selected {
+    background-color: rgba(79, 70, 229, 0.1);
+    border-left: 3px solid var(--primary-color);
+}
+
+.tree-file-delete {
+    background: none;
+    border: none;
+    color: var(--gray-color);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    opacity: 0;
+    transition: all 0.2s ease;
+    margin-left: auto;
+}
+
+.tree-file:hover .tree-file-delete {
+    opacity: 1;
+}
+
+.tree-file-delete:hover {
+    background-color: #FEE2E2;
+    color: var(--danger-color);
+}
+
+/* Nouveaux styles pour le système amélioré */
+.tree-empty {
+    padding: 1rem;
+    text-align: center;
+    color: var(--gray-color);
+    font-style: italic;
+}
+
+.tree-empty i {
+    margin-right: 0.5rem;
+}
+
+.tree-item-count {
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--gray-color);
+    opacity: 0.7;
+}
+
+.tree-item-size {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--gray-color);
+    opacity: 0.7;
+}
+
+.tree-file {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tree-folder-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s ease;
+}
+
+.tree-folder-header:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Sélection des éléments */
+.tree-file.selected,
+.tree-folder.selected {
+    background-color: rgba(79, 70, 229, 0.2) !important;
+    border-radius: 0.25rem;
+    border: 2px solid #4F46E5;
+}
+
+.tree-file.selected .tree-item-name,
+.tree-folder.selected .tree-item-name {
+    font-weight: 600;
+    color: #4F46E5;
+}
+
+/* Amélioration du curseur pour la sélection */
+.tree-file,
+.tree-folder-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.tree-folder.selected .tree-folder-header {
+    background-color: transparent;
+}
+
+.class-item.drag-over .class-header {
+    background-color: rgba(79, 70, 229, 0.1) !important;
+    border-left: 3px solid var(--primary-color);
+}
+
+/* Amélioration de la responsivité */
+@media (max-width: 768px) {
+    .tree-file {
+        font-size: 0.875rem;
+    }
+    
+    .tree-item-size,
+    .tree-item-count {
+        display: none;
+    }
+}
+
+.tree-item-icon {
+    color: var(--primary-color);
+    width: 16px;
+    text-align: center;
+}
+
+.tree-item-name {
+    flex: 1;
+}
+
+.class-name {
+    font-weight: 500;
+    color: var(--dark-color);
+    margin-bottom: 0.25rem;
+}
+
+.class-info {
+    font-size: 0.75rem;
+    color: var(--gray-color);
+}
+
+/* Boutons de suppression multiple */
+.delete-actions {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--white);
+    border-top: 1px solid var(--light-gray);
+    padding: 1rem;
+    box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.delete-actions-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.delete-mode-btn.active {
+    background-color: var(--danger-color) !important;
+    color: white !important;
 }
 
 /* État vide */
@@ -486,7 +803,34 @@
     margin: 0.5rem 0;
 }
 
+/* Drag and drop vers les classes */
+.file-item.dragging {
+    opacity: 0.5;
+    transform: rotate(3deg);
+}
+
 /* Responsive */
+@media (max-width: 1024px) {
+    .file-manager-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .classes-section {
+        order: -1;
+        margin-bottom: 1.5rem;
+    }
+
+    .classes-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .class-item {
+        margin-bottom: 0;
+    }
+}
+
 @media (max-width: 768px) {
     .header-top {
         flex-direction: column;
@@ -534,5 +878,9 @@
         left: 1rem;
         right: 1rem;
         bottom: 1rem;
+    }
+
+    .delete-actions-content {
+        flex-direction: column;
     }
 }

@@ -116,3 +116,22 @@ class FileShare(db.Model):
 
     def __repr__(self):
         return f'<FileShare {self.id}>'
+
+
+class FileAnnotation(db.Model):
+    """Modèle pour stocker les annotations de fichiers"""
+    __tablename__ = 'file_annotations'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    file_id = db.Column(db.Integer, db.ForeignKey('user_files.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    annotations_data = db.Column(db.JSON, nullable=False)  # Stockage JSON des annotations
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relations
+    file = db.relationship('UserFile', backref='annotations')
+    user = db.relationship('User', backref='file_annotations')
+    
+    def __repr__(self):
+        return f'<FileAnnotation {self.file_id} by user {self.user_id}>'
