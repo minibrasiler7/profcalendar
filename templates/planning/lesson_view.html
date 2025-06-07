@@ -926,9 +926,6 @@ if (typeof pdfjsLib !== 'undefined') {
                 <button class="tool-btn" id="nextPageBtn" onclick="nextPage()" title="Page suivante">
                     <i class="fas fa-chevron-right"></i>
                 </button>
-                <button class="tool-btn" onclick="togglePageThumbnails()" title="Afficher les pages">
-                    <i class="fas fa-th-large"></i>
-                </button>
             </div>
             
             <!-- Zoom -->
@@ -991,24 +988,21 @@ if (typeof pdfjsLib !== 'undefined') {
         </button>
     </div>
     <div class="viewer-content">
-        <!-- Barre latérale des pages -->
-        <div class="page-sidebar" id="pageSidebar">
-            <div class="sidebar-header">
-                <h6>Pages</h6>
-                <button class="close-sidebar" onclick="togglePageThumbnails()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="page-thumbnails" id="pageThumbnails">
-                <!-- Les miniatures seront générées ici -->
-            </div>
-        </div>
-        
         <!-- Zone d'affichage principal -->
         <div class="viewer-container" id="viewerContainer">
             <div class="pdf-viewer-container">
                 <canvas id="pdfCanvas" class="pdf-canvas"></canvas>
                 <canvas id="annotationCanvas" class="annotation-canvas"></canvas>
+            </div>
+        </div>
+        
+        <!-- Barre latérale des pages - permanente à droite -->
+        <div class="page-sidebar show" id="pageSidebar">
+            <div class="sidebar-header">
+                <h6><i class="fas fa-copy"></i> Pages</h6>
+            </div>
+            <div class="page-thumbnails scrollable" id="pageThumbnails">
+                <!-- Les miniatures seront générées ici -->
             </div>
         </div>
     </div>
@@ -2294,11 +2288,7 @@ function updateActiveThumbnail() {
     });
 }
 
-// Basculer l'affichage des miniatures
-function togglePageThumbnails() {
-    const sidebar = document.getElementById('pageSidebar');
-    sidebar.classList.toggle('show');
-}
+// Barre latérale permanente - plus besoin de toggle
 
 // ===== SYSTÈME D'ANNOTATION AMÉLIORÉ =====
 
@@ -3791,14 +3781,15 @@ document.addEventListener('click', (e) => {
     position: relative;
 }
 
-/* Barre latérale des pages */
+/* Barre latérale des pages - permanente à droite */
 .page-sidebar {
-    width: 200px;
-    background-color: #2d3748;
-    border-right: 1px solid #4a5568;
-    display: none;
+    width: 220px;
+    background-color: #f8fafc;
+    border-left: 1px solid #e2e8f0;
+    display: flex;
     flex-direction: column;
     overflow: hidden;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .page-sidebar.show {
@@ -3807,78 +3798,77 @@ document.addEventListener('click', (e) => {
 
 .sidebar-header {
     padding: 1rem;
-    border-bottom: 1px solid #4a5568;
+    border-bottom: 1px solid #e2e8f0;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
-    background-color: #1a202c;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
 }
 
 .sidebar-header h6 {
     margin: 0;
-    color: #e2e8f0;
+    color: white;
     font-size: 0.9rem;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-.close-sidebar {
-    background: none;
-    border: none;
-    color: #a0aec0;
-    cursor: pointer;
-    padding: 0.25rem;
-    border-radius: 0.25rem;
-    transition: color 0.2s;
-}
 
-.close-sidebar:hover {
-    color: #e2e8f0;
-}
-
+/* Zone de miniatures scrollable moderne */
 .page-thumbnails {
     flex: 1;
     overflow-y: auto;
-    padding: 0.5rem;
+    padding: 1rem 0.75rem;
     scrollbar-width: thin;
-    scrollbar-color: #4a5568 #2d3748;
+    scrollbar-color: #cbd5e0 #f1f5f9;
+}
+
+.page-thumbnails.scrollable {
+    max-height: calc(100vh - 200px);
 }
 
 .page-thumbnails::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
 }
 
 .page-thumbnails::-webkit-scrollbar-track {
-    background: #2d3748;
+    background: #f1f5f9;
+    border-radius: 4px;
 }
 
 .page-thumbnails::-webkit-scrollbar-thumb {
-    background: #4a5568;
-    border-radius: 3px;
+    background: #cbd5e0;
+    border-radius: 4px;
+    transition: background 0.2s ease;
 }
 
 .page-thumbnails::-webkit-scrollbar-thumb:hover {
-    background: #718096;
+    background: #a0aec0;
 }
 
 .thumbnail-item {
     margin-bottom: 0.75rem;
     border: 2px solid transparent;
-    border-radius: 0.5rem;
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     overflow: hidden;
-    background-color: #1a202c;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .thumbnail-item:hover {
-    border-color: #4a5568;
-    transform: scale(1.02);
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .thumbnail-item.active {
-    border-color: #3182ce;
-    box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.3);
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
 }
 
 .thumbnail-canvas {
