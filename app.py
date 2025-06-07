@@ -3,6 +3,9 @@ from extensions import db, login_manager, migrate
 from config import Config
 import os
 
+# Importer tous les modèles pour la création des tables
+import models
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -42,6 +45,7 @@ def create_app(config_class=Config):
     from routes.planning import planning_bp
     from routes.file_manager import file_manager_bp
     from routes.class_files import class_files_bp
+    from routes.sanctions import sanctions_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(setup_bp)
@@ -49,6 +53,7 @@ def create_app(config_class=Config):
     app.register_blueprint(planning_bp)
     app.register_blueprint(file_manager_bp)
     app.register_blueprint(class_files_bp)
+    app.register_blueprint(sanctions_bp)
 
     # Route d'accueil
     @app.route('/')

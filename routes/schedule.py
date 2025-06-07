@@ -189,3 +189,62 @@ def validate_schedule():
 
     flash('Horaire type validé avec succès ! Vous pouvez maintenant accéder à votre calendrier.', 'success')
     return redirect(url_for('planning.dashboard'))
+
+@schedule_bp.route('/view')
+@login_required
+def view_schedule():
+    """Affichage simple de l'horaire type sans navigation ni progression"""
+    # Vérifier que l'horaire est configuré
+    if not current_user.schedule_completed:
+        flash('Veuillez d\'abord configurer votre horaire type.', 'warning')
+        return redirect(url_for('schedule.weekly_schedule'))
+
+    classrooms = current_user.classrooms.all()
+
+    # Convertir les classrooms en dictionnaires pour JSON
+    classrooms_dict = [{
+        'id': c.id,
+        'name': c.name,
+        'subject': c.subject,
+        'color': c.color
+    } for c in classrooms]
+
+    periods = calculate_periods(current_user)
+
+    # Convertir les périodes pour JSON
+    periods_json = []
+    for period in periods:
+        periods_json.append({
+            'number': period['number'],
+            'start': period['start'].strftime('%H:%M'),
+            'end': period['end'].strftime('%H:%M')
+        })
+
+    schedules = current_user.schedules.all()
+
+    # Organiser les horaires par jour et période
+    schedule_grid = {}
+    schedule_grid_json = {}
+    for schedule in schedules:
+        key = f"{schedule.weekday}_{schedule.period_number}"
+        schedule_grid[key] = schedule
+        # Créer une version JSON-serializable pour JavaScript
+        schedule_grid_json[key] = {
+            'classroom_id': schedule.classroom_id,
+            'weekday': schedule.weekday,
+            'period_number': schedule.period_number,
+            'classroom_name': schedule.classroom.name,
+            'classroom_subject': schedule.classroom.subject,
+            'classroom_color': schedule.classroom.color
+        }
+
+    days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi']
+
+    return render_template('schedule/view_schedule.html',
+                         classrooms=classrooms,
+                         classrooms_json=classrooms_dict,
+                         periods=periods,
+                         periods_json=periods_json,
+                         schedule_grid=schedule_grid,
+                         schedule_grid_json=schedule_grid_json,
+                         days=days)

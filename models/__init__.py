@@ -6,6 +6,8 @@ from models.planning import Planning
 from models.student import Student, Grade, ClassFile, Chapter, ClassroomChapter
 from models.attendance import Attendance
 from models.file_manager import FileFolder, UserFile, FileShare
+from models.sanctions import SanctionTemplate, SanctionThreshold, SanctionOption, ClassroomSanctionImport, StudentSanctionRecord
 
 __all__ = ['User', 'Holiday', 'Break', 'Classroom', 'Schedule', 'Planning',
-           'Student', 'Grade', 'ClassFile', 'Chapter', 'ClassroomChapter', 'Attendance', 'FileFolder', 'UserFile', 'FileShare']
+           'Student', 'Grade', 'ClassFile', 'Chapter', 'ClassroomChapter', 'Attendance', 'FileFolder', 'UserFile', 'FileShare',
+           'SanctionTemplate', 'SanctionThreshold', 'SanctionOption', 'ClassroomSanctionImport', 'StudentSanctionRecord']

@@ -37,7 +37,7 @@
                         Prochain cours
                     {% endif %}
                 </a>
-                <a href="{{ url_for('schedule.weekly_schedule') }}" class="nav-link {% if request.endpoint == 'schedule.weekly_schedule' %}active{% endif %}">
+                <a href="{{ url_for('schedule.view_schedule') }}" class="nav-link {% if request.endpoint == 'schedule.view_schedule' %}active{% endif %}">
                     <i class="fas fa-clock"></i> Horaire type
                 </a>
                 <a href="{{ url_for('planning.calendar_view') }}" class="nav-link {% if request.endpoint == 'planning.calendar_view' %}active{% endif %}">
