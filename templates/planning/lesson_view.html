@@ -289,6 +289,44 @@ if (typeof pdfjsLib !== 'undefined') {
     opacity: 0.5;
 }
 
+/* Styles pour les onglets de suivi */
+.tracking-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--light-gray);
+    margin-bottom: 1.5rem;
+}
+
+.tracking-tab {
+    padding: 0.75rem 1.5rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--gray-color);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tracking-tab:hover {
+    color: var(--primary-color);
+}
+
+.tracking-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.tracking-content {
+    display: none;
+}
+
+.tracking-content.active {
+    display: block;
+}
+
 /* Styles pour la section présences */
 .attendance-content {
     flex: 1;
@@ -446,6 +484,130 @@ if (typeof pdfjsLib !== 'undefined') {
 .student-attendance.late .btn-late {
     background-color: var(--warning-color);
     color: white;
+}
+
+/* Styles pour les sanctions */
+.sanctions-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.sanctions-table-container {
+    overflow-x: auto;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--light-gray);
+    background-color: var(--white);
+}
+
+.sanctions-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+.sanctions-table th {
+    background-color: var(--light-gray);
+    padding: 0.75rem;
+    text-align: center;
+    font-weight: 600;
+    color: var(--dark-color);
+    border-bottom: 2px solid var(--primary-color);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-size: 0.875rem;
+}
+
+.sanctions-table th.student-column {
+    text-align: left;
+    min-width: 150px;
+    max-width: 150px;
+}
+
+.sanctions-table th.sanction-column {
+    min-width: 100px;
+}
+
+.sanctions-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--light-gray);
+    vertical-align: middle;
+}
+
+.sanctions-table tr:hover {
+    background-color: #F9FAFB;
+}
+
+.student-name {
+    font-weight: 500;
+    color: var(--dark-color);
+    text-align: left;
+    font-size: 0.875rem;
+}
+
+.sanction-count {
+    text-align: center;
+}
+
+.count-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.count-btn {
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--light-gray);
+    background-color: var(--white);
+    color: var(--gray-color);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.625rem;
+    transition: all 0.2s ease;
+}
+
+.count-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+.count-btn.decrease:hover {
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.count-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.count-display {
+    font-weight: 600;
+    font-size: 0.875rem;
+    min-width: 24px;
+    text-align: center;
+    color: var(--dark-color);
+    padding: 0.125rem 0.25rem;
+    border-radius: var(--border-radius);
+    background-color: var(--light-gray);
+}
+
+.count-display.warning {
+    background-color: #FEF3C7;
+    color: #92400E;
+}
+
+.count-display.danger {
+    background-color: #FEE2E2;
+    color: #991B1B;
 }
 
 .lesson-controls {
@@ -783,11 +945,23 @@ if (typeof pdfjsLib !== 'undefined') {
         <div class="attendance-section">
             <div class="section-header">
                 <h2 class="section-title">
-                    <i class="fas fa-user-check"></i> Présences
+                    <i class="fas fa-user-check"></i> Suivi des élèves
                 </h2>
             </div>
 
-            <div class="attendance-content">
+            <!-- Onglets de suivi -->
+            <div class="tracking-tabs">
+                <button class="tracking-tab active" onclick="showTrackingTab('attendance')">
+                    <i class="fas fa-user-check"></i> Présences
+                </button>
+                {% if imported_sanctions %}
+                <button class="tracking-tab" onclick="showTrackingTab('sanctions')">
+                    <i class="fas fa-exclamation-triangle"></i> Sanctions ({{ imported_sanctions|length }})
+                </button>
+                {% endif %}
+            </div>
+
+            <div class="attendance-content tracking-content active" id="attendance-content">
                 <!-- Statistiques -->
                 <div class="attendance-stats">
                     <div class="stat-item present">
@@ -841,6 +1015,46 @@ if (typeof pdfjsLib !== 'undefined') {
                     {% endfor %}
                 </div>
             </div>
+
+            <!-- Section sanctions -->
+            {% if imported_sanctions %}
+            <div class="sanctions-content tracking-content" id="sanctions-content">
+                <div class="sanctions-table-container">
+                    <table class="sanctions-table">
+                        <thead>
+                            <tr>
+                                <th class="student-column">Élève</th>
+                                {% for sanction in imported_sanctions %}
+                                <th class="sanction-column">{{ sanction.name }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr>
+                                <td class="student-name">{{ student.full_name }}</td>
+                                {% for sanction in imported_sanctions %}
+                                <td class="sanction-count">
+                                    <div class="count-controls">
+                                        <button class="count-btn decrease" onclick="updateSanctionCount({{ student.id }}, {{ sanction.id }}, -1)">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <span class="count-display" data-student="{{ student.id }}" data-sanction="{{ sanction.id }}">
+                                            {{ sanctions_data[student.id][sanction.id] }}
+                                        </span>
+                                        <button class="count-btn increase" onclick="updateSanctionCount({{ student.id }}, {{ sanction.id }}, 1)">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Section ressources -->
@@ -3348,6 +3562,85 @@ document.addEventListener('click', (e) => {
     if (e.target === modal && modal.classList.contains('show')) {
         closeFileViewer();
     }
+});
+
+// Fonctions pour la gestion des onglets de suivi
+function showTrackingTab(tabName) {
+    // Désactiver tous les onglets
+    document.querySelectorAll('.tracking-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Masquer tous les contenus
+    document.querySelectorAll('.tracking-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Activer l'onglet cliqué
+    event.target.closest('.tracking-tab').classList.add('active');
+    
+    // Afficher le contenu correspondant
+    document.getElementById(tabName + '-content').classList.add('active');
+}
+
+// Fonctions pour la gestion des sanctions
+async function updateSanctionCount(studentId, sanctionId, delta) {
+    const countElement = document.querySelector(`[data-student="${studentId}"][data-sanction="${sanctionId}"]`);
+    const currentCount = parseInt(countElement.textContent);
+    const newCount = Math.max(0, currentCount + delta); // Ne pas aller en dessous de 0
+    
+    try {
+        const response = await fetch('{{ url_for("planning.update_sanction_count") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                student_id: studentId,
+                template_id: sanctionId,
+                count: newCount
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            countElement.textContent = result.new_count;
+            
+            // Mettre à jour les classes CSS selon le nombre
+            countElement.className = 'count-display';
+            if (result.new_count >= 6) {
+                countElement.classList.add('danger');
+            } else if (result.new_count >= 3) {
+                countElement.classList.add('warning');
+            }
+            
+            // Animation de mise à jour
+            countElement.style.transform = 'scale(1.2)';
+            setTimeout(() => {
+                countElement.style.transform = 'scale(1)';
+            }, 200);
+        } else {
+            alert(result.message || 'Erreur lors de la mise à jour');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la communication avec le serveur');
+    }
+}
+
+// Initialiser les classes CSS des compteurs au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Appliquer les classes CSS aux compteurs selon leur valeur
+    document.querySelectorAll('.count-display').forEach(element => {
+        const count = parseInt(element.textContent);
+        if (count >= 6) {
+            element.classList.add('danger');
+        } else if (count >= 3) {
+            element.classList.add('warning');
+        }
+    });
 });
 
 </script>

@@ -633,6 +633,16 @@ def lesson_view():
             period_number=lesson.period_number
         ).first()
 
+    # Vérifier que la classe appartient bien à l'utilisateur
+    lesson_classroom = Classroom.query.filter_by(
+        id=lesson.classroom_id,
+        user_id=current_user.id
+    ).first()
+    
+    if not lesson_classroom:
+        flash('Classe non trouvée ou non autorisée.', 'error')
+        return redirect(url_for('planning.dashboard'))
+
     # Récupérer les élèves de la classe
     students = Student.query.filter_by(
         classroom_id=lesson.classroom_id
@@ -653,6 +663,42 @@ def lesson_view():
                 'late_minutes': attendance.late_minutes,
                 'comment': attendance.comment
             }
+
+    # Récupérer les modèles de sanctions importés dans cette classe
+    from models.sanctions import SanctionTemplate, ClassroomSanctionImport
+    from models.student_sanctions import StudentSanctionCount
+    
+    imported_sanctions = db.session.query(SanctionTemplate).join(ClassroomSanctionImport).filter(
+        ClassroomSanctionImport.classroom_id == lesson.classroom_id,
+        ClassroomSanctionImport.is_active == True,
+        SanctionTemplate.user_id == current_user.id,
+        SanctionTemplate.is_active == True
+    ).order_by(SanctionTemplate.name).all()
+
+    # Créer le tableau des coches pour chaque élève/sanction
+    sanctions_data = {}
+    for student in students:
+        sanctions_data[student.id] = {}
+        for sanction in imported_sanctions:
+            # Récupérer ou créer le compteur de coches
+            count = StudentSanctionCount.query.filter_by(
+                student_id=student.id,
+                template_id=sanction.id
+            ).first()
+            
+            if not count:
+                # Créer un nouveau compteur à 0
+                count = StudentSanctionCount(
+                    student_id=student.id,
+                    template_id=sanction.id,
+                    check_count=0
+                )
+                db.session.add(count)
+            
+            sanctions_data[student.id][sanction.id] = count.check_count
+    
+    # Sauvegarder les nouveaux compteurs créés
+    db.session.commit()
 
     # Calculer le temps restant si cours en cours
     remaining_seconds = 0
@@ -683,7 +729,9 @@ def lesson_view():
                          time_remaining=time_remaining,
                          remaining_seconds=remaining_seconds,
                          students=students,
-                         attendance_records=attendance_records)
+                         attendance_records=attendance_records,
+                         imported_sanctions=imported_sanctions,
+                         sanctions_data=sanctions_data)
 
 @planning_bp.route('/get-class-resources/<int:classroom_id>')
 @login_required
@@ -808,8 +856,10 @@ def toggle_pin_resource():
 @planning_bp.route('/manage-classes')
 @login_required
 def manage_classes():
-    """Gestion des classes - élèves, notes, fichiers et chapitres"""
-    from models.student import Student, Grade, Chapter, ClassroomChapter
+    """Gestion des classes - élèves, notes, fichiers et sanctions"""
+    from models.student import Student, Grade
+    from models.sanctions import SanctionTemplate, ClassroomSanctionImport
+    from models.student_sanctions import StudentSanctionCount
 
     # Récupérer la classe sélectionnée (par défaut la première)
     selected_classroom_id = request.args.get('classroom', type=int)
@@ -831,14 +881,38 @@ def manage_classes():
     # Récupérer les notes récentes
     recent_grades = Grade.query.filter_by(classroom_id=selected_classroom_id).order_by(Grade.date.desc()).limit(10).all()
 
-    # Récupérer tous les chapitres de l'utilisateur
-    all_chapters = current_user.chapters.order_by(Chapter.order_index).all()
+    # Récupérer les modèles de sanctions importés dans cette classe
+    imported_sanctions = db.session.query(SanctionTemplate).join(ClassroomSanctionImport).filter(
+        ClassroomSanctionImport.classroom_id == selected_classroom_id,
+        ClassroomSanctionImport.is_active == True,
+        SanctionTemplate.user_id == current_user.id,
+        SanctionTemplate.is_active == True
+    ).order_by(SanctionTemplate.name).all()
 
-    # Récupérer les chapitres actuels de la classe
-    current_chapters = ClassroomChapter.query.filter_by(
-        classroom_id=selected_classroom_id,
-        is_current=True
-    ).all()
+    # Créer le tableau des coches pour chaque élève/sanction
+    sanctions_data = {}
+    for student in students:
+        sanctions_data[student.id] = {}
+        for sanction in imported_sanctions:
+            # Récupérer ou créer le compteur de coches
+            count = StudentSanctionCount.query.filter_by(
+                student_id=student.id,
+                template_id=sanction.id
+            ).first()
+            
+            if not count:
+                # Créer un nouveau compteur à 0
+                count = StudentSanctionCount(
+                    student_id=student.id,
+                    template_id=sanction.id,
+                    check_count=0
+                )
+                db.session.add(count)
+            
+            sanctions_data[student.id][sanction.id] = count.check_count
+    
+    # Sauvegarder les nouveaux compteurs créés
+    db.session.commit()
 
     return render_template('planning/manage_classes.html',
                          classrooms=classrooms,
@@ -846,8 +920,112 @@ def manage_classes():
                          selected_classroom_id=selected_classroom_id,
                          students=students,
                          recent_grades=recent_grades,
-                         all_chapters=all_chapters,
-                         current_chapters=current_chapters)
+                         imported_sanctions=imported_sanctions,
+                         sanctions_data=sanctions_data)
+
+
+@planning_bp.route('/update-sanction-count', methods=['POST'])
+@login_required
+def update_sanction_count():
+    """Mettre à jour le nombre de coches pour une sanction d'un élève"""
+    from models.student_sanctions import StudentSanctionCount
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+    
+    try:
+        student_id = data.get('student_id')
+        template_id = data.get('template_id')
+        new_count = data.get('count')
+        
+        if student_id is None or template_id is None or new_count is None:
+            return jsonify({'success': False, 'message': 'Données manquantes'}), 400
+        
+        # Vérifier que l'élève appartient à une classe de l'utilisateur
+        from models.student import Student
+        student = Student.query.join(Classroom).filter(
+            Student.id == student_id,
+            Classroom.user_id == current_user.id
+        ).first()
+        
+        if not student:
+            return jsonify({'success': False, 'message': 'Élève non trouvé'}), 404
+        
+        # Récupérer ou créer le compteur
+        count_record = StudentSanctionCount.query.filter_by(
+            student_id=student_id,
+            template_id=template_id
+        ).first()
+        
+        if not count_record:
+            count_record = StudentSanctionCount(
+                student_id=student_id,
+                template_id=template_id,
+                check_count=0
+            )
+            db.session.add(count_record)
+        
+        # Mettre à jour le compteur
+        count_record.check_count = max(0, int(new_count))  # Ne pas aller en dessous de 0
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Compteur mis à jour',
+            'new_count': count_record.check_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@planning_bp.route('/reset-all-sanctions', methods=['POST'])
+@login_required
+def reset_all_sanctions():
+    """Réinitialiser toutes les coches d'une classe à zéro"""
+    from models.student_sanctions import StudentSanctionCount
+    from models.student import Student
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+    
+    try:
+        classroom_id = data.get('classroom_id')
+        
+        if not classroom_id:
+            return jsonify({'success': False, 'message': 'ID de classe manquant'}), 400
+        
+        # Vérifier que la classe appartient à l'utilisateur
+        classroom = Classroom.query.filter_by(
+            id=classroom_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not classroom:
+            return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+        
+        # Récupérer tous les élèves de la classe
+        student_ids = [s.id for s in Student.query.filter_by(classroom_id=classroom_id).all()]
+        
+        if student_ids:
+            # Réinitialiser tous les compteurs à 0 pour cette classe
+            StudentSanctionCount.query.filter(
+                StudentSanctionCount.student_id.in_(student_ids)
+            ).update({'check_count': 0}, synchronize_session=False)
+            
+            db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Toutes les coches ont été réinitialisées à zéro'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @planning_bp.route('/add-student', methods=['POST'])

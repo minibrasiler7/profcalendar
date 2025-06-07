@@ -377,73 +377,129 @@
     color: var(--gray-color);
 }
 
-/* Chapters section */
-.chapters-section {
+/* Sanctions section */
+.sanctions-section {
     background-color: var(--white);
     padding: 2rem;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-sm);
 }
 
-.chapters-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1rem;
-}
-
-.chapter-card {
-    background-color: var(--light-gray);
-    padding: 1.5rem;
+.sanctions-table-container {
+    overflow-x: auto;
     border-radius: var(--border-radius);
-    position: relative;
+    border: 1px solid var(--light-gray);
 }
 
-.chapter-card.current {
-    background-color: #EFF6FF;
-    border: 2px solid var(--primary-color);
+.sanctions-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--white);
+    min-width: 600px;
 }
 
-.chapter-number {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    width: 30px;
-    height: 30px;
-    background-color: var(--primary-color);
-    color: white;
-    border-radius: 50%;
+.sanctions-table th {
+    background-color: var(--light-gray);
+    padding: 1rem;
+    text-align: center;
+    font-weight: 600;
+    color: var(--dark-color);
+    border-bottom: 2px solid var(--primary-color);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.sanctions-table th.student-column {
+    text-align: left;
+    min-width: 200px;
+    max-width: 200px;
+}
+
+.sanctions-table th.sanction-column {
+    min-width: 120px;
+    font-size: 0.875rem;
+}
+
+.sanctions-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--light-gray);
+    vertical-align: middle;
+}
+
+.sanctions-table tr:hover {
+    background-color: #F9FAFB;
+}
+
+.student-name {
+    font-weight: 500;
+    color: var(--dark-color);
+    text-align: left;
+}
+
+.sanction-count {
+    text-align: center;
+}
+
+.count-controls {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
-    font-size: 0.875rem;
-}
-
-.chapter-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
-
-.chapter-description {
-    font-size: 0.875rem;
-    color: var(--gray-color);
-    margin-bottom: 1rem;
-}
-
-.chapter-actions {
-    display: flex;
     gap: 0.5rem;
 }
 
-.current-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
+.count-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--light-gray);
+    background-color: var(--white);
+    color: var(--gray-color);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.count-btn:hover {
     background-color: var(--primary-color);
     color: white;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 500;
+    border-color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+.count-btn.decrease:hover {
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.count-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.count-display {
+    font-weight: 600;
+    font-size: 1.125rem;
+    min-width: 30px;
+    text-align: center;
+    color: var(--dark-color);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+    background-color: var(--light-gray);
+}
+
+.count-display.warning {
+    background-color: #FEF3C7;
+    color: #92400E;
+}
+
+.count-display.danger {
+    background-color: #FEE2E2;
+    color: #991B1B;
 }
 
 /* Empty states */
@@ -514,8 +570,8 @@
                 <button class="tab-button" onclick="showTab('files')">
                     <i class="fas fa-folder-open"></i> Fichiers
                 </button>
-                <button class="tab-button" onclick="showTab('chapters')">
-                    <i class="fas fa-book"></i> Chapitres
+                <button class="tab-button" onclick="showTab('sanctions')">
+                    <i class="fas fa-exclamation-triangle"></i> Sanctions
                 </button>
             </div>
         </div>
@@ -704,46 +760,64 @@
         </div>
     </div>
 
-    <!-- Onglet Chapitres -->
-    <div id="chapters-tab" class="tab-content">
-        <div class="chapters-section">
+    <!-- Onglet Sanctions -->
+    <div id="sanctions-tab" class="tab-content">
+        <div class="sanctions-section">
             <div class="section-header">
                 <h2 class="section-title">
-                    <i class="fas fa-book"></i> Chapitres en cours
+                    <i class="fas fa-exclamation-triangle"></i> Suivi des sanctions
                 </h2>
-                <button class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Nouveau chapitre
+                <button class="btn btn-danger" onclick="resetAllSanctions()">
+                    <i class="fas fa-undo"></i> Réinitialiser toutes les coches
                 </button>
             </div>
 
-            {% if all_chapters %}
-            <div class="chapters-grid">
-                {% for chapter in all_chapters %}
-                <div class="chapter-card {% if chapter.id in current_chapters|map(attribute='chapter_id')|list %}current{% endif %}">
-                    <div class="chapter-number">{{ loop.index }}</div>
-                    <h3 class="chapter-title">{{ chapter.name }}</h3>
-                    {% if chapter.description %}
-                    <p class="chapter-description">{{ chapter.description }}</p>
-                    {% endif %}
-                    <div class="chapter-actions">
-                        {% if chapter.id in current_chapters|map(attribute='chapter_id')|list %}
-                        <span class="current-badge">En cours</span>
-                        {% else %}
-                        <button class="btn btn-sm btn-outline">
-                            Marquer comme en cours
-                        </button>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
+            {% if imported_sanctions and students %}
+            <div class="sanctions-table-container">
+                <table class="sanctions-table">
+                    <thead>
+                        <tr>
+                            <th class="student-column">Élève</th>
+                            {% for sanction in imported_sanctions %}
+                            <th class="sanction-column">{{ sanction.name }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr>
+                            <td class="student-name">{{ student.full_name }}</td>
+                            {% for sanction in imported_sanctions %}
+                            <td class="sanction-count">
+                                <div class="count-controls">
+                                    <button class="count-btn decrease" onclick="updateCount({{ student.id }}, {{ sanction.id }}, -1)">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <span class="count-display" data-student="{{ student.id }}" data-sanction="{{ sanction.id }}">
+                                        {{ sanctions_data[student.id][sanction.id] }}
+                                    </span>
+                                    <button class="count-btn increase" onclick="updateCount({{ student.id }}, {{ sanction.id }}, 1)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            {% else %}
+            {% elif not imported_sanctions %}
             <div class="empty-state">
-                <i class="fas fa-book"></i>
-                <p>Aucun chapitre créé</p>
-                <button class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Créer le premier chapitre
-                </button>
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Aucun modèle de sanction importé dans cette classe</p>
+                <p style="font-size: 0.875rem;">Allez dans <a href="{{ url_for('sanctions.index') }}">Gestion des sanctions</a> pour créer et importer des modèles</p>
+            </div>
+            {% elif not students %}
+            <div class="empty-state">
+                <i class="fas fa-user-graduate"></i>
+                <p>Aucun élève dans cette classe</p>
+                <p style="font-size: 0.875rem;">Ajoutez des élèves dans l'onglet "Élèves" pour commencer le suivi des sanctions</p>
             </div>
             {% endif %}
         </div>
@@ -1124,12 +1198,113 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// Fonctions pour la gestion des sanctions
+async function updateCount(studentId, sanctionId, delta) {
+    const countElement = document.querySelector(`[data-student="${studentId}"][data-sanction="${sanctionId}"]`);
+    const currentCount = parseInt(countElement.textContent);
+    const newCount = Math.max(0, currentCount + delta); // Ne pas aller en dessous de 0
+    
+    try {
+        const response = await fetch('{{ url_for("planning.update_sanction_count") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                student_id: studentId,
+                template_id: sanctionId,
+                count: newCount
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            countElement.textContent = result.new_count;
+            
+            // Mettre à jour les classes CSS selon le nombre
+            countElement.className = 'count-display';
+            if (result.new_count >= 6) {
+                countElement.classList.add('danger');
+            } else if (result.new_count >= 3) {
+                countElement.classList.add('warning');
+            }
+            
+            // Animation de mise à jour
+            countElement.style.transform = 'scale(1.2)';
+            setTimeout(() => {
+                countElement.style.transform = 'scale(1)';
+            }, 200);
+        } else {
+            showNotification('error', result.message || 'Erreur lors de la mise à jour');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur lors de la communication avec le serveur');
+    }
+}
+
+async function resetAllSanctions() {
+    if (!confirm('Êtes-vous sûr de vouloir remettre toutes les coches à zéro pour cette classe ?\n\nCette action est irréversible.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('{{ url_for("planning.reset_all_sanctions") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                classroom_id: {{ selected_classroom_id }}
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', result.message);
+            
+            // Mettre à jour tous les compteurs à 0 visuellement
+            document.querySelectorAll('.count-display').forEach(element => {
+                element.textContent = '0';
+                element.className = 'count-display'; // Enlever les classes warning/danger
+                
+                // Animation de réinitialisation
+                element.style.backgroundColor = '#D1FAE5';
+                element.style.color = '#065F46';
+                setTimeout(() => {
+                    element.style.backgroundColor = '';
+                    element.style.color = '';
+                }, 1000);
+            });
+        } else {
+            showNotification('error', result.message || 'Erreur lors de la réinitialisation');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur lors de la communication avec le serveur');
+    }
+}
+
 // Focus sur le champ prénom au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
     const firstNameField = document.getElementById('studentFirstName');
     if (firstNameField && document.getElementById('addStudentForm').style.display !== 'none') {
         firstNameField.focus();
     }
+    
+    // Appliquer les classes CSS aux compteurs selon leur valeur au chargement
+    document.querySelectorAll('.count-display').forEach(element => {
+        const count = parseInt(element.textContent);
+        if (count >= 6) {
+            element.classList.add('danger');
+        } else if (count >= 3) {
+            element.classList.add('warning');
+        }
+    });
 });
 </script>
 {% endblock %}
