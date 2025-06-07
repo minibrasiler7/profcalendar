@@ -960,12 +960,16 @@ if (typeof pdfjsLib !== 'undefined') {
             
             <!-- Actions -->
             <div class="tool-group">
+                <button class="tool-btn" id="saveBtn" title="Sauvegarder maintenant" onclick="saveAnnotations()">
+                    <i class="fas fa-save"></i>
+                </button>
                 <button class="tool-btn" id="undoBtn" title="Annuler">
                     <i class="fas fa-undo"></i>
                 </button>
                 <button class="tool-btn" id="clearAllBtn" title="Tout effacer">
                     <i class="fas fa-trash"></i>
                 </button>
+                <!-- Bouton debug supprimé pour simplifier -->
             </div>
         </div>
         <button class="close-viewer" onclick="closeFileViewer()">
@@ -993,7 +997,7 @@ if (typeof pdfjsLib !== 'undefined') {
     </div>
     <div class="viewer-footer">
         <div class="save-status" id="saveStatus">
-            <i class="fas fa-check"></i> Sauvegardé automatiquement
+<i class="fas fa-info-circle"></i> Sauvegarde à la fermeture
         </div>
     </div>
 </div>
@@ -1905,6 +1909,18 @@ timerInterval = setInterval(updateTimer, 1000);
 // Nettoyer à la fermeture de la page
 window.addEventListener('beforeunload', () => {
     clearInterval(timerInterval);
+    
+    // Sauvegarder les annotations si le viewer est ouvert
+    if (currentFileId && annotations.length > 0) {
+        // Utiliser sendBeacon pour une sauvegarde synchrone lors de la fermeture
+        const data = JSON.stringify({
+            file_id: currentFileId,
+            annotations: annotations
+        });
+        
+        // sendBeacon est plus fiable que fetch lors de beforeunload
+        navigator.sendBeacon('/planning/save_file_annotations', new Blob([data], {type: 'application/json'}));
+    }
 });
 {% endif %}
 
@@ -1918,7 +1934,10 @@ let currentStrokeWidth = 3;
 let isDrawing = false;
 let annotations = [];
 let currentStroke = [];
+let undoHistory = [];
 let saveTimeout = null;
+
+// Variables simplifiées
 
 // Variables PDF
 let pdfDoc = null;
@@ -1995,7 +2014,88 @@ function initializeCanvases() {
         pdfCtx.imageSmoothingQuality = 'high';
         annotationCtx.imageSmoothingEnabled = true;
         annotationCtx.imageSmoothingQuality = 'high';
+        
+        // Forcer le bon positionnement du canvas d'annotation
+        forceCanvasPositioning();
     }
+}
+
+// Fonction pour forcer le bon positionnement du canvas
+function forceCanvasPositioning() {
+    if (!annotationCanvas || !pdfCanvas) return;
+    
+    console.log('🔧 Aligning annotation canvas with PDF canvas...');
+    
+    // Assurer que les canvas ont exactement les mêmes dimensions logiques
+    annotationCanvas.width = pdfCanvas.width;
+    annotationCanvas.height = pdfCanvas.height;
+    
+    // Obtenir les rectangles de position pour diagnostic
+    const pdfRect = pdfCanvas.getBoundingClientRect();
+    
+    // Copier TOUS les styles computed du PDF canvas pour garantir un alignement parfait
+    const pdfComputedStyle = window.getComputedStyle(pdfCanvas);
+    
+    // Assurer que les canvas ont exactement les mêmes styles CSS
+    annotationCanvas.style.position = 'absolute';
+    annotationCanvas.style.top = '0px';
+    annotationCanvas.style.left = '0px';
+    
+    // IMPORTANT: Copier les dimensions exactement du PDF canvas
+    // Les dimensions CSS doivent être les dimensions logiques (avant transformation)
+    if (pdfCanvas.style.width) {
+        annotationCanvas.style.width = pdfCanvas.style.width;
+    } else {
+        // Si pas de style explicite, utiliser les dimensions logiques
+        annotationCanvas.style.width = pdfCanvas.width + 'px';
+    }
+    
+    if (pdfCanvas.style.height) {
+        annotationCanvas.style.height = pdfCanvas.style.height;
+    } else {
+        // Si pas de style explicite, utiliser les dimensions logiques
+        annotationCanvas.style.height = pdfCanvas.height + 'px';
+    }
+    
+    // Copier la transformation et l'origine exactement
+    annotationCanvas.style.transform = pdfComputedStyle.transform;
+    annotationCanvas.style.transformOrigin = pdfComputedStyle.transformOrigin;
+    
+    annotationCanvas.style.zIndex = '100'; // Au-dessus du PDF
+    annotationCanvas.style.pointerEvents = 'auto';
+    
+    // S'assurer que le conteneur est configuré correctement
+    const container = pdfCanvas.parentElement;
+    if (container) {
+        container.style.position = 'relative';
+    }
+    
+    // Vérifier l'alignement après positionnement
+    requestAnimationFrame(() => {
+        const annotationRect = annotationCanvas.getBoundingClientRect();
+        const pdfRectAfter = pdfCanvas.getBoundingClientRect();
+        
+        console.log('✅ Canvas alignment completed');
+        console.log('  📏 PDF Canvas logical:', pdfCanvas.width, 'x', pdfCanvas.height);
+        console.log('  📏 PDF Canvas visible:', Math.round(pdfRectAfter.width), 'x', Math.round(pdfRectAfter.height));
+        console.log('  📏 Annotation Canvas logical:', annotationCanvas.width, 'x', annotationCanvas.height);
+        console.log('  📏 Annotation Canvas visible:', Math.round(annotationRect.width), 'x', Math.round(annotationRect.height));
+        console.log('  🎨 CSS width match:', annotationCanvas.style.width, '===', pdfCanvas.style.width || pdfComputedStyle.width);
+        console.log('  🎨 CSS height match:', annotationCanvas.style.height, '===', pdfCanvas.style.height || pdfComputedStyle.height);
+        console.log('  📍 Position alignment:', 
+            Math.abs(pdfRectAfter.left - annotationRect.left) < 1 && Math.abs(pdfRectAfter.top - annotationRect.top) < 1);
+        console.log('  📍 Size alignment:', 
+            Math.abs(pdfRectAfter.width - annotationRect.width) < 1 && Math.abs(pdfRectAfter.height - annotationRect.height) < 1);
+        console.log('  ⚖️  Scale factor X:', Math.round(annotationCanvas.width / annotationRect.width * 100) / 100);
+        console.log('  ⚖️  Scale factor Y:', Math.round(annotationCanvas.height / annotationRect.height * 100) / 100);
+        
+        // Si les tailles ne correspondent pas, forcer la correction
+        if (Math.abs(pdfRectAfter.width - annotationRect.width) > 1) {
+            console.warn('⚠️  Size mismatch detected! Forcing correction...');
+            annotationCanvas.style.width = pdfRectAfter.width + 'px';
+            annotationCanvas.style.height = pdfRectAfter.height + 'px';
+        }
+    });
 }
 
 // Charger PDF.js de manière asynchrone
@@ -2056,6 +2156,13 @@ async function renderPage(pageNum) {
         return;
     }
     
+    // Ne pas rerender si on est en train de dessiner
+    if (isDrawing) {
+        console.log('renderPage delayed - currently drawing');
+        pageNumIsPending = pageNum;
+        return;
+    }
+    
     pageIsRendering = true;
     
     try {
@@ -2071,21 +2178,52 @@ async function renderPage(pageNum) {
         // Configurer les canvas
         pdfCanvas.width = viewport.width;
         pdfCanvas.height = viewport.height;
-        annotationCanvas.width = viewport.width;
-        annotationCanvas.height = viewport.height;
+        
+        // Ne redimensionner le canvas d'annotation que si nécessaire
+        if (annotationCanvas.width !== viewport.width || annotationCanvas.height !== viewport.height) {
+            console.log('📐 Resizing annotation canvas from', annotationCanvas.width, 'x', annotationCanvas.height, 'to', viewport.width, 'x', viewport.height);
+            
+            // Si on est en train de dessiner, arrêter le trait en cours
+            if (isDrawing) {
+                console.warn('⚠️ Canvas resize during drawing! Stopping current stroke...');
+                isDrawing = false;
+                currentStroke = [];
+            }
+            
+            annotationCanvas.width = viewport.width;
+            annotationCanvas.height = viewport.height;
+            
+            // Récréer le contexte après redimensionnement
+            annotationCtx = annotationCanvas.getContext('2d');
+            ctx = annotationCtx; // Variable de compatibilité
+            
+            // Forcer le repositionnement après redimensionnement
+            forceCanvasPositioning();
+        }
         
         // Appliquer le scale CSS pour l'affichage
         const cssScale = displayScale / baseScale;
         const transform = `scale(${cssScale})`;
+        
+        // D'abord définir les dimensions CSS explicites AVANT la transformation
+        pdfCanvas.style.width = viewport.width + 'px';
+        pdfCanvas.style.height = viewport.height + 'px';
+        annotationCanvas.style.width = viewport.width + 'px';
+        annotationCanvas.style.height = viewport.height + 'px';
+        
+        // Ensuite appliquer la transformation
         pdfCanvas.style.transform = transform;
         annotationCanvas.style.transform = transform;
         pdfCanvas.style.transformOrigin = '0 0';
         annotationCanvas.style.transformOrigin = '0 0';
         
-        // Ajuster la taille du conteneur
+        // Ajuster la taille du conteneur pour contenir les canvas transformés
         const container = pdfCanvas.parentElement;
-        container.style.width = (viewport.width * cssScale) + 'px';
-        container.style.height = (viewport.height * cssScale) + 'px';
+        const containerWidth = viewport.width * cssScale;
+        const containerHeight = viewport.height * cssScale;
+        
+        container.style.width = containerWidth + 'px';
+        container.style.height = containerHeight + 'px';
         
         // Rendre la page
         const renderContext = {
@@ -2097,6 +2235,9 @@ async function renderPage(pageNum) {
         
         // Redessiner les annotations
         redrawAnnotations();
+        
+        // Forcer l'alignement parfait des canvas après le rendu
+        forceCanvasPositioning();
         
         pageIsRendering = false;
         
@@ -2156,6 +2297,10 @@ async function loadImage(fileId) {
 // Navigation entre pages
 function previousPage() {
     if (currentPageNum <= 1 || !pdfDoc) return;
+    if (isDrawing) {
+        console.log('previousPage delayed - currently drawing');
+        return;
+    }
     currentPageNum--;
     renderPage(currentPageNum);
     updatePageInfo();
@@ -2165,6 +2310,10 @@ function previousPage() {
 
 function nextPage() {
     if (currentPageNum >= pdfDoc.numPages || !pdfDoc) return;
+    if (isDrawing) {
+        console.log('nextPage delayed - currently drawing');
+        return;
+    }
     currentPageNum++;
     renderPage(currentPageNum);
     updatePageInfo();
@@ -2179,6 +2328,51 @@ function goToPage(pageNum) {
     updatePageInfo();
     updateNavigationButtons();
     updateActiveThumbnail();
+}
+
+// Fonction pour calculer les coordonnées du canvas - corrigée pour la scale CSS
+function getCanvasCoordinates(e) {
+    try {
+        // Utiliser getBoundingClientRect pour obtenir la position et taille actuelles du canvas
+        const rect = annotationCanvas.getBoundingClientRect();
+        
+        // Vérifier si la souris est au-dessus du canvas
+        const isOverCanvas = (
+            e.clientX >= rect.left && 
+            e.clientX <= rect.right && 
+            e.clientY >= rect.top && 
+            e.clientY <= rect.bottom
+        );
+        
+        // Calculer les coordonnées relatives au canvas visible
+        // Important: utiliser rect.width/height (taille visible) plutôt que canvas.width/height (taille logique)
+        const x = (e.clientX - rect.left) * (annotationCanvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (annotationCanvas.height / rect.height);
+        
+        // Debug temporaire pour vérifier les calculs
+        if (Math.random() < 0.05) { // Log 5% des événements pour éviter le spam
+            console.log('🔍 Coordinate calculation:');
+            console.log('  Mouse screen:', e.clientX, e.clientY);
+            console.log('  Canvas rect (visible):', Math.round(rect.left), Math.round(rect.top), Math.round(rect.width), Math.round(rect.height));
+            console.log('  Canvas logical:', annotationCanvas.width, annotationCanvas.height);
+            console.log('  Scale factors:', Math.round(annotationCanvas.width / rect.width * 100) / 100, Math.round(annotationCanvas.height / rect.height * 100) / 100);
+            console.log('  Calculated coords:', Math.round(x), Math.round(y));
+            console.log('  Within bounds:', x >= 0 && x <= annotationCanvas.width && y >= 0 && y <= annotationCanvas.height);
+        }
+        
+        // Retourner les coordonnées, en s'assurant qu'elles restent dans les limites du canvas logique
+        return { 
+            x: Math.max(0, Math.min(x, annotationCanvas.width - 1)),
+            y: Math.max(0, Math.min(y, annotationCanvas.height - 1)),
+            isOverCanvas: isOverCanvas
+        };
+        
+    } catch (error) {
+        console.error('❌ Erreur dans getCanvasCoordinates:', error);
+        
+        // Retourner une coordonnée sûre en cas d'erreur
+        return { x: 0, y: 0, isOverCanvas: false };
+    }
 }
 
 // Fonctions de zoom supprimées - non utilisées
@@ -2255,22 +2449,114 @@ function updateActiveThumbnail() {
 
 // Système d'annotation amélioré
 function setupAnnotationTools() {
-    if (!annotationCanvas) return;
+    if (!annotationCanvas) {
+        console.error('annotationCanvas not found!');
+        return;
+    }
     
-    // Événements de dessin
-    annotationCanvas.addEventListener('mousedown', startDrawing);
-    annotationCanvas.addEventListener('mousemove', draw);
-    annotationCanvas.addEventListener('mouseup', stopDrawing);
-    annotationCanvas.addEventListener('mouseout', stopDrawing);
+    console.log('Setting up annotation tools on canvas:', annotationCanvas);
+    
+    // Debug des styles CSS
+    const computedStyle = window.getComputedStyle(annotationCanvas);
+    console.log('Canvas CSS styles:');
+    console.log('  pointer-events:', computedStyle.pointerEvents);
+    console.log('  z-index:', computedStyle.zIndex);
+    console.log('  position:', computedStyle.position);
+    console.log('  display:', computedStyle.display);
+    console.log('  visibility:', computedStyle.visibility);
+    
+    // Événements de dessin simplifiés
+    console.log('Attaching mousedown event listener...');
+    annotationCanvas.addEventListener('mousedown', (e) => {
+        console.log('🔽 MOUSEDOWN EVENT');
+        startDrawing(e);
+    });
+    
+    console.log('Attaching mousemove event listener to DOCUMENT (for global coverage)...');
+    document.addEventListener('mousemove', (e) => {
+        if (isDrawing) {
+            draw(e);
+        }
+    });
+    
+    console.log('Attaching mouseup event listener to DOCUMENT (for global coverage)...');
+    document.addEventListener('mouseup', (e) => {
+        console.log('🔼 MOUSEUP EVENT');
+        stopDrawing(e);
+    });
+    
+    console.log('Attaching mouseout event listener (for debugging only)...');
+    annotationCanvas.addEventListener('mouseout', (e) => {
+        console.log('🚪 MOUSEOUT EVENT (ignored)');
+        // NE PAS appeler stopDrawing() ici - l'utilisateur doit pouvoir dessiner hors du canvas
+    });
     
     // Support tactile
     annotationCanvas.addEventListener('touchstart', handleTouch, { passive: false });
     annotationCanvas.addEventListener('touchmove', handleTouch, { passive: false });
     annotationCanvas.addEventListener('touchend', handleTouch, { passive: false });
     
+    console.log('Event listeners attached successfully');
+    
+    // Test de débogage AMÉLIORÉ : vérifier quel élément reçoit les clics
+    document.addEventListener('mousedown', (e) => {
+        if (!annotationCanvas) return;
+        
+        const rect = annotationCanvas.getBoundingClientRect();
+        const isOverCanvas = e.clientX >= rect.left && e.clientX <= rect.right && 
+                           e.clientY >= rect.top && e.clientY <= rect.bottom;
+        
+        if (isOverCanvas) {
+            console.log('🎯 CLICK ANALYSIS:');
+            console.log('  📍 Mouse position:', e.clientX, e.clientY);
+            console.log('  📦 Canvas bounds:', rect);
+            console.log('  🎯 Target element:', e.target);
+            console.log('  ❓ Is annotation canvas?', e.target === annotationCanvas);
+            console.log('  🔍 Element at point:', document.elementFromPoint(e.clientX, e.clientY));
+            console.log('  📊 Target classes:', e.target.className);
+            console.log('  🏷️ Target ID:', e.target.id);
+            console.log('  🌳 Target parent:', e.target.parentElement);
+            
+            // CSS debugging
+            const targetStyle = window.getComputedStyle(e.target);
+            console.log('  🎨 Target z-index:', targetStyle.zIndex);
+            console.log('  👆 Target pointer-events:', targetStyle.pointerEvents);
+            console.log('  📐 Target position:', targetStyle.position);
+            
+            const canvasStyle = window.getComputedStyle(annotationCanvas);
+            console.log('  🎨 Canvas z-index:', canvasStyle.zIndex);
+            console.log('  👆 Canvas pointer-events:', canvasStyle.pointerEvents);
+            
+            console.log('🎯 Click intercepted and will be redirected to canvas');
+            
+            // Si le clic n'est pas directement sur le canvas, forcer l'événement
+            if (e.target !== annotationCanvas) {
+                console.log('🔄 FORCING click to annotation canvas...');
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const canvasEvent = new MouseEvent('mousedown', {
+                    clientX: e.clientX,
+                    clientY: e.clientY,
+                    button: e.button,
+                    buttons: e.buttons,
+                    bubbles: true
+                });
+                annotationCanvas.dispatchEvent(canvasEvent);
+            }
+        }
+    }, true); // Utiliser capture phase pour intercepter tôt
+    
+    // Démarrer le monitoring
+    // Monitoring désactivé pour simplifier
+    
+    // Détecteurs de clics globaux supprimés pour simplifier
+    
     // Événements des outils
     setupToolEvents();
 }
+
+// Fonctions de diagnostic supprimées pour simplifier le code
 
 function setupToolEvents() {
     // Outils de dessin
@@ -2335,70 +2621,104 @@ function setAnnotationColor(color) {
     document.getElementById('annotationColor').value = color;
 }
 
-// Commencer à dessiner
+// Fonction de dessin simple - basée sur la logique de la gomme qui fonctionne
 function startDrawing(e) {
-    if (!annotationCtx) return;
+    if (!annotationCtx || !annotationCanvas) {
+        console.error('❌ Canvas ou contexte indisponible');
+        return;
+    }
     
     isDrawing = true;
     currentStroke = [];
     
-    const rect = annotationCanvas.getBoundingClientRect();
-    const scaleX = annotationCanvas.width / rect.width;
-    const scaleY = annotationCanvas.height / rect.height;
+    console.log('🎨 Début du dessin avec outil:', currentAnnotationTool);
     
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-    
-    currentStroke.push({ x, y });
+    const coords = getCanvasCoordinates(e);
+    currentStroke.push(coords);
     
     if (currentAnnotationTool === 'eraser') {
-        eraseAt(x, y);
+        eraseAt(coords.x, coords.y);
     } else {
-        annotationCtx.beginPath();
-        annotationCtx.moveTo(x, y);
+        // Pour le stylo : commencer un nouveau path
+        drawAt(coords.x, coords.y, true); // true = début de trait
     }
 }
 
-// Dessiner
+// Fonction de dessin simplifiée
 function draw(e) {
-    if (!isDrawing || !annotationCtx) return;
+    if (!isDrawing) return;
     
-    const rect = annotationCanvas.getBoundingClientRect();
-    const scaleX = annotationCanvas.width / rect.width;
-    const scaleY = annotationCanvas.height / rect.height;
-    
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-    
-    currentStroke.push({ x, y });
+    const coords = getCanvasCoordinates(e);
+    currentStroke.push(coords);
     
     if (currentAnnotationTool === 'eraser') {
-        eraseAt(x, y);
-        return;
+        eraseAt(coords.x, coords.y);
+    } else {
+        // Pour le stylo : continuer le trait
+        drawAt(coords.x, coords.y, false); // false = continuation de trait
+    }
+}
+
+// Fonction d'arrêt simplifiée
+function stopDrawing() {
+    if (!isDrawing) return;
+    
+    console.log('🛑 Arrêt du dessin');
+    isDrawing = false;
+    
+    // Finaliser le dessin (pour restaurer le contexte)
+    if (currentAnnotationTool !== 'eraser') {
+        annotationCtx.restore();
     }
     
-    // Configurer le style selon l'outil
-    if (currentAnnotationTool === 'pen') {
-        annotationCtx.globalCompositeOperation = 'source-over';
-        annotationCtx.strokeStyle = currentColor;
-        annotationCtx.lineWidth = currentStrokeWidth * (currentScale || 1);
-        annotationCtx.lineCap = 'round';
-        annotationCtx.lineJoin = 'round';
-        annotationCtx.globalAlpha = 1.0;
-    } else if (currentAnnotationTool === 'highlighter') {
-        annotationCtx.globalCompositeOperation = 'multiply';
-        annotationCtx.strokeStyle = currentColor;
-        annotationCtx.lineWidth = currentStrokeWidth * 3 * (currentScale || 1);
-        annotationCtx.lineCap = 'round';
-        annotationCtx.lineJoin = 'round';
-        annotationCtx.globalAlpha = 0.3;
+    // Sauvegarder l'annotation si ce n'est pas la gomme
+    if (currentStroke.length > 0 && currentAnnotationTool !== 'eraser') {
+        const annotation = {
+            type: currentAnnotationTool,
+            color: currentColor,
+            strokeWidth: currentStrokeWidth,
+            points: [...currentStroke],
+            page: currentPageNum,
+            scale: currentScale,
+            timestamp: Date.now()
+        };
+        
+        annotations.push(annotation);
+        undoHistory.push(annotations.length - 1);
     }
     
-    annotationCtx.lineTo(x, y);
-    annotationCtx.stroke();
-    
-    if (currentAnnotationTool === 'highlighter') {
-        annotationCtx.globalAlpha = 1.0;
+    currentStroke = [];
+}
+
+// Fonction de dessin simple - inspirée d'eraseAt qui fonctionne bien
+function drawAt(x, y, isStart) {
+    if (isStart) {
+        // Configurer le style pour ce trait
+        annotationCtx.save();
+        
+        if (currentAnnotationTool === 'pen') {
+            annotationCtx.globalCompositeOperation = 'source-over';
+            annotationCtx.strokeStyle = currentColor;
+            annotationCtx.lineWidth = currentStrokeWidth * (currentScale || 1);
+            annotationCtx.lineCap = 'round';
+            annotationCtx.lineJoin = 'round';
+            annotationCtx.globalAlpha = 1.0;
+        } else if (currentAnnotationTool === 'highlighter') {
+            annotationCtx.globalCompositeOperation = 'multiply';
+            annotationCtx.strokeStyle = currentColor;
+            annotationCtx.lineWidth = currentStrokeWidth * 3 * (currentScale || 1);
+            annotationCtx.lineCap = 'round';
+            annotationCtx.lineJoin = 'round';
+            annotationCtx.globalAlpha = 0.3;
+        }
+        
+        // Commencer un nouveau path
+        annotationCtx.beginPath();
+        annotationCtx.moveTo(x, y);
+    } else {
+        // Continuer le trait
+        annotationCtx.lineTo(x, y);
+        annotationCtx.stroke();
     }
 }
 
@@ -2427,31 +2747,11 @@ function eraseAt(x, y) {
     // Supprimer les annotations vides
     annotations = annotations.filter(annotation => annotation.points.length > 0);
     
-    // Programmer la sauvegarde
-    scheduleAutoSave();
+    // Sauvegarde désactivée pendant le dessin pour éviter les blocages
+    // scheduleAutoSave();
 }
 
-// Arrêter de dessiner
-function stopDrawing() {
-    if (!isDrawing) return;
-    
-    isDrawing = false;
-    
-    if (currentStroke.length > 0 && currentAnnotationTool !== 'eraser') {
-        const annotation = {
-            type: currentAnnotationTool,
-            color: currentColor,
-            strokeWidth: currentStrokeWidth,
-            points: [...currentStroke],
-            page: currentPageNum,
-            scale: currentScale,
-            timestamp: Date.now()
-        };
-        
-        annotations.push(annotation);
-        scheduleAutoSave();
-    }
-}
+// Fonction stopDrawing supprimée - doublon
 
 // Gestion tactile améliorée
 function handleTouch(e) {
@@ -2476,6 +2776,13 @@ function handleTouch(e) {
 function redrawAnnotations() {
     if (!annotationCtx) return;
     
+    // Ne pas redessiner si on est en train de dessiner pour éviter d'effacer le trait en cours
+    if (isDrawing) {
+        console.log('redrawAnnotations skipped - currently drawing');
+        return;
+    }
+    
+    console.log('redrawAnnotations called');
     annotationCtx.clearRect(0, 0, annotationCanvas.width, annotationCanvas.height);
     
     annotations.forEach(annotation => {
@@ -2544,7 +2851,8 @@ function undo() {
             const lastIndex = annotations.indexOf(lastPageAnnotation);
             annotations.splice(lastIndex, 1);
             redrawAnnotations();
-            scheduleAutoSave();
+            // Sauvegarde désactivée - sera faite à la fermeture
+            // scheduleAutoSave();
         }
     }
 }
@@ -2554,26 +2862,23 @@ function clearAll() {
     if (confirm('Êtes-vous sûr de vouloir effacer toutes les annotations de cette page ?')) {
         annotations = annotations.filter(annotation => annotation.page !== currentPageNum);
         redrawAnnotations();
-        scheduleAutoSave();
+        // Sauvegarde désactivée - sera faite à la fermeture
+        // scheduleAutoSave();
     }
 }
 
-// Programmer la sauvegarde automatique
-function scheduleAutoSave() {
-    if (saveTimeout) {
-        clearTimeout(saveTimeout);
-    }
-    
-    const saveStatus = document.getElementById('saveStatus');
-    saveStatus.className = 'save-status saving';
-    saveStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde...';
-    
-    saveTimeout = setTimeout(saveAnnotations, 1000);
-}
+// Fonction scheduleAutoSave supprimée - sauvegarde uniquement à la fermeture
 
-// Sauvegarder les annotations
+// Sauvegarder les annotations (appelé uniquement à la fermeture)
 async function saveAnnotations() {
     if (!currentFileId) return;
+    
+    // Indicateur visuel
+    const saveStatus = document.getElementById('saveStatus');
+    if (saveStatus) {
+        saveStatus.className = 'save-status saving';
+        saveStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde...';
+    }
     
     try {
         const response = await fetch('/planning/save_file_annotations', {
@@ -2592,17 +2897,24 @@ async function saveAnnotations() {
         const saveStatus = document.getElementById('saveStatus');
         
         if (result.success) {
-            saveStatus.className = 'save-status';
-            saveStatus.innerHTML = '<i class="fas fa-check"></i> Sauvegardé automatiquement';
+            if (saveStatus) {
+                saveStatus.className = 'save-status';
+                saveStatus.innerHTML = '<i class="fas fa-check"></i> Annotations sauvegardées';
+            }
+            console.log('Annotations sauvegardées avec succès');
         } else {
-            saveStatus.className = 'save-status error';
-            saveStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erreur de sauvegarde';
+            if (saveStatus) {
+                saveStatus.className = 'save-status error';
+                saveStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erreur de sauvegarde';
+            }
+            console.error('Erreur de sauvegarde:', result.message);
         }
     } catch (error) {
         console.error('Erreur lors de la sauvegarde:', error);
-        const saveStatus = document.getElementById('saveStatus');
-        saveStatus.className = 'save-status error';
-        saveStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erreur de connexion';
+        if (saveStatus) {
+            saveStatus.className = 'save-status error';
+            saveStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erreur de connexion';
+        }
     }
 }
 
@@ -2731,288 +3043,13 @@ async function loadAnnotations(fileId) {
     }
 }
 
-// Configurer les outils d'annotation
-function setupAnnotationTools() {
-    if (!canvas) return;
-    
-    // Événements de souris
-    canvas.addEventListener('mousedown', startDrawing);
-    canvas.addEventListener('mousemove', draw);
-    canvas.addEventListener('mouseup', stopDrawing);
-    canvas.addEventListener('mouseout', stopDrawing);
-    
-    // Événements tactiles (Apple Pencil)
-    canvas.addEventListener('touchstart', handleTouch);
-    canvas.addEventListener('touchmove', handleTouch);
-    canvas.addEventListener('touchend', handleTouch);
-    
-    // Empêcher le comportement par défaut du navigateur
-    canvas.addEventListener('touchstart', e => e.preventDefault());
-    canvas.addEventListener('touchmove', e => e.preventDefault());
-    
-    // Boutons d'outils
-    document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentAnnotationTool = btn.dataset.tool;
-            
-            // Changer le curseur
-            if (currentAnnotationTool === 'eraser') {
-                canvas.style.cursor = 'grab';
-            } else {
-                canvas.style.cursor = 'crosshair';
-            }
-        });
-    });
-    
-    // Boutons de couleurs prédéfinies
-    document.querySelectorAll('.color-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            // Retirer l'état actif de tous les boutons
-            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
-            // Activer le bouton cliqué
-            btn.classList.add('active');
-            // Changer la couleur
-            currentColor = btn.dataset.color;
-            // Mettre à jour le color picker
-            document.getElementById('annotationColor').value = currentColor;
-        });
-    });
-    
-    // Couleur personnalisée
-    document.getElementById('annotationColor').addEventListener('change', (e) => {
-        currentColor = e.target.value;
-        // Désactiver tous les boutons prédéfinis
-        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
-    });
-    
-    // Épaisseur du trait
-    const strokeWidthInput = document.getElementById('strokeWidth');
-    const strokeWidthValue = document.getElementById('strokeWidthValue');
-    
-    strokeWidthInput.addEventListener('input', (e) => {
-        currentStrokeWidth = parseInt(e.target.value);
-        strokeWidthValue.textContent = currentStrokeWidth;
-    });
-    
-    // Annuler
-    document.getElementById('undoBtn').addEventListener('click', undo);
-    
-    // Tout effacer
-    document.getElementById('clearAllBtn').addEventListener('click', clearAll);
-    
-    // Activer l'outil stylo par défaut
-    document.getElementById('penTool').classList.add('active');
-}
+// Code orphelin supprimé - déjà géré dans setupToolEvents()
 
-// Commencer à dessiner
-function startDrawing(e) {
-    if (currentAnnotationTool === 'eraser') return;
-    
-    isDrawing = true;
-    currentStroke = [];
-    
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    currentStroke.push({x, y});
-    
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-}
+// Fonctions de dessin supprimées - dupliquées avec celles qui utilisent annotationCanvas
 
-// Dessiner
-function draw(e) {
-    if (!isDrawing || currentAnnotationTool === 'eraser') return;
-    
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    currentStroke.push({x, y});
-    
-    // Configurer le style selon l'outil
-    if (currentAnnotationTool === 'pen') {
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.strokeStyle = currentColor;
-        ctx.lineWidth = currentStrokeWidth;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-    } else if (currentAnnotationTool === 'highlighter') {
-        ctx.globalCompositeOperation = 'multiply';
-        ctx.strokeStyle = currentColor;
-        ctx.lineWidth = currentStrokeWidth * 3;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.globalAlpha = 0.3;
-    }
-    
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    
-    if (currentAnnotationTool === 'highlighter') {
-        ctx.globalAlpha = 1.0;
-    }
-}
+// Fonctions dupliquées supprimées - déjà définies plus haut dans le fichier
 
-// Arrêter de dessiner
-function stopDrawing() {
-    if (!isDrawing) return;
-    
-    isDrawing = false;
-    
-    if (currentStroke.length > 0) {
-        // Sauvegarder le trait dans l'historique
-        const annotation = {
-            type: currentAnnotationTool,
-            color: currentColor,
-            strokeWidth: currentStrokeWidth,
-            points: [...currentStroke],
-            timestamp: Date.now()
-        };
-        
-        annotations.push(annotation);
-        undoHistory.push(annotations.length - 1);
-        
-        // Sauvegarder automatiquement après un délai
-        scheduleAutoSave();
-    }
-}
-
-// Gestion des événements tactiles (Apple Pencil)
-function handleTouch(e) {
-    e.preventDefault();
-    
-    if (e.touches.length === 1) {
-        const touch = e.touches[0];
-        const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
-                                         e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
-            clientX: touch.clientX,
-            clientY: touch.clientY
-        });
-        
-        canvas.dispatchEvent(mouseEvent);
-    }
-}
-
-// Annuler la dernière action
-function undo() {
-    if (undoHistory.length > 0) {
-        const lastIndex = undoHistory.pop();
-        annotations.splice(lastIndex, 1);
-        
-        // Réajuster les index dans l'historique
-        undoHistory = undoHistory.map(index => index > lastIndex ? index - 1 : index);
-        
-        redrawAnnotations();
-        scheduleAutoSave();
-    }
-}
-
-// Tout effacer
-function clearAll() {
-    if (confirm('Êtes-vous sûr de vouloir effacer toutes les annotations ?')) {
-        annotations = [];
-        undoHistory = [];
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        scheduleAutoSave();
-    }
-}
-
-// Redessiner toutes les annotations
-function redrawAnnotations() {
-    if (!ctx) return;
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    annotations.forEach(annotation => {
-        if (annotation.points.length === 0) return;
-        
-        ctx.beginPath();
-        ctx.moveTo(annotation.points[0].x, annotation.points[0].y);
-        
-        // Configurer le style
-        if (annotation.type === 'pen') {
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.strokeStyle = annotation.color;
-            ctx.lineWidth = annotation.strokeWidth;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.globalAlpha = 1.0;
-        } else if (annotation.type === 'highlighter') {
-            ctx.globalCompositeOperation = 'multiply';
-            ctx.strokeStyle = annotation.color;
-            ctx.lineWidth = annotation.strokeWidth * 3;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.globalAlpha = 0.3;
-        }
-        
-        // Dessiner le trait
-        for (let i = 1; i < annotation.points.length; i++) {
-            ctx.lineTo(annotation.points[i].x, annotation.points[i].y);
-        }
-        
-        ctx.stroke();
-        
-        if (annotation.type === 'highlighter') {
-            ctx.globalAlpha = 1.0;
-        }
-    });
-}
-
-// Programmer la sauvegarde automatique
-function scheduleAutoSave() {
-    // Annuler la sauvegarde précédente si elle existe
-    if (saveTimeout) {
-        clearTimeout(saveTimeout);
-    }
-    
-    // Afficher le statut de sauvegarde
-    const saveStatus = document.getElementById('saveStatus');
-    saveStatus.className = 'save-status saving';
-    saveStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde...';
-    
-    // Programmer la sauvegarde dans 1 seconde
-    saveTimeout = setTimeout(saveAnnotations, 1000);
-}
-
-// Sauvegarder les annotations
-async function saveAnnotations() {
-    if (!currentFileId) return;
-    
-    try {
-        const response = await fetch('/planning/save_file_annotations', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({
-                file_id: currentFileId,
-                annotations: annotations
-            })
-        });
-        
-        const result = await response.json();
-        const saveStatus = document.getElementById('saveStatus');
-        
-        if (result.success) {
-            saveStatus.className = 'save-status';
-            saveStatus.innerHTML = '<i class="fas fa-check"></i> Sauvegardé automatiquement';
-        } else {
-            saveStatus.className = 'save-status error';
-            saveStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erreur de sauvegarde';
-        }
-    } catch (error) {
-        console.error('Erreur lors de la sauvegarde:', error);
-        const saveStatus = document.getElementById('saveStatus');
-        saveStatus.className = 'save-status error';
-        saveStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erreur de connexion';
-    }
-}
+// Fonction saveAnnotations dupliquée supprimée - déjà définie plus haut
 
 // Fermer le viewer amélioré
 function closeFileViewer() {
@@ -3517,6 +3554,8 @@ document.addEventListener('click', (e) => {
     justify-content: space-between;
     border-bottom: 1px solid #e2e8f0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    z-index: 1;
+    position: relative;
 }
 
 .viewer-title {
@@ -3593,6 +3632,8 @@ document.addEventListener('click', (e) => {
     border-radius: 0.5rem;
     border: 1px solid #e2e8f0;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1;
 }
 
 .preset-colors {
@@ -3609,6 +3650,7 @@ document.addEventListener('click', (e) => {
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
+    z-index: 1;
 }
 
 .color-btn:hover {
@@ -3675,6 +3717,7 @@ document.addEventListener('click', (e) => {
     justify-content: center;
     overflow: hidden;
     position: relative;
+    z-index: 0;
 }
 
 .viewer-container {
@@ -3686,13 +3729,7 @@ document.addEventListener('click', (e) => {
     justify-content: center;
 }
 
-.annotation-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    cursor: crosshair;
-    z-index: 10;
-}
+/* Styles d'annotation canvas supprimés - dupliqués plus bas */
 
 .pdf-container, .image-container {
     position: relative;
@@ -3862,9 +3899,12 @@ document.addEventListener('click', (e) => {
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 2;
+    z-index: 10;
     cursor: crosshair;
     border-radius: 0.5rem;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
 }
 
 /* États des boutons */
