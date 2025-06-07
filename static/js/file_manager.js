@@ -1443,7 +1443,7 @@ async function createFolder(e) {
 
 // Ouvrir un dossier
 function openFolder(folderId) {
-    window.location.href = `/files?folder=${folderId}`;
+    window.location.href = `/file_manager/?folder=${folderId}`;
 }
 
 // Afficher le sélecteur de couleur pour un dossier
