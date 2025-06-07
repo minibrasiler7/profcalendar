@@ -506,6 +506,18 @@ def get_available_periods(date):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@planning_bp.route('/test-sanctions')
+@login_required
+def test_sanctions():
+    """Page de test pour le système de sanctions"""
+    # Obtenir la leçon actuelle pour les données de contexte
+    lesson, is_current_lesson, lesson_date = get_current_or_next_lesson(current_user)
+    
+    return render_template('planning/test_sanctions.html',
+                         lesson=lesson,
+                         lesson_date=lesson_date,
+                         is_current=is_current_lesson)
+
 @planning_bp.route('/lesson')
 @login_required
 def lesson_view():
@@ -1619,7 +1631,7 @@ def check_sanction_thresholds():
                     # Seuil franchi si: initial < seuil <= current
                     if initial_value < threshold.check_count <= current_value:
                         # Tirer au sort une sanction pour ce seuil
-                        available_options = threshold.options.filter_by(is_active=True).all()
+                        available_options = threshold.sanctions.filter_by(is_active=True).all()
                         if available_options:
                             selected_option = random.choice(available_options)
                             
@@ -1628,7 +1640,7 @@ def check_sanction_thresholds():
                                 'student_name': student.full_name,
                                 'sanction_template': sanction_template.name,
                                 'threshold': threshold.check_count,
-                                'sanction_text': selected_option.sanction_text,
+                                'sanction_text': selected_option.description,
                                 'min_days_deadline': selected_option.min_days_deadline,
                                 'option_id': selected_option.id
                             })
