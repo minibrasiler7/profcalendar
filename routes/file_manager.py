@@ -94,6 +94,11 @@ def index():
                          breadcrumb=breadcrumb,
                          total_size=total_size)
 
+@file_manager_bp.route('/test-classes')
+def test_classes():
+    """Page de test pour diagnostiquer le problème des classes"""
+    return render_template('file_manager/test_classes.html')
+
 @file_manager_bp.route('/get-classes')
 @login_required
 def get_classes():

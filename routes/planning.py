@@ -1566,6 +1566,200 @@ def save_file_annotations():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@planning_bp.route('/check-sanction-thresholds', methods=['POST'])
+@login_required
+def check_sanction_thresholds():
+    """Vérifier les seuils de sanctions franchis pendant la période"""
+    from models.sanctions import SanctionTemplate, SanctionThreshold, SanctionOption, ClassroomSanctionImport
+    from models.student_sanctions import StudentSanctionCount
+    from models.student import Student
+    import random
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+    
+    try:
+        classroom_id = data.get('classroom_id')
+        initial_counts = data.get('initial_counts', {})  # Compteurs au début de la période
+        
+        # Vérifier que la classe appartient à l'utilisateur
+        classroom = Classroom.query.filter_by(id=classroom_id, user_id=current_user.id).first()
+        if not classroom:
+            return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+        
+        # Récupérer les sanctions importées dans cette classe
+        imported_sanctions = db.session.query(SanctionTemplate).join(ClassroomSanctionImport).filter(
+            ClassroomSanctionImport.classroom_id == classroom_id,
+            ClassroomSanctionImport.is_active == True,
+            SanctionTemplate.user_id == current_user.id,
+            SanctionTemplate.is_active == True
+        ).all()
+        
+        # Récupérer les élèves de la classe
+        students = Student.query.filter_by(classroom_id=classroom_id).all()
+        
+        threshold_breaches = []
+        
+        for student in students:
+            for sanction_template in imported_sanctions:
+                # Récupérer le compteur actuel
+                current_count = StudentSanctionCount.query.filter_by(
+                    student_id=student.id,
+                    template_id=sanction_template.id
+                ).first()
+                
+                current_value = current_count.check_count if current_count else 0
+                initial_value = int(initial_counts.get(f"{student.id}_{sanction_template.id}", 0))
+                
+                # Vérifier quels seuils ont été franchis pendant cette période
+                thresholds = sanction_template.thresholds.order_by(SanctionThreshold.check_count).all()
+                
+                for threshold in thresholds:
+                    # Seuil franchi si: initial < seuil <= current
+                    if initial_value < threshold.check_count <= current_value:
+                        # Tirer au sort une sanction pour ce seuil
+                        available_options = threshold.options.filter_by(is_active=True).all()
+                        if available_options:
+                            selected_option = random.choice(available_options)
+                            
+                            threshold_breaches.append({
+                                'student_id': student.id,
+                                'student_name': student.full_name,
+                                'sanction_template': sanction_template.name,
+                                'threshold': threshold.check_count,
+                                'sanction_text': selected_option.sanction_text,
+                                'min_days_deadline': selected_option.min_days_deadline,
+                                'option_id': selected_option.id
+                            })
+        
+        return jsonify({
+            'success': True,
+            'threshold_breaches': threshold_breaches
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/calculate-next-lesson-date', methods=['POST'])
+@login_required
+def calculate_next_lesson_date():
+    """Calculer la prochaine date de cours pour une classe après un délai minimum"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+    
+    try:
+        classroom_id = data.get('classroom_id')
+        min_days = data.get('min_days', 0)
+        current_date = datetime.strptime(data.get('current_date'), '%Y-%m-%d').date()
+        
+        # Date minimale = date actuelle + nombre de jours minimum
+        min_date = current_date + timedelta(days=min_days)
+        
+        # Récupérer l'horaire type pour cette classe
+        schedules = Schedule.query.filter_by(
+            user_id=current_user.id,
+            classroom_id=classroom_id
+        ).order_by(Schedule.weekday, Schedule.period_number).all()
+        
+        if not schedules:
+            return jsonify({
+                'success': True,
+                'next_date': None,
+                'message': 'Aucun cours programmé pour cette classe'
+            })
+        
+        # Chercher la prochaine date de cours
+        search_date = min_date
+        max_search_days = 365  # Limiter la recherche à un an
+        
+        for days_ahead in range(max_search_days):
+            check_date = search_date + timedelta(days=days_ahead)
+            weekday = check_date.weekday()
+            
+            # Vérifier si c'est un jour de vacances
+            if is_holiday(check_date, current_user):
+                continue
+            
+            # Vérifier si cette classe a cours ce jour
+            day_schedule = [s for s in schedules if s.weekday == weekday]
+            if day_schedule:
+                # Prendre la première période du jour
+                first_period = min(day_schedule, key=lambda x: x.period_number)
+                return jsonify({
+                    'success': True,
+                    'next_date': check_date.strftime('%Y-%m-%d'),
+                    'weekday': weekday,
+                    'period_number': first_period.period_number,
+                    'formatted_date': check_date.strftime('%d/%m/%Y')
+                })
+        
+        return jsonify({
+            'success': True,
+            'next_date': None,
+            'message': 'Aucune date trouvée dans les 365 prochains jours'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/add-sanction-to-planning', methods=['POST'])
+@login_required
+def add_sanction_to_planning():
+    """Ajouter une sanction à récupérer dans la planification d'un cours"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+    
+    try:
+        date_str = data.get('date')
+        period_number = data.get('period_number')
+        classroom_id = data.get('classroom_id')
+        student_name = data.get('student_name')
+        sanction_text = data.get('sanction_text')
+        
+        planning_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Chercher une planification existante
+        existing = Planning.query.filter_by(
+            user_id=current_user.id,
+            date=planning_date,
+            period_number=period_number
+        ).first()
+        
+        # Texte de la sanction à ajouter
+        sanction_reminder = f"☐ {student_name} : {sanction_text}"
+        
+        if existing:
+            # Ajouter à la description existante
+            if existing.description:
+                existing.description += f"\n\n{sanction_reminder}"
+            else:
+                existing.description = sanction_reminder
+        else:
+            # Créer une nouvelle planification
+            planning = Planning(
+                user_id=current_user.id,
+                classroom_id=classroom_id,
+                date=planning_date,
+                period_number=period_number,
+                title="",
+                description=sanction_reminder
+            )
+            db.session.add(planning)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Sanction ajoutée à la planification'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @planning_bp.route('/get_file_annotations/<int:file_id>')
 @login_required 
 def get_file_annotations(file_id):

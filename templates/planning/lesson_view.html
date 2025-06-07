@@ -1247,6 +1247,12 @@ const lessonDate = '{{ lesson_date.strftime("%Y-%m-%d") }}';
 const periodNumber = {{ lesson.period_number }};
 const classroomId = {{ lesson.classroom_id }};
 let isEditingPlanning = false;
+
+// Variables pour le système de sanctions
+let initialSanctionCounts = {};
+let sanctionCheckTimer = null;
+let sanctionNotificationShown = false;
+const NOTIFICATION_TIME_BEFORE_END = 3 * 60 * 1000; // 3 minutes en millisecondes
 let checklistStates = {{ (planning.get_checklist_states() if planning else {}) | tojson }};
 let checkboxUpdateTimeout = null;
 let currentLayout = 'default';
@@ -3608,6 +3614,225 @@ function showTrackingTab(tabName) {
     document.getElementById(tabName + '-content').classList.add('active');
 }
 
+// Fonctions pour l'initialisation du système de sanctions
+function initializeSanctionSystem() {
+    // Stocker les compteurs initiaux au début de la période
+    document.querySelectorAll('.count-display').forEach(element => {
+        const studentId = element.getAttribute('data-student');
+        const sanctionId = element.getAttribute('data-sanction');
+        const count = parseInt(element.textContent) || 0;
+        initialSanctionCounts[`${studentId}_${sanctionId}`] = count;
+    });
+    
+    // Démarrer la surveillance uniquement si on est en cours actuel
+    {% if is_current and remaining_seconds > 0 %}
+    startSanctionMonitoring();
+    {% endif %}
+    
+    // MODE TEST : Ajouter un bouton de test si pas en cours
+    {% if not is_current %}
+    addTestButton();
+    {% endif %}
+}
+
+// Fonction pour ajouter un bouton de test
+function addTestButton() {
+    const sanctionsTab = document.querySelector('.tracking-tab[onclick*="sanctions"]');
+    if (sanctionsTab) {
+        const testButton = document.createElement('button');
+        testButton.className = 'btn btn-warning';
+        testButton.style.cssText = 'margin-left: 1rem; padding: 0.5rem 1rem; font-size: 0.875rem;';
+        testButton.innerHTML = '<i class="fas fa-flask"></i> Tester sanctions';
+        testButton.onclick = function() {
+            console.log('Test des sanctions déclenché');
+            checkForSanctionThresholds();
+        };
+        sanctionsTab.parentElement.appendChild(testButton);
+    }
+}
+
+function startSanctionMonitoring() {
+    // Vérifier 3 minutes avant la fin
+    const timeToNotification = {{ remaining_seconds * 1000 }} - NOTIFICATION_TIME_BEFORE_END;
+    
+    if (timeToNotification > 0) {
+        sanctionCheckTimer = setTimeout(() => {
+            checkForSanctionThresholds();
+        }, timeToNotification);
+        
+        console.log(`Surveillance des sanctions activée. Vérification dans ${Math.round(timeToNotification / 1000)} secondes.`);
+    } else if ({{ remaining_seconds * 1000 }} > 0) {
+        // Si il reste moins de 3 minutes, vérifier immédiatement
+        checkForSanctionThresholds();
+    }
+}
+
+async function checkForSanctionThresholds() {
+    if (sanctionNotificationShown) return; // Éviter les notifications multiples
+    
+    try {
+        const response = await fetch('{{ url_for("planning.check_sanction_thresholds") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                classroom_id: classroomId,
+                initial_counts: initialSanctionCounts
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success && result.threshold_breaches.length > 0) {
+            sanctionNotificationShown = true;
+            await showSanctionNotification(result.threshold_breaches);
+        }
+    } catch (error) {
+        console.error('Erreur lors de la vérification des seuils:', error);
+    }
+}
+
+async function showSanctionNotification(breaches) {
+    // Créer la notification en haut de la page
+    const notification = document.createElement('div');
+    notification.className = 'sanction-notification';
+    notification.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #FEF3C7 0%, #F59E0B 100%);
+        color: #92400E;
+        padding: 1rem;
+        z-index: 1000;
+        border-bottom: 3px solid #F59E0B;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        animation: slideDown 0.5s ease;
+    `;
+    
+    let notificationHTML = `
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem;"></i>
+                <h3 style="margin: 0; font-size: 1.25rem; font-weight: bold;">
+                    🎯 Sanctions à attribuer - Demandez aux élèves d'apporter leur agenda
+                </h3>
+                <button onclick="closeSanctionNotification()" style="margin-left: auto; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #92400E;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div style="font-size: 0.95rem; line-height: 1.5;">
+    `;
+    
+    // Traiter chaque seuil franchi
+    for (const breach of breaches) {
+        let dateInfo = '';
+        if (breach.min_days_deadline) {
+            try {
+                // Calculer la prochaine date de cours
+                const dateResponse = await fetch('{{ url_for("planning.calculate_next_lesson_date") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        classroom_id: classroomId,
+                        min_days: breach.min_days_deadline,
+                        current_date: lessonDate
+                    })
+                });
+                
+                const dateResult = await dateResponse.json();
+                if (dateResult.success && dateResult.next_date) {
+                    dateInfo = ` - <strong>À rendre le ${dateResult.formatted_date}</strong>`;
+                    
+                    // Ajouter à la planification
+                    await fetch('{{ url_for("planning.add_sanction_to_planning") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            date: dateResult.next_date,
+                            period_number: dateResult.period_number,
+                            classroom_id: classroomId,
+                            student_name: breach.student_name,
+                            sanction_text: breach.sanction_text
+                        })
+                    });
+                } else {
+                    dateInfo = ' - <em>Date à déterminer</em>';
+                }
+            } catch (error) {
+                console.error('Erreur calcul date:', error);
+                dateInfo = ' - <em>Date à déterminer</em>';
+            }
+        }
+        
+        notificationHTML += `
+            <div style="background: rgba(255, 255, 255, 0.3); padding: 0.75rem; margin: 0.5rem 0; border-radius: 0.5rem; border-left: 4px solid #F59E0B;">
+                <strong>${breach.student_name}</strong> - ${breach.sanction_template} (${breach.threshold} coches) : 
+                <strong>${breach.sanction_text}</strong>${dateInfo}
+            </div>
+        `;
+    }
+    
+    notificationHTML += `
+            </div>
+        </div>
+    `;
+    
+    notification.innerHTML = notificationHTML;
+    document.body.appendChild(notification);
+    
+    // Ajouter le CSS pour l'animation
+    if (!document.getElementById('sanction-notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'sanction-notification-styles';
+        style.textContent = `
+            @keyframes slideDown {
+                from {
+                    transform: translateY(-100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideUp {
+                from {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateY(-100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Décaler le contenu principal vers le bas
+    document.body.style.paddingTop = notification.offsetHeight + 'px';
+}
+
+function closeSanctionNotification() {
+    const notification = document.querySelector('.sanction-notification');
+    if (notification) {
+        notification.style.animation = 'slideUp 0.5s ease';
+        setTimeout(() => {
+            notification.remove();
+            document.body.style.paddingTop = '0';
+        }, 500);
+    }
+}
+
 // Fonctions pour la gestion des sanctions
 async function updateSanctionCount(studentId, sanctionId, delta) {
     const countElement = document.querySelector(`[data-student="${studentId}"][data-sanction="${sanctionId}"]`);
@@ -3666,6 +3891,9 @@ document.addEventListener('DOMContentLoaded', function() {
             element.classList.add('warning');
         }
     });
+    
+    // Initialiser le système de surveillance des sanctions
+    initializeSanctionSystem();
 });
 
 </script>

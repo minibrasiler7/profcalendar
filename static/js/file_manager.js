@@ -55,7 +55,7 @@ function getTreeStates() {
 // Charger les classes de l'utilisateur
 async function loadClasses() {
     try {
-        const response = await fetch('/files/get-classes');
+        const response = await fetch('/file_manager/get-classes');
         const result = await response.json();
 
         if (result.success) {
@@ -162,7 +162,7 @@ async function toggleClassTree(classId) {
 // Charger l'arborescence des fichiers d'une classe
 async function loadClassTree(classId) {
     try {
-        const response = await fetch(`/files/get-class-files/${classId}`);
+        const response = await fetch(`/file_manager/get-class-files/${classId}`);
         const result = await response.json();
 
         if (result.success) {
@@ -427,7 +427,7 @@ async function deleteClassFile(fileId, classId) {
     console.log(`🔍 deleteClassFile appelée avec fileId=${fileId}, classId=${classId}`);
 
     try {
-        const url = `/files/delete-class-file/${fileId}`;
+        const url = `/api/class-files/delete/${fileId}`;
         console.log(`🔍 Envoi requête DELETE vers: ${url}`);
         
         const response = await fetch(url, {
@@ -458,7 +458,7 @@ async function deleteClassFile(fileId, classId) {
 async function deleteClassFolder(folderPath, classId) {
 
     try {
-        const response = await fetch('/files/delete-class-folder', {
+        const response = await fetch('/file_manager/delete-class-folder', {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -769,7 +769,7 @@ async function handleTreeFolderDrop(e) {
 // Copier un dossier complet vers une classe
 async function copyFolderToClass(folderId, classId) {
     try {
-        const response = await fetch('/files/copy-folder-to-class', {
+        const response = await fetch('/api/class-files/copy-folder', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -814,7 +814,7 @@ async function copyFolderToClass(folderId, classId) {
 // Copier un fichier vers un dossier spécifique d'une classe
 async function copyFileToClassFolder(fileId, classId, folderName) {
     try {
-        const response = await fetch('/files/copy-to-class-folder', {
+        const response = await fetch('/file_manager/copy-to-class-folder', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -845,7 +845,7 @@ async function copyFileToClassFolder(fileId, classId, folderName) {
 // Copier un dossier vers un dossier spécifique d'une classe
 async function copyFolderToClassFolder(folderId, classId, folderName) {
     try {
-        const response = await fetch('/files/copy-folder-to-class-folder', {
+        const response = await fetch('/file_manager/copy-folder-to-class-folder', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -876,7 +876,7 @@ async function copyFolderToClassFolder(folderId, classId, folderName) {
 // Copier un fichier vers une classe
 async function copyFileToClass(fileId, classId) {
     try {
-        const response = await fetch('/files/copy-to-class', {
+        const response = await fetch('/api/class-files/copy-file', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -998,7 +998,7 @@ async function deleteSelectedItems() {
     }));
 
     try {
-        const response = await fetch('/files/delete-multiple', {
+        const response = await fetch('/file_manager/delete-multiple', {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -1037,13 +1037,13 @@ function getFileTypeFromItem(fileItem) {
 
 // Fonction pour ouvrir un fichier dans un nouvel onglet
 function openFileInNewTab(fileId) {
-    const previewUrl = `/files/preview/${fileId}`;
+    const previewUrl = `/file_manager/preview/${fileId}`;
     window.open(previewUrl, '_blank');
 }
 
 // Fonction pour télécharger un fichier directement
 function downloadFileDirectly(fileId) {
-    const downloadUrl = `/files/download/${fileId}`;
+    const downloadUrl = `/file_manager/download/${fileId}`;
 
     // Créer un lien temporaire pour déclencher le téléchargement
     const link = document.createElement('a');
@@ -1193,7 +1193,7 @@ async function createFolderStructure(folderPaths) {
     folderPaths.sort((a, b) => a.split('/').length - b.split('/').length);
     
     try {
-        const response = await fetch('/files/create-folder-structure', {
+        const response = await fetch('/file_manager/create-folder-structure', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1259,7 +1259,7 @@ async function uploadFilesWithStructure(filesData) {
                 };
                 xhr.onerror = reject;
                 
-                xhr.open('POST', '/files/upload-with-structure');
+                xhr.open('POST', '/file_manager/upload-with-structure');
                 xhr.send(formData);
             });
             
@@ -1361,7 +1361,7 @@ async function uploadFile(file) {
             };
             xhr.onerror = reject;
 
-            xhr.open('POST', '/files/upload');
+            xhr.open('POST', '/file_manager/upload');
             xhr.send(formData);
         });
 
@@ -1414,7 +1414,7 @@ async function createFolder(e) {
     const color = document.querySelector('input[name="folderColor"]:checked').value;
 
     try {
-        const response = await fetch('/files/create-folder', {
+        const response = await fetch('/file_manager/create-folder', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1460,7 +1460,7 @@ function showColorPicker(folderId) {
 // Mettre à jour la couleur d'un dossier
 async function updateFolderColor(folderId, color) {
     try {
-        const response = await fetch('/files/update-folder-color', {
+        const response = await fetch('/file_manager/update-folder-color', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1494,9 +1494,9 @@ function previewFile(fileId, fileType) {
     title.textContent = 'Aperçu';
 
     if (fileType === 'pdf') {
-        content.innerHTML = `<iframe src="/files/preview/${fileId}"></iframe>`;
+        content.innerHTML = `<iframe src="/file_manager/preview/${fileId}"></iframe>`;
     } else {
-        content.innerHTML = `<img src="/files/preview/${fileId}" alt="Aperçu">`;
+        content.innerHTML = `<img src="/file_manager/preview/${fileId}" alt="Aperçu">`;
     }
 
     modal.classList.add('show');
@@ -1523,7 +1523,7 @@ async function saveRename(e) {
     const name = document.getElementById('renameName').value;
 
     try {
-        const response = await fetch('/files/rename', {
+        const response = await fetch('/file_manager/rename', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1555,7 +1555,7 @@ async function deleteFile(fileId) {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce fichier ?')) return;
 
     try {
-        const response = await fetch(`/files/delete-file/${fileId}`, {
+        const response = await fetch(`/file_manager/delete-file/${fileId}`, {
             method: 'DELETE'
         });
 
@@ -1578,7 +1578,7 @@ async function deleteFolder(folderId) {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce dossier et tout son contenu ?')) return;
 
     try {
-        const response = await fetch(`/files/delete-folder/${folderId}`, {
+        const response = await fetch(`/file_manager/delete-folder/${folderId}`, {
             method: 'DELETE'
         });
 
@@ -1698,7 +1698,7 @@ function showContextMenu(e, item) {
             <div class="context-menu-item" onclick="previewFile(${id}, '${item.querySelector('.item-icon i').classList.contains('fa-file-pdf') ? 'pdf' : 'image'}')">
                 <i class="fas fa-eye"></i> Aperçu
             </div>
-            <a class="context-menu-item" href="/files/download/${id}">
+            <a class="context-menu-item" href="/file_manager/download/${id}">
                 <i class="fas fa-download"></i> Télécharger
             </a>
             <div class="context-menu-item" onclick="renameItem('file', ${id}, '${name}')">
