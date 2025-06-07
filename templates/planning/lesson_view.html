@@ -1932,9 +1932,13 @@ let currentAnnotationTool = 'pen';
 let currentColor = '#000000';
 let currentStrokeWidth = 3;
 let isDrawing = false;
-let annotations = [];
+let isNavigating = false; // Nouveau: indique qu'on est en train de naviguer entre pages
+let isLoadingInitialAnnotations = false; // Indique qu'on charge les annotations initiales
+let annotations = []; // Annotations de la page actuelle (pour compatibilité)
+let annotationsByPage = {}; // Nouveau: annotations organisées par numéro de page
 let currentStroke = [];
 let undoHistory = [];
+let undoHistoryByPage = {}; // Historique d'annulation par page
 let saveTimeout = null;
 
 // Variables simplifiées
@@ -1983,11 +1987,14 @@ async function openFileViewer(fileId, filename, fileType) {
     try {
         if (fileType.toLowerCase() === 'pdf') {
             await loadPDF(fileId);
+            // Pour les PDF, charger les annotations après que la première page soit rendue
+            await loadAnnotations(fileId);
         } else if (['png', 'jpg', 'jpeg'].includes(fileType.toLowerCase())) {
             await loadImage(fileId);
+            // Pour les images, charger immédiatement
+            await loadAnnotations(fileId);
         }
         
-        await loadAnnotations(fileId);
         setupAnnotationTools();
         
     } catch (error) {
@@ -2094,6 +2101,12 @@ function forceCanvasPositioning() {
             console.warn('⚠️  Size mismatch detected! Forcing correction...');
             annotationCanvas.style.width = pdfRectAfter.width + 'px';
             annotationCanvas.style.height = pdfRectAfter.height + 'px';
+        }
+        
+        // 🔥 CRITIQUE: Redessiner les annotations après l'alignement car le redimensionnement les efface
+        if (annotations.length > 0) {
+            console.log('🎨 REDESSINAGE APRÈS ALIGNEMENT:', annotations.length, 'annotations');
+            redrawAnnotations();
         }
     });
 }
@@ -2233,8 +2246,12 @@ async function renderPage(pageNum) {
         
         await page.render(renderContext).promise;
         
-        // Redessiner les annotations
-        redrawAnnotations();
+        // Redessiner les annotations (seulement si on n'est pas en train de charger les annotations initiales)
+        if (!isLoadingInitialAnnotations) {
+            redrawAnnotations();
+        } else {
+            console.log('📄 Redessinage d\'annotations sauté - chargement initial en cours');
+        }
         
         // Forcer l'alignement parfait des canvas après le rendu
         forceCanvasPositioning();
@@ -2301,11 +2318,24 @@ function previousPage() {
         console.log('previousPage delayed - currently drawing');
         return;
     }
+    
+    isNavigating = true; // Marquer le début de la navigation
+    
+    // Sauvegarder les annotations de la page actuelle avant de changer
+    console.log(`📄 Changement de page ${currentPageNum} vers ${currentPageNum - 1}`);
+    saveCurrentPageAnnotations();
+    
     currentPageNum--;
+    
+    // Charger les annotations de la nouvelle page AVANT de rendre
+    loadPageAnnotations(currentPageNum);
+    
     renderPage(currentPageNum);
     updatePageInfo();
     updateNavigationButtons();
     updateActiveThumbnail();
+    
+    isNavigating = false; // Marquer la fin de la navigation
 }
 
 function nextPage() {
@@ -2314,20 +2344,47 @@ function nextPage() {
         console.log('nextPage delayed - currently drawing');
         return;
     }
+    
+    isNavigating = true; // Marquer le début de la navigation
+    
+    // Sauvegarder les annotations de la page actuelle avant de changer
+    console.log(`📄 Changement de page ${currentPageNum} vers ${currentPageNum + 1}`);
+    saveCurrentPageAnnotations();
+    
     currentPageNum++;
+    
+    // Charger les annotations de la nouvelle page AVANT de rendre
+    loadPageAnnotations(currentPageNum);
+    
     renderPage(currentPageNum);
     updatePageInfo();
     updateNavigationButtons();
     updateActiveThumbnail();
+    
+    isNavigating = false; // Marquer la fin de la navigation
 }
 
 function goToPage(pageNum) {
     if (pageNum < 1 || pageNum > pdfDoc.numPages) return;
+    if (pageNum === currentPageNum) return; // Déjà sur cette page
+    
+    isNavigating = true; // Marquer le début de la navigation
+    
+    // Sauvegarder les annotations de la page actuelle avant de changer
+    console.log(`📄 Navigation directe de la page ${currentPageNum} vers ${pageNum}`);
+    saveCurrentPageAnnotations();
+    
     currentPageNum = pageNum;
+    
+    // Charger les annotations de la nouvelle page AVANT de rendre
+    loadPageAnnotations(currentPageNum);
+    
     renderPage(currentPageNum);
     updatePageInfo();
     updateNavigationButtons();
     updateActiveThumbnail();
+    
+    isNavigating = false; // Marquer la fin de la navigation
 }
 
 // Fonction pour calculer les coordonnées du canvas - corrigée pour la scale CSS
@@ -2808,7 +2865,10 @@ function handleTouch(e) {
 
 // Redessiner les annotations
 function redrawAnnotations() {
-    if (!annotationCtx) return;
+    if (!annotationCtx) {
+        console.warn('⚠️ redrawAnnotations: annotationCtx not available');
+        return;
+    }
     
     // Ne pas redessiner si on est en train de dessiner pour éviter d'effacer le trait en cours
     if (isDrawing) {
@@ -2816,12 +2876,33 @@ function redrawAnnotations() {
         return;
     }
     
-    console.log('redrawAnnotations called');
+    console.log(`📄 redrawAnnotations called for page ${currentPageNum} with ${annotations.length} annotations:`, annotations);
+    
+    // Effacer le canvas
     annotationCtx.clearRect(0, 0, annotationCanvas.width, annotationCanvas.height);
     
-    annotations.forEach(annotation => {
-        if (annotation.points.length === 0) return;
-        if (annotation.page && annotation.page !== currentPageNum) return;
+    // Compter les annotations qui seront dessinées
+    let drawnCount = 0;
+    
+    annotations.forEach((annotation, index) => {
+        if (!annotation || !annotation.points || annotation.points.length === 0) {
+            console.log(`❌ Annotation ${index} skipped - no points:`, annotation);
+            return;
+        }
+        
+        // Double vérification pour détecter d'éventuels problèmes de filtrage
+        if (annotation.page && annotation.page !== currentPageNum) {
+            console.error(`🚨 BUG DÉTECTÉ: Annotation ${index} de la page ${annotation.page} trouvée dans le tableau de la page ${currentPageNum}!`, annotation);
+            return;
+        }
+        
+        console.log(`✏️ Drawing annotation ${index}:`, {
+            type: annotation.type,
+            color: annotation.color,
+            strokeWidth: annotation.strokeWidth,
+            pointsCount: annotation.points.length,
+            page: annotation.page
+        });
         
         annotationCtx.beginPath();
         annotationCtx.moveTo(annotation.points[0].x, annotation.points[0].y);
@@ -2853,52 +2934,176 @@ function redrawAnnotations() {
         if (annotation.type === 'highlighter') {
             annotationCtx.globalAlpha = 1.0;
         }
+        
+        drawnCount++;
     });
+    
+    console.log(`✅ redrawAnnotations completed: ${drawnCount}/${annotations.length} annotations drawn on page ${currentPageNum}`);
 }
 
 // Charger les annotations
 async function loadAnnotations(fileId) {
     try {
+        isLoadingInitialAnnotations = true;
+        console.log('📄 Chargement des annotations depuis le serveur...');
         const response = await fetch(`/planning/get_file_annotations/${fileId}`);
         const result = await response.json();
         
         if (result.success) {
-            annotations = result.annotations || [];
-            redrawAnnotations();
+            // Utiliser le nouveau système pour charger toutes les annotations
+            loadAllAnnotations(result.annotations);
+            console.log('📄 Annotations chargées avec succès depuis le serveur');
         } else {
-            annotations = [];
+            console.log('📄 Aucune annotation trouvée sur le serveur - démarrage avec document vierge');
+            loadAllAnnotations({});
         }
     } catch (error) {
         console.error('Erreur lors du chargement des annotations:', error);
-        annotations = [];
+        loadAllAnnotations({});
+    } finally {
+        isLoadingInitialAnnotations = false;
     }
 }
 
 // Annuler la dernière action
 function undo() {
     if (annotations.length > 0) {
-        // Filtrer pour ne supprimer que les annotations de la page actuelle
-        const pageAnnotations = annotations.filter(annotation => annotation.page === currentPageNum);
-        if (pageAnnotations.length > 0) {
-            // Trouver l'index de la dernière annotation de cette page
-            const lastPageAnnotation = pageAnnotations[pageAnnotations.length - 1];
-            const lastIndex = annotations.indexOf(lastPageAnnotation);
-            annotations.splice(lastIndex, 1);
-            redrawAnnotations();
-            // Sauvegarde désactivée - sera faite à la fermeture
-            // scheduleAutoSave();
-        }
+        // Annuler uniquement sur la page actuelle
+        annotations.pop(); // Supprimer la dernière annotation
+        redrawAnnotations();
+        console.log(`↩️ Annulation effectuée sur la page ${currentPageNum}, ${annotations.length} annotations restantes`);
+        // Les annotations seront sauvegardées automatiquement lors du changement de page
     }
 }
 
 // Tout effacer
 function clearAll() {
     if (confirm('Êtes-vous sûr de vouloir effacer toutes les annotations de cette page ?')) {
-        annotations = annotations.filter(annotation => annotation.page !== currentPageNum);
+        const removedCount = annotations.length;
+        annotations = []; // Vider toutes les annotations de la page actuelle
+        undoHistory = []; // Vider l'historique aussi
         redrawAnnotations();
-        // Sauvegarde désactivée - sera faite à la fermeture
-        // scheduleAutoSave();
+        console.log(`🗑️ ${removedCount} annotations supprimées de la page ${currentPageNum}`);
+        // Les changements seront sauvegardés automatiquement lors du changement de page
     }
+}
+
+// === GESTION DES ANNOTATIONS PAR PAGE ===
+
+// Sauvegarder les annotations de la page actuelle dans la structure par page
+function saveCurrentPageAnnotations() {
+    if (!currentPageNum) return;
+    
+    // FILTRER les annotations pour ne sauvegarder que celles de la page actuelle
+    const pageAnnotations = annotations.filter(annotation => {
+        // Inclure les annotations sans page définie (legacy) ou celles de la page actuelle
+        return !annotation.page || annotation.page === currentPageNum;
+    });
+    
+    if (pageAnnotations.length > 0) {
+        annotationsByPage[currentPageNum] = [...pageAnnotations]; // Copie du tableau FILTRÉ
+        console.log(`📄 ${pageAnnotations.length} annotations sauvegardées pour la page ${currentPageNum}:`, pageAnnotations);
+    } else {
+        // Si aucune annotation, supprimer la page de la structure (économise l'espace)
+        if (annotationsByPage[currentPageNum]) {
+            delete annotationsByPage[currentPageNum];
+            console.log(`📄 Page ${currentPageNum} supprimée (aucune annotation)`);
+        }
+    }
+    
+    // Sauvegarder aussi l'historique d'annulation
+    if (undoHistory.length > 0) {
+        undoHistoryByPage[currentPageNum] = [...undoHistory];
+    } else {
+        // Nettoyer l'historique vide
+        if (undoHistoryByPage[currentPageNum]) {
+            delete undoHistoryByPage[currentPageNum];
+        }
+    }
+}
+
+// Charger les annotations d'une page spécifique
+function loadPageAnnotations(pageNum) {
+    console.log(`📄 Chargement des annotations pour la page ${pageNum}`);
+    console.log(`📄 Annotations disponibles par page:`, Object.keys(annotationsByPage));
+    
+    // Charger les annotations de cette page
+    if (annotationsByPage[pageNum]) {
+        const rawAnnotations = [...annotationsByPage[pageNum]]; // Copie du tableau
+        
+        // DOUBLE FILTRAGE pour s'assurer qu'on n'a que les annotations de cette page
+        annotations = rawAnnotations.filter(annotation => {
+            // Inclure les annotations sans page définie (legacy) ou celles de cette page
+            return !annotation.page || annotation.page === pageNum;
+        });
+        
+        if (rawAnnotations.length !== annotations.length) {
+            console.warn(`⚠️ NETTOYAGE: ${rawAnnotations.length - annotations.length} annotations d'autres pages supprimées`);
+        }
+        
+        console.log(`✅ ${annotations.length} annotations chargées pour la page ${pageNum}:`, annotations);
+    } else {
+        annotations = [];
+        console.log(`📄 Aucune annotation trouvée pour la page ${pageNum} - page vierge`);
+    }
+    
+    // Charger l'historique d'annulation
+    if (undoHistoryByPage[pageNum]) {
+        undoHistory = [...undoHistoryByPage[pageNum]];
+    } else {
+        undoHistory = [];
+    }
+    
+    // Redessiner les annotations sur le canvas (forcé)
+    console.log(`📄 Redessinage forcé des annotations pour la page ${pageNum}`);
+    if (annotationCtx) {
+        redrawAnnotations();
+    } else {
+        console.warn('⚠️ annotationCtx non disponible pour redessiner');
+    }
+}
+
+// Obtenir toutes les annotations de toutes les pages pour la sauvegarde
+function getAllAnnotations() {
+    // D'abord sauvegarder la page actuelle
+    saveCurrentPageAnnotations();
+    
+    // Retourner toutes les annotations organisées par page
+    return annotationsByPage;
+}
+
+// Charger toutes les annotations depuis les données sauvegardées
+function loadAllAnnotations(savedAnnotations) {
+    console.log('📄 Chargement de toutes les annotations:', savedAnnotations);
+    
+    if (savedAnnotations && typeof savedAnnotations === 'object' && !Array.isArray(savedAnnotations)) {
+        // Nouveau format par page
+        annotationsByPage = savedAnnotations;
+        console.log(`📄 ${Object.keys(annotationsByPage).length} pages avec annotations trouvées`);
+        
+        // Charger les annotations de la page actuelle
+        loadPageAnnotations(currentPageNum);
+    } else if (Array.isArray(savedAnnotations)) {
+        // Ancien format (compatibility) - toutes les annotations sur la page 1
+        console.log('📄 Format legacy détecté - migration vers format par page');
+        annotationsByPage = {};
+        if (savedAnnotations.length > 0) {
+            annotationsByPage[1] = savedAnnotations;
+        }
+        loadPageAnnotations(currentPageNum);
+    } else {
+        // Aucune annotation ou format non reconnu
+        console.log('📄 Aucune annotation ou format non reconnu - démarrage vierge');
+        annotationsByPage = {};
+        annotations = [];
+        undoHistory = [];
+        // S'assurer que le canvas est nettoyé
+        if (annotationCtx) {
+            redrawAnnotations();
+        }
+    }
+    
+    console.log(`📄 Fin du chargement - page actuelle ${currentPageNum} avec ${annotations.length} annotations`);
 }
 
 // Fonction scheduleAutoSave supprimée - sauvegarde uniquement à la fermeture
@@ -2915,6 +3120,11 @@ async function saveAnnotations() {
     }
     
     try {
+        // Utiliser le nouveau système : obtenir toutes les annotations de toutes les pages
+        const allAnnotations = getAllAnnotations();
+        
+        console.log('💾 Sauvegarde de toutes les annotations:', allAnnotations);
+        
         const response = await fetch('/planning/save_file_annotations', {
             method: 'POST',
             headers: {
@@ -2923,7 +3133,7 @@ async function saveAnnotations() {
             },
             body: JSON.stringify({
                 file_id: currentFileId,
-                annotations: annotations
+                annotations: allAnnotations // Maintenant c'est un objet avec les pages
             })
         });
         
@@ -2935,7 +3145,7 @@ async function saveAnnotations() {
                 saveStatus.className = 'save-status';
                 saveStatus.innerHTML = '<i class="fas fa-check"></i> Annotations sauvegardées';
             }
-            console.log('Annotations sauvegardées avec succès');
+            console.log('💾 Annotations sauvegardées avec succès pour toutes les pages');
         } else {
             if (saveStatus) {
                 saveStatus.className = 'save-status error';
@@ -3059,23 +3269,7 @@ async function loadImage(fileId, container) {
     }
 }
 
-// Charger les annotations existantes
-async function loadAnnotations(fileId) {
-    try {
-        const response = await fetch(`/planning/get_file_annotations/${fileId}`);
-        const result = await response.json();
-        
-        if (result.success && result.annotations) {
-            annotations = result.annotations;
-            redrawAnnotations();
-        } else {
-            annotations = [];
-        }
-    } catch (error) {
-        console.error('Erreur lors du chargement des annotations:', error);
-        annotations = [];
-    }
-}
+// Fonction loadAnnotations dupliquée supprimée - utiliser celle définie plus haut avec le système par page
 
 // Code orphelin supprimé - déjà géré dans setupToolEvents()
 
@@ -3088,8 +3282,12 @@ async function loadAnnotations(fileId) {
 // Fermer le viewer amélioré
 function closeFileViewer() {
     try {
-        // Sauvegarder avant de fermer
-        if (annotations.length > 0) {
+        // Sauvegarder les annotations de la page actuelle avant de fermer
+        console.log('📄 Fermeture du viewer - sauvegarde des annotations de la page actuelle...');
+        saveCurrentPageAnnotations();
+        
+        // Sauvegarder toutes les annotations
+        if (Object.keys(annotationsByPage).length > 0 || annotations.length > 0) {
             saveAnnotations();
         }
         
@@ -3101,6 +3299,8 @@ function closeFileViewer() {
         // Nettoyer les variables
         currentFileId = null;
         annotations = [];
+        annotationsByPage = {}; // Nettoyer les annotations par page
+        undoHistoryByPage = {}; // Nettoyer l'historique par page
         pdfDoc = null;
         currentPageNum = 1;
         currentScale = 1.0;
