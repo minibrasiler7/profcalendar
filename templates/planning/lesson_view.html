@@ -1951,6 +1951,9 @@ let pdfCanvas = null;
 let pdfCtx = null;
 let annotationCanvas = null;
 let annotationCtx = null;
+// Variables de compatibilité
+let canvas = null;
+let ctx = null;
 
 // Charger PDF.js si pas déjà fait
 if (typeof pdfjsLib === 'undefined') {
@@ -2006,6 +2009,10 @@ function initializeCanvases() {
     if (pdfCanvas && annotationCanvas) {
         pdfCtx = pdfCanvas.getContext('2d');
         annotationCtx = annotationCanvas.getContext('2d');
+        
+        // Variables de compatibilité pour les autres fonctions
+        canvas = annotationCanvas;
+        ctx = annotationCtx;
         
         // Améliorer la qualité du rendu
         pdfCtx.imageSmoothingEnabled = true;
@@ -2690,77 +2697,6 @@ async function loadFileContent(fileId, fileType, container) {
     }
 }
 
-// Charger un PDF
-async function loadPDF(fileId, container) {
-    try {
-        console.log('Début du chargement PDF, fileId:', fileId);
-        
-        // Vérifier que PDF.js est chargé
-        if (typeof pdfjsLib === 'undefined') {
-            throw new Error('PDF.js n\'est pas chargé. Vérifiez les scripts.');
-        }
-        console.log('PDF.js est disponible');
-        
-        const url = `/file_manager/serve_file/${fileId}`;
-        console.log('URL de fetch:', url);
-        
-        const response = await fetch(url);
-        console.log('Réponse fetch:', response.status, response.statusText);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const arrayBuffer = await response.arrayBuffer();
-        console.log('ArrayBuffer reçu, taille:', arrayBuffer.byteLength);
-        
-        if (arrayBuffer.byteLength === 0) {
-            throw new Error('Le fichier PDF est vide');
-        }
-        
-        console.log('Début du parsing PDF avec PDF.js');
-        const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-        console.log('PDF parsé avec succès, nombre de pages:', pdf.numPages);
-        
-        const page = await pdf.getPage(1); // Première page pour l'instant
-        console.log('Page 1 récupérée');
-        
-        const scale = 1.5;
-        const viewport = page.getViewport({scale});
-        
-        // Créer le canvas pour le PDF
-        const pdfCanvas = document.createElement('canvas');
-        const pdfCtx = pdfCanvas.getContext('2d');
-        
-        pdfCanvas.width = viewport.width;
-        pdfCanvas.height = viewport.height;
-        
-        await page.render({
-            canvasContext: pdfCtx,
-            viewport: viewport
-        }).promise;
-        
-        // Créer le conteneur
-        const pdfContainer = document.createElement('div');
-        pdfContainer.className = 'pdf-container';
-        pdfContainer.appendChild(pdfCanvas);
-        
-        // Créer le canvas d'annotation
-        canvas = document.createElement('canvas');
-        canvas.className = 'annotation-canvas';
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        ctx = canvas.getContext('2d');
-        
-        pdfContainer.appendChild(canvas);
-        container.innerHTML = '';
-        container.appendChild(pdfContainer);
-        
-    } catch (error) {
-        console.error('Erreur lors du chargement du PDF:', error);
-        throw error;
-    }
-}
 
 // Charger une image
 async function loadImage(fileId, container) {
