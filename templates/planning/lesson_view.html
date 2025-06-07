@@ -2502,6 +2502,14 @@ function setupAnnotationTools() {
     document.addEventListener('mousedown', (e) => {
         if (!annotationCanvas) return;
         
+        // Vérifier si le clic est sur un élément d'interface (à exclure de l'interception)
+        const isUIElement = e.target.matches('input, button, select, textarea, .tool-btn, .color-btn, .stroke-width-container, .stroke-width-container *, .annotation-toolbar, .annotation-toolbar *');
+        
+        if (isUIElement) {
+            console.log('🎛️ Click on UI element, allowing normal behavior:', e.target);
+            return; // Laisser le comportement normal pour les éléments d'interface
+        }
+        
         const rect = annotationCanvas.getBoundingClientRect();
         const isOverCanvas = e.clientX >= rect.left && e.clientX <= rect.right && 
                            e.clientY >= rect.top && e.clientY <= rect.bottom;
@@ -2577,10 +2585,36 @@ function setupToolEvents() {
     const strokeWidthSlider = document.getElementById('strokeWidth');
     const strokeWidthValue = document.getElementById('strokeWidthValue');
     
-    strokeWidthSlider.addEventListener('input', (e) => {
-        currentStrokeWidth = parseInt(e.target.value);
-        strokeWidthValue.textContent = currentStrokeWidth;
-    });
+    if (strokeWidthSlider) {
+        console.log('📏 Stroke width slider found:', strokeWidthSlider);
+        console.log('📏 Initial value:', strokeWidthSlider.value);
+        console.log('📏 Min:', strokeWidthSlider.min, 'Max:', strokeWidthSlider.max);
+        console.log('📏 Disabled:', strokeWidthSlider.disabled);
+        
+        strokeWidthSlider.addEventListener('input', (e) => {
+            currentStrokeWidth = parseInt(e.target.value);
+            strokeWidthValue.textContent = currentStrokeWidth;
+            console.log('🎨 Stroke width changed to:', currentStrokeWidth);
+        });
+        
+        // Ajouter aussi l'événement 'change' pour les navigateurs qui ne supportent pas bien 'input'
+        strokeWidthSlider.addEventListener('change', (e) => {
+            currentStrokeWidth = parseInt(e.target.value);
+            strokeWidthValue.textContent = currentStrokeWidth;
+            console.log('🎨 Stroke width changed to (change event):', currentStrokeWidth);
+        });
+        
+        // Test si le curseur est accessible
+        strokeWidthSlider.addEventListener('mousedown', (e) => {
+            console.log('🖱️ Mouse down on slider');
+        });
+        
+        strokeWidthSlider.addEventListener('click', (e) => {
+            console.log('🖱️ Click on slider at position:', e.offsetX);
+        });
+    } else {
+        console.error('❌ Stroke width slider not found!');
+    }
     
     // Actions
     document.getElementById('undoBtn').addEventListener('click', undo);
@@ -3679,10 +3713,40 @@ document.addEventListener('click', (e) => {
     background-color: #4A5568;
     padding: 0.5rem;
     border-radius: 0.5rem;
+    position: relative;
+    z-index: 10;
 }
 
 .stroke-width-container input[type="range"] {
     width: 80px;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: #6B7280;
+    outline: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.stroke-width-container input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    cursor: pointer;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.stroke-width-container input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    cursor: pointer;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    border: none;
 }
 
 #strokeWidthValue {
