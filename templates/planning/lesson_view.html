@@ -820,7 +820,32 @@ if (typeof pdfjsLib !== 'undefined') {
                 <div class="lesson-details">
                     <div class="lesson-detail">
                         <i class="fas fa-calendar"></i>
-                        <span>{{ lesson_date.strftime('%A %d %B %Y') }}</span>
+                        <span>
+                            {% set day_names = {
+                                'Monday': 'Lundi',
+                                'Tuesday': 'Mardi', 
+                                'Wednesday': 'Mercredi',
+                                'Thursday': 'Jeudi',
+                                'Friday': 'Vendredi',
+                                'Saturday': 'Samedi',
+                                'Sunday': 'Dimanche'
+                            } %}
+                            {% set month_names = {
+                                'January': 'janvier',
+                                'February': 'février',
+                                'March': 'mars',
+                                'April': 'avril',
+                                'May': 'mai',
+                                'June': 'juin',
+                                'July': 'juillet',
+                                'August': 'août',
+                                'September': 'septembre',
+                                'October': 'octobre',
+                                'November': 'novembre',
+                                'December': 'décembre'
+                            } %}
+                            {{ day_names[lesson_date.strftime('%A')] }} {{ lesson_date.strftime('%d') }} {{ month_names[lesson_date.strftime('%B')] }} {{ lesson_date.strftime('%Y') }}
+                        </span>
                     </div>
                     <div class="lesson-detail">
                         <i class="fas fa-clock"></i>
@@ -956,7 +981,7 @@ if (typeof pdfjsLib !== 'undefined') {
                 </button>
                 {% if imported_sanctions %}
                 <button class="tracking-tab" onclick="showTrackingTab('sanctions')">
-                    <i class="fas fa-exclamation-triangle"></i> Sanctions ({{ imported_sanctions|length }})
+                    <i class="fas fa-exclamation-triangle"></i> Coches ({{ imported_sanctions|length }})
                 </button>
                 {% endif %}
             </div>
