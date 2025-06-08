@@ -1836,3 +1836,95 @@ def get_file_annotations(file_id):
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
 
+
+@planning_bp.route('/save-seating-plan', methods=['POST'])
+@login_required
+def save_seating_plan():
+    """Sauvegarder un plan de classe"""
+    from models.seating_plan import SeatingPlan
+    import json
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+    
+    try:
+        classroom_id = data.get('classroom_id')
+        plan_data = data.get('plan_data')
+        name = data.get('name', 'Plan par défaut')
+        
+        if not classroom_id or not plan_data:
+            return jsonify({'success': False, 'message': 'Données manquantes'}), 400
+        
+        # Vérifier que la classe appartient à l'utilisateur
+        classroom = Classroom.query.filter_by(id=classroom_id, user_id=current_user.id).first()
+        if not classroom:
+            return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+        
+        # Désactiver les anciens plans pour cette classe
+        SeatingPlan.query.filter_by(
+            classroom_id=classroom_id,
+            user_id=current_user.id,
+            is_active=True
+        ).update({'is_active': False})
+        
+        # Créer le nouveau plan
+        seating_plan = SeatingPlan(
+            classroom_id=classroom_id,
+            user_id=current_user.id,
+            name=name,
+            plan_data=json.dumps(plan_data),
+            is_active=True
+        )
+        
+        db.session.add(seating_plan)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Plan de classe sauvegardé avec succès',
+            'plan_id': seating_plan.id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@planning_bp.route('/load-seating-plan/<int:classroom_id>')
+@login_required
+def load_seating_plan(classroom_id):
+    """Charger le plan de classe actif"""
+    from models.seating_plan import SeatingPlan
+    import json
+    
+    try:
+        # Vérifier que la classe appartient à l'utilisateur
+        classroom = Classroom.query.filter_by(id=classroom_id, user_id=current_user.id).first()
+        if not classroom:
+            return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+        
+        # Récupérer le plan actif
+        seating_plan = SeatingPlan.query.filter_by(
+            classroom_id=classroom_id,
+            user_id=current_user.id,
+            is_active=True
+        ).first()
+        
+        if seating_plan:
+            return jsonify({
+                'success': True,
+                'plan_data': json.loads(seating_plan.plan_data),
+                'name': seating_plan.name,
+                'plan_id': seating_plan.id
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'plan_data': None,
+                'message': 'Aucun plan sauvegardé pour cette classe'
+            })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+

@@ -731,6 +731,345 @@
     color: #9C27B0;
 }
 
+/* Styles pour le plan de classe */
+.seating-container {
+    display: flex;
+    gap: 15px;
+    height: calc(100vh - 300px);
+    min-height: 600px;
+}
+
+.seating-toolbar {
+    width: 160px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid #dee2e6;
+    overflow-y: auto;
+}
+
+.toolbar-section {
+    margin-bottom: 20px;
+}
+
+.toolbar-section h4 {
+    margin-bottom: 10px;
+    color: #495057;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.tool-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 8px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.75rem;
+    text-align: center;
+}
+
+.tool-btn:hover {
+    background: #e3f2fd;
+    border-color: #007bff;
+    transform: translateY(-1px);
+}
+
+.tool-btn i {
+    color: #007bff;
+    font-size: 1.3em;
+}
+
+.control-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.control-btn {
+    padding: 8px 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: center;
+}
+
+.btn-reset {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.btn-reset:hover {
+    background: #ffeaa7;
+    transform: translateY(-1px);
+}
+
+.btn-save {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.btn-save:hover {
+    background: #c3e6cb;
+    transform: translateY(-1px);
+}
+
+.seating-main-area {
+    display: flex;
+    flex: 1;
+    gap: 20px;
+}
+
+.seating-workspace {
+    flex: 1;
+    background: white;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    position: relative;
+    min-height: 500px;
+    overflow: hidden;
+}
+
+.students-sidebar {
+    width: 200px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    padding: 12px;
+    border-bottom: 1px solid #dee2e6;
+    background: white;
+    border-radius: 8px 8px 0 0;
+}
+
+.sidebar-header h4 {
+    margin: 0 0 5px 0;
+    color: #495057;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.students-count {
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.students-labels-container {
+    padding: 10px;
+    flex: 1;
+    overflow-y: auto;
+    max-height: 400px;
+}
+
+.student-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    cursor: grab;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.student-label:hover {
+    background: #e3f2fd;
+    border-color: #007bff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+}
+
+.student-label:active {
+    cursor: grabbing;
+}
+
+.student-label i {
+    color: #007bff;
+    font-size: 0.8em;
+}
+
+.student-label span {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #495057;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Éléments du plan de classe */
+.seating-element {
+    position: absolute;
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    cursor: grab;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.seating-element:hover {
+    border-color: #007bff;
+    box-shadow: 0 4px 8px rgba(0,123,255,0.2);
+}
+
+.seating-element.dragging {
+    opacity: 0.8;
+    z-index: 1000;
+    cursor: grabbing;
+}
+
+.desk-single {
+    width: 100px;
+    height: 80px;
+    background: #e3f2fd;
+    border-color: #007bff;
+    position: absolute !important;
+    padding: 8px;
+}
+
+.desk-double {
+    width: 140px;
+    height: 80px;
+    background: #e8f5e8;
+    border-color: #28a745;
+    position: absolute !important;
+    padding: 8px;
+}
+
+.teacher-desk {
+    width: 140px;
+    height: 80px;
+    background: #fff3cd;
+    border-color: #ffc107;
+    position: absolute !important;
+}
+
+.desk-content {
+    padding: 8px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+}
+
+.desk-content i {
+    font-size: 1.2em;
+    margin-bottom: 4px;
+}
+
+.desk-content span {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.student-slots {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    width: 100%;
+    justify-content: space-between;
+}
+
+.student-slot {
+    width: 100%;
+    height: 25px;
+    background: rgba(255,255,255,0.9);
+    border: 1px dashed #999;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    position: relative;
+    margin-top: 2px;
+}
+
+.student-slot.occupied {
+    background: #007bff;
+    border-color: #007bff;
+    color: white;
+    border-style: solid;
+}
+
+.student-placed {
+    font-size: 0.7rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    position: relative;
+}
+
+.student-remove {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 16px;
+    height: 16px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 0.6rem;
+    cursor: pointer;
+    display: none;
+}
+
+.student-placed:hover .student-remove {
+    display: block;
+}
+
+.element-delete {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    cursor: pointer;
+    display: none;
+    z-index: 10;
+}
+
+.seating-element:hover .element-delete {
+    display: block;
+}
+
 /* Styles pour l'onglet absences */
 .attendance-mini-tabs {
     display: flex;
@@ -842,6 +1181,205 @@
     border-radius: 4px;
     font-size: 0.75rem;
 }
+
+/* Styles pour le plan de classe */
+.seating-container {
+    display: flex;
+    gap: 20px;
+    height: 600px;
+}
+
+.seating-toolbar {
+    width: 250px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #dee2e6;
+    overflow-y: auto;
+}
+
+.seating-workspace {
+    flex: 1;
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+    background-image: 
+        radial-gradient(circle, #e9ecef 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+.toolbar-section {
+    margin-bottom: 25px;
+}
+
+.toolbar-section h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #495057;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 8px;
+}
+
+.tool-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.tool-btn {
+    padding: 10px;
+    border: 1px solid #dee2e6;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.tool-btn:hover {
+    background: #e9ecef;
+    border-color: #007bff;
+}
+
+.tool-btn i {
+    font-size: 1.2em;
+    color: #007bff;
+}
+
+.control-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.control-btn {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-reset {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.btn-reset:hover {
+    background: #f5c6cb;
+}
+
+.btn-save {
+    background: #d4edda;
+    color: #155724;
+}
+
+.btn-save:hover {
+    background: #c3e6cb;
+}
+
+.students-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 10px;
+    background: white;
+}
+
+/* Éléments déplaçables */
+.draggable-element {
+    position: absolute;
+    cursor: move;
+    user-select: none;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.draggable-element:hover {
+    transform: scale(1.05);
+    z-index: 10;
+}
+
+.draggable-element.dragging {
+    transform: rotate(5deg);
+    z-index: 100;
+    opacity: 0.8;
+}
+
+/* Types d'éléments */
+.desk-single {
+    width: 80px;
+    height: 60px;
+    background: #e3f2fd;
+    border: 2px solid #2196f3;
+    color: #1976d2;
+}
+
+.desk-double {
+    width: 120px;
+    height: 60px;
+    background: #f3e5f5;
+    border: 2px solid #9c27b0;
+    color: #7b1fa2;
+}
+
+.teacher-desk {
+    width: 140px;
+    height: 80px;
+    background: #fff3e0;
+    border: 2px solid #ff9800;
+    color: #f57c00;
+    font-weight: 600;
+}
+
+.student-label {
+    width: 100px;
+    height: 30px;
+    background: #e8f5e8;
+    border: 2px solid #4caf50;
+    color: #2e7d32;
+    font-size: 0.75rem;
+    border-radius: 15px;
+}
+
+.student-label.placed {
+    background: #c8e6c9;
+    border-color: #388e3c;
+}
+
+/* Zone de drop */
+.drop-zone {
+    position: absolute;
+    border: 2px dashed #007bff;
+    background: rgba(0, 123, 255, 0.1);
+    border-radius: 4px;
+    display: none;
+}
+
+.drop-zone.active {
+    display: block;
+}
 </style>
 {% endblock %}
 
@@ -882,6 +1420,9 @@
                 </button>
                 <button class="tab-button" onclick="showTab('attendance')">
                     <i class="fas fa-calendar-check"></i> Absences
+                </button>
+                <button class="tab-button" onclick="showTab('seating')">
+                    <i class="fas fa-th"></i> Plan de classe
                 </button>
             </div>
         </div>
@@ -1264,7 +1805,1108 @@
             </div>
         </div>
     </div>
+
+    <!-- Onglet Plan de classe -->
+    <div id="seating-tab" class="tab-content">
+        <div class="seating-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-th"></i> Plan de classe
+                </h2>
+                <div class="header-info">
+                    <span id="seating-class-name" class="text-muted">{{ selected_classroom.name if selected_classroom else 'Aucune classe sélectionnée' }}</span>
+                </div>
+            </div>
+
+            <div class="seating-container">
+                <!-- Barre d'outils -->
+                <div class="seating-toolbar">
+                    <!-- Ajouter des éléments -->
+                    <div class="toolbar-section">
+                        <h4><i class="fas fa-plus"></i> Ajouter</h4>
+                        <div class="tool-buttons">
+                            <div class="tool-btn" onclick="addElement('desk-single')">
+                                <i class="fas fa-square"></i>
+                                <span>Simple</span>
+                            </div>
+                            <div class="tool-btn" onclick="addElement('desk-double')">
+                                <i class="fas fa-th-large"></i>
+                                <span>Double</span>
+                            </div>
+                        </div>
+                        <div class="tool-btn" onclick="addElement('teacher-desk')" style="margin-top: 8px;">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                            <span>Bureau prof</span>
+                        </div>
+                    </div>
+
+                    <!-- Contrôles -->
+                    <div class="toolbar-section">
+                        <h4><i class="fas fa-cogs"></i> Actions</h4>
+                        <div class="control-buttons">
+                            <button class="control-btn btn-reset" onclick="resetStudentsPlacement()">
+                                <i class="fas fa-undo"></i>
+                                Réinitialiser élèves
+                            </button>
+                            <button class="control-btn btn-save" onclick="saveSeatingPlan()">
+                                <i class="fas fa-save"></i>
+                                Enregistrer plan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Zone de travail avec panneau latéral -->
+                <div class="seating-main-area">
+                    <!-- Zone de travail -->
+                    <div class="seating-workspace" id="seating-workspace">
+                        <!-- Les éléments du plan seront ajoutés ici -->
+                        
+                        <!-- Message d'aide initial -->
+                        <div id="seating-help" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #6c757d; pointer-events: none;">
+                            <i class="fas fa-mouse fa-3x" style="margin-bottom: 20px; opacity: 0.3;"></i>
+                            <h3 style="margin-bottom: 10px;">Créez votre plan de classe</h3>
+                            <p>Utilisez les outils de gauche pour ajouter des tables et un bureau.<br>
+                            Déplacez ensuite les étiquettes des élèves depuis le panneau de droite.</p>
+                        </div>
+                    </div>
+
+                    <!-- Panneau latéral des élèves -->
+                    <div class="students-sidebar">
+                        <div class="sidebar-header">
+                            <h4><i class="fas fa-users"></i> Élèves de la classe</h4>
+                            <div class="students-count">
+                                <span id="sidebar-students-count">{{ students|length if students else 0 }}</span> élèves
+                            </div>
+                        </div>
+                        <div class="students-labels-container" id="students-labels-container">
+                            <!-- Les étiquettes d'élèves seront ajoutées ici dynamiquement -->
+                            {% if students %}
+                                {% for student in students %}
+                                    <div class="student-label" draggable="true" data-student-id="{{ student.id }}">
+                                        <i class="fas fa-user"></i>
+                                        <span>{{ student.full_name }}</span>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <p style="color: #666; font-style: italic; text-align: center; padding: 20px;">
+                                    Aucun élève dans cette classe.
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+// ===== SYSTÈME DE PLAN DE CLASSE =====
+
+// Variables globales pour le plan de classe
+let seatingWorkspace = null;
+let elementCounter = 0;
+let isDragging = false;
+let currentDragElement = null;
+let dragOffset = { x: 0, y: 0 };
+let currentStudents = [];
+let magnetRadius = 100; // Distance pour l'aimantation en pixels (augmenté pour plus de facilité)
+
+// Initialisation du plan de classe
+function initializeSeatingPlan() {
+    seatingWorkspace = document.getElementById('seating-workspace');
+    
+    if (!seatingWorkspace) {
+        console.error('seatingWorkspace element not found!');
+        return;
+    }
+    
+    console.log('Initializing seating plan, workspace found:', seatingWorkspace);
+    
+    // Réinitialiser les variables
+    elementCounter = 0;
+    isDragging = false;
+    currentDragElement = null;
+    
+    // Ajouter les event listeners pour le drag and drop
+    setupSeatingEventListeners();
+    
+    // Charger les étudiants de la classe sélectionnée
+    loadStudentsForSeating();
+    
+    // Mettre à jour les compteurs
+    updateSeatingStats();
+}
+
+// Charger les étudiants pour le plan de classe
+function loadStudentsForSeating() {
+    const studentsCountSpan = document.getElementById('sidebar-students-count');
+    
+    console.log('Loading students for seating...');
+    
+    // Compter les étudiants déjà affichés
+    const studentLabels = document.querySelectorAll('#students-labels-container .student-label');
+    currentStudents = [];
+    
+    studentLabels.forEach(label => {
+        const studentId = label.dataset.studentId;
+        const studentName = label.querySelector('span').textContent;
+        currentStudents.push({ id: studentId, name: studentName });
+    });
+    
+    if (studentsCountSpan) {
+        studentsCountSpan.textContent = currentStudents.length;
+    }
+    
+    console.log('Total students found:', currentStudents.length);
+    updateSeatingStats();
+}
+
+// Configuration des event listeners pour le drag and drop
+function setupSeatingEventListeners() {
+    if (!seatingWorkspace) {
+        console.error('seatingWorkspace not found in setupSeatingEventListeners');
+        return;
+    }
+    
+    // Event listeners pour l'espace de travail
+    seatingWorkspace.addEventListener('dragover', handleWorkspaceDragOver);
+    seatingWorkspace.addEventListener('drop', handleWorkspaceDrop);
+    
+    // Event listeners globaux pour le drag des tables
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mousemove', handleMouseMove);
+    
+    // Event listener pour empêcher la sélection de texte pendant le drag
+    document.addEventListener('selectstart', function(e) {
+        if (isDragging) {
+            e.preventDefault();
+        }
+    });
+}
+
+// Ajouter un élément (table ou bureau)
+function addElement(elementType) {
+    // S'assurer que seatingWorkspace est initialisé
+    if (!seatingWorkspace) {
+        seatingWorkspace = document.getElementById('seating-workspace');
+        if (!seatingWorkspace) {
+            console.error('seatingWorkspace element not found');
+            return;
+        }
+    }
+    
+    elementCounter++;
+    
+    const element = document.createElement('div');
+    element.id = `element-${elementCounter}`;
+    element.className = 'seating-element';
+    element.dataset.type = elementType;
+    
+    // S'assurer que l'élément est en position absolute
+    element.style.position = 'absolute';
+    
+    // Position par défaut au centre avec un petit décalage
+    const centerX = Math.max(50, seatingWorkspace.offsetWidth / 2 + (elementCounter * 20) - 50);
+    const centerY = Math.max(50, seatingWorkspace.offsetHeight / 2 + (elementCounter * 20) - 50);
+    
+    element.style.left = centerX + 'px';
+    element.style.top = centerY + 'px';
+    
+    console.log('Creating element at position:', centerX, centerY);
+    
+    // Définir le contenu selon le type
+    switch(elementType) {
+        case 'desk-single':
+            element.classList.add('desk-single');
+            element.innerHTML = `
+                <div class="desk-content">
+                    <div class="student-slot" data-capacity="1" title="Déposez un élève ici"></div>
+                </div>
+                <button class="element-delete" onclick="deleteElement('${element.id}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            break;
+            
+        case 'desk-double':
+            element.classList.add('desk-double');
+            element.innerHTML = `
+                <div class="desk-content">
+                    <div class="student-slots">
+                        <div class="student-slot" data-capacity="1" title="Déposez un élève ici"></div>
+                        <div class="student-slot" data-capacity="1" title="Déposez un élève ici"></div>
+                    </div>
+                </div>
+                <button class="element-delete" onclick="deleteElement('${element.id}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            break;
+            
+        case 'teacher-desk':
+            element.classList.add('teacher-desk');
+            element.innerHTML = `
+                <div class="desk-content">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                    <span>Bureau enseignant</span>
+                </div>
+                <button class="element-delete" onclick="deleteElement('${element.id}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            break;
+    }
+    
+    // Système de drag-and-drop simplifié directement sur l'élément
+    let offsetX = 0;
+    let offsetY = 0;
+    let isDraggingElement = false;
+    
+    element.onmousedown = function(e) {
+        if (e.target.classList.contains('element-delete') || e.target.closest('.element-delete')) {
+            return;
+        }
+        
+        e.preventDefault();
+        isDraggingElement = true;
+        
+        const rect = element.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+        
+        element.style.cursor = 'grabbing';
+        element.style.zIndex = '1000';
+        
+        function moveElement(e) {
+            if (!isDraggingElement) return;
+            
+            const workspaceRect = seatingWorkspace.getBoundingClientRect();
+            let newX = e.clientX - workspaceRect.left - offsetX;
+            let newY = e.clientY - workspaceRect.top - offsetY;
+            
+            // Contraindre aux limites
+            newX = Math.max(0, Math.min(newX, seatingWorkspace.offsetWidth - element.offsetWidth));
+            newY = Math.max(0, Math.min(newY, seatingWorkspace.offsetHeight - element.offsetHeight));
+            
+            element.style.left = newX + 'px';
+            element.style.top = newY + 'px';
+        }
+        
+        function stopDragging() {
+            isDraggingElement = false;
+            element.style.cursor = 'grab';
+            element.style.zIndex = '';
+            document.removeEventListener('mousemove', moveElement);
+            document.removeEventListener('mouseup', stopDragging);
+        }
+        
+        document.addEventListener('mousemove', moveElement);
+        document.addEventListener('mouseup', stopDragging);
+    };
+    
+    seatingWorkspace.appendChild(element);
+    
+    // Masquer le message d'aide
+    const helpMessage = document.getElementById('seating-help');
+    if (helpMessage) {
+        helpMessage.style.display = 'none';
+    }
+    
+    updateSeatingStats();
+}
+
+// Supprimer un élément
+function deleteElement(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    // Libérer les étudiants placés sur cet élément
+    const studentSlots = element.querySelectorAll('.student-slot .student-placed');
+    studentSlots.forEach(studentPlaced => {
+        const studentId = studentPlaced.dataset.studentId;
+        const studentName = studentPlaced.textContent;
+        
+        // Remettre l'étiquette dans la liste des étudiants
+        const studentsContainer = document.getElementById('students-labels-container');
+        const studentLabel = document.createElement('div');
+        studentLabel.className = 'student-label';
+        studentLabel.draggable = true;
+        studentLabel.dataset.studentId = studentId;
+        studentLabel.innerHTML = `
+            <i class="fas fa-user"></i>
+            <span>${studentName}</span>
+        `;
+        studentsContainer.appendChild(studentLabel);
+    });
+    
+    // Supprimer l'élément
+    element.remove();
+    
+    // Vérifier s'il faut réafficher le message d'aide
+    const remainingElements = seatingWorkspace.querySelectorAll('.seating-element');
+    if (remainingElements.length === 0) {
+        const helpMessage = document.getElementById('seating-help');
+        if (helpMessage) {
+            helpMessage.style.display = 'block';
+        }
+    }
+    
+    updateSeatingStats();
+}
+
+// Gestion du mousedown sur les éléments
+function handleElementMouseDown(e) {
+    if (e.target.classList.contains('element-delete') || e.target.closest('.element-delete')) {
+        return; // Ne pas déclencher le drag pour le bouton de suppression
+    }
+    
+    // Ignorer si ce n'est pas un clic gauche
+    if (e.button !== 0) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    isDragging = true;
+    currentDragElement = e.currentTarget;
+    
+    // Obtenir la position actuelle de l'élément et de la souris
+    const elementRect = currentDragElement.getBoundingClientRect();
+    const workspaceRect = seatingWorkspace.getBoundingClientRect();
+    
+    // Calculer l'offset de la souris par rapport à l'élément
+    dragOffset.x = e.clientX - elementRect.left;
+    dragOffset.y = e.clientY - elementRect.top;
+    
+    currentDragElement.style.zIndex = '1000';
+    currentDragElement.classList.add('dragging');
+    
+    // Changer le curseur de tout le document
+    document.body.style.cursor = 'grabbing';
+    
+    console.log('Start dragging element:', currentDragElement.id);
+    console.log('Mouse position:', e.clientX, e.clientY);
+    console.log('Element position:', elementRect.left, elementRect.top);
+    console.log('Drag offset:', dragOffset.x, dragOffset.y);
+}
+
+// Gestion du mousemove
+function handleMouseMove(e) {
+    if (!isDragging || !currentDragElement) return;
+    
+    e.preventDefault();
+    
+    const workspaceRect = seatingWorkspace.getBoundingClientRect();
+    
+    // Calculer la nouvelle position relative au workspace
+    let newX = e.clientX - workspaceRect.left - dragOffset.x;
+    let newY = e.clientY - workspaceRect.top - dragOffset.y;
+    
+    // Contraindre aux limites de l'espace de travail
+    newX = Math.max(0, Math.min(newX, seatingWorkspace.offsetWidth - currentDragElement.offsetWidth));
+    newY = Math.max(0, Math.min(newY, seatingWorkspace.offsetHeight - currentDragElement.offsetHeight));
+    
+    currentDragElement.style.left = newX + 'px';
+    currentDragElement.style.top = newY + 'px';
+    
+    console.log('Moving to:', newX, newY);
+}
+
+// Gestion du mouseup
+function handleMouseUp(e) {
+    if (isDragging && currentDragElement) {
+        console.log('Stop dragging element:', currentDragElement.id);
+        currentDragElement.style.zIndex = '';
+        currentDragElement.classList.remove('dragging');
+    }
+    
+    // Restaurer le curseur
+    document.body.style.cursor = '';
+    
+    isDragging = false;
+    currentDragElement = null;
+}
+
+// Gestion du dragover sur l'espace de travail
+function handleWorkspaceDragOver(e) {
+    e.preventDefault();
+}
+
+// Gestion du drop sur l'espace de travail
+function handleWorkspaceDrop(e) {
+    e.preventDefault();
+    
+    // Trouver l'élément étudiant en cours de drag
+    const draggedStudentId = e.dataTransfer.getData('studentId');
+    if (!draggedStudentId) return;
+    
+    const draggedElement = document.querySelector(`.student-label[data-student-id="${draggedStudentId}"]`) || 
+                           document.querySelector(`.student-label[data-studentid="${draggedStudentId}"]`);
+    if (!draggedElement) return;
+    
+    // Restaurer l'opacité
+    draggedElement.style.opacity = '';
+    
+    // Trouver la table la plus proche
+    const workspaceRect = seatingWorkspace.getBoundingClientRect();
+    const dropX = e.clientX - workspaceRect.left;
+    const dropY = e.clientY - workspaceRect.top;
+    
+    console.log('Drop position:', dropX, dropY);
+    
+    const closestDesk = findClosestDesk(dropX, dropY);
+    
+    if (closestDesk) {
+        console.log('Found closest desk:', closestDesk.id);
+        // Passer la position X absolue du drop
+        placeStudentOnDesk(draggedElement, closestDesk, e.clientX);
+    } else {
+        console.log('No desk found within magnetism radius');
+    }
+}
+
+// Trouver la table la plus proche dans le rayon d'aimantation
+function findClosestDesk(x, y) {
+    const desks = seatingWorkspace.querySelectorAll('.seating-element');
+    let closestDesk = null;
+    let minDistance = magnetRadius;
+    
+    desks.forEach(desk => {
+        if (desk.dataset.type === 'teacher-desk') return; // Exclure le bureau enseignant
+        
+        const rect = desk.getBoundingClientRect();
+        const workspaceRect = seatingWorkspace.getBoundingClientRect();
+        
+        const deskCenterX = rect.left - workspaceRect.left + rect.width / 2;
+        const deskCenterY = rect.top - workspaceRect.top + rect.height / 2;
+        
+        const distance = Math.sqrt(Math.pow(x - deskCenterX, 2) + Math.pow(y - deskCenterY, 2));
+        
+        if (distance < minDistance) {
+            // Vérifier s'il y a de la place
+            const availableSlot = desk.querySelector('.student-slot:not(.occupied)');
+            if (availableSlot) {
+                minDistance = distance;
+                closestDesk = desk;
+            }
+        }
+    });
+    
+    return closestDesk;
+}
+
+// Placer un étudiant sur une table
+function placeStudentOnDesk(studentLabel, desk, dropX = null) {
+    let targetSlot = null;
+    
+    // Si c'est une table double et qu'on a une position de drop
+    if (desk.classList.contains('desk-double') && dropX !== null) {
+        const slots = desk.querySelectorAll('.student-slot');
+        const deskRect = desk.getBoundingClientRect();
+        const deskMiddle = deskRect.left + deskRect.width / 2;
+        
+        // Déterminer quel slot utiliser selon la position du drop
+        if (dropX < deskMiddle) {
+            // Côté gauche
+            targetSlot = slots[0];
+        } else {
+            // Côté droit
+            targetSlot = slots[1];
+        }
+        
+        // Si le slot choisi est occupé, essayer l'autre
+        if (targetSlot && targetSlot.classList.contains('occupied')) {
+            targetSlot = slots[0] === targetSlot ? slots[1] : slots[0];
+        }
+        
+        // Vérifier si le slot alternatif est disponible
+        if (targetSlot && targetSlot.classList.contains('occupied')) {
+            targetSlot = null;
+        }
+    } else {
+        // Pour les tables simples ou si pas de position, prendre le premier slot disponible
+        targetSlot = desk.querySelector('.student-slot:not(.occupied)');
+    }
+    
+    if (!targetSlot) {
+        console.log('No available slot on this desk');
+        return;
+    }
+    
+    const studentId = studentLabel.dataset.studentId || studentLabel.dataset.studentid;
+    const studentName = studentLabel.querySelector('span').textContent;
+    
+    console.log('Placing student:', studentName, 'on desk:', desk.id);
+    
+    // Créer l'élément étudiant placé
+    const studentPlaced = document.createElement('div');
+    studentPlaced.className = 'student-placed';
+    studentPlaced.dataset.studentId = studentId;
+    studentPlaced.textContent = studentName;
+    
+    // Ajouter un bouton pour retirer l'étudiant
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'student-remove';
+    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    removeBtn.onclick = () => removeStudentFromDesk(studentId);
+    
+    studentPlaced.appendChild(removeBtn);
+    
+    // Marquer le slot comme occupé
+    targetSlot.classList.add('occupied');
+    targetSlot.innerHTML = ''; // Vider le slot
+    targetSlot.appendChild(studentPlaced);
+    
+    // Supprimer l'étiquette de la liste
+    studentLabel.remove();
+    
+    // Mettre à jour le compteur
+    const studentsCountSpan = document.getElementById('sidebar-students-count');
+    if (studentsCountSpan) {
+        const remainingCount = document.getElementById('students-labels-container').querySelectorAll('.student-label').length;
+        studentsCountSpan.textContent = remainingCount;
+    }
+    
+    updateSeatingStats();
+}
+
+// Retirer un étudiant d'une table
+function removeStudentFromDesk(studentId) {
+    const studentPlaced = seatingWorkspace.querySelector(`.student-placed[data-student-id="${studentId}"]`) ||
+                         seatingWorkspace.querySelector(`.student-placed[data-studentid="${studentId}"]`);
+    if (!studentPlaced) return;
+    
+    const studentName = studentPlaced.textContent;
+    const slot = studentPlaced.parentElement;
+    
+    // Retirer de la table
+    slot.classList.remove('occupied');
+    studentPlaced.remove();
+    
+    // Remettre dans la liste des étudiants
+    const studentsContainer = document.getElementById('students-labels-container');
+    const studentLabel = document.createElement('div');
+    studentLabel.className = 'student-label';
+    studentLabel.draggable = true;
+    studentLabel.dataset.studentId = studentId;
+    studentLabel.innerHTML = `
+        <i class="fas fa-user"></i>
+        <span>${studentName}</span>
+    `;
+    
+    studentsContainer.appendChild(studentLabel);
+    
+    // Mettre à jour le compteur
+    const studentsCountSpan = document.getElementById('sidebar-students-count');
+    if (studentsCountSpan) {
+        const currentCount = studentsContainer.querySelectorAll('.student-label').length;
+        studentsCountSpan.textContent = currentCount;
+    }
+    
+    updateSeatingStats();
+}
+
+// Réinitialiser le placement des étudiants
+function resetStudentsPlacement() {
+    const placedStudents = seatingWorkspace.querySelectorAll('.student-placed');
+    placedStudents.forEach(studentPlaced => {
+        const studentId = studentPlaced.dataset.studentId;
+        removeStudentFromDesk(studentId);
+    });
+}
+
+// Sauvegarder le plan de classe
+function saveSeatingPlan() {
+    // S'assurer que seatingWorkspace est initialisé
+    if (!seatingWorkspace) {
+        seatingWorkspace = document.getElementById('seating-workspace');
+        if (!seatingWorkspace) {
+            showNotification('error', 'Espace de travail non trouvé');
+            return;
+        }
+    }
+    
+    const classSelect = document.getElementById('classSelect');
+    const selectedClassId = classSelect ? classSelect.value : null;
+    
+    if (!selectedClassId) {
+        showNotification('error', 'Veuillez sélectionner une classe');
+        return;
+    }
+    
+    // Collecter les données du plan
+    const planData = {
+        classroom_id: selectedClassId,
+        elements: [],
+        students_placement: []
+    };
+    
+    // Récupérer les éléments (tables et bureau)
+    const elements = seatingWorkspace.querySelectorAll('.seating-element');
+    elements.forEach(element => {
+        const rect = element.getBoundingClientRect();
+        const workspaceRect = seatingWorkspace.getBoundingClientRect();
+        
+        planData.elements.push({
+            id: element.id,
+            type: element.dataset.type,
+            x: element.offsetLeft,
+            y: element.offsetTop
+        });
+    });
+    
+    // Récupérer le placement des étudiants
+    const placedStudents = seatingWorkspace.querySelectorAll('.student-placed');
+    placedStudents.forEach(studentPlaced => {
+        const studentId = studentPlaced.dataset.studentId;
+        const desk = studentPlaced.closest('.seating-element');
+        const slot = studentPlaced.parentElement;
+        const slotIndex = Array.from(desk.querySelectorAll('.student-slot')).indexOf(slot);
+        
+        planData.students_placement.push({
+            student_id: studentId,
+            element_id: desk.id,
+            slot_index: slotIndex
+        });
+    });
+    
+    // Envoyer au serveur
+    fetch('/planning/save-seating-plan', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            classroom_id: parseInt(selectedClassId),
+            plan_data: planData,
+            name: 'Plan par défaut'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('success', 'Plan de classe sauvegardé avec succès !');
+        } else {
+            showNotification('error', 'Erreur lors de la sauvegarde : ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur de connexion lors de la sauvegarde');
+    });
+}
+
+// Créer un élément table simple
+function createSingleDesk(customId = null) {
+    if (!customId) {
+        elementCounter++;
+        customId = `element-${elementCounter}`;
+    }
+    const element = document.createElement('div');
+    element.id = customId;
+    element.className = 'seating-element desk-single';
+    element.dataset.type = 'desk-single';
+    element.style.position = 'absolute';
+    
+    element.innerHTML = `
+        <div class="desk-content">
+            <div class="student-slot" data-capacity="1" title="Déposez un élève ici"></div>
+        </div>
+        <button class="element-delete" onclick="deleteElement('${customId}')">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    return element;
+}
+
+// Créer un élément table double
+function createDoubleDesk(customId = null) {
+    if (!customId) {
+        elementCounter++;
+        customId = `element-${elementCounter}`;
+    }
+    const element = document.createElement('div');
+    element.id = customId;
+    element.className = 'seating-element desk-double';
+    element.dataset.type = 'desk-double';
+    element.style.position = 'absolute';
+    
+    element.innerHTML = `
+        <div class="desk-content">
+            <div class="student-slots">
+                <div class="student-slot" data-capacity="1" title="Déposez un élève ici"></div>
+                <div class="student-slot" data-capacity="1" title="Déposez un élève ici"></div>
+            </div>
+        </div>
+        <button class="element-delete" onclick="deleteElement('${customId}')">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    return element;
+}
+
+// Créer un bureau enseignant
+function createTeacherDesk(customId = null) {
+    if (!customId) {
+        elementCounter++;
+        customId = `element-${elementCounter}`;
+    }
+    const element = document.createElement('div');
+    element.id = customId;
+    element.className = 'seating-element teacher-desk';
+    element.dataset.type = 'teacher-desk';
+    element.style.position = 'absolute';
+    
+    element.innerHTML = `
+        <div class="desk-content">
+            <i class="fas fa-chalkboard-teacher"></i>
+            <span>Bureau enseignant</span>
+        </div>
+        <button class="element-delete" onclick="deleteElement('${customId}')">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    return element;
+}
+
+// Configurer le drag-and-drop pour un élément
+function setupElementDragging(element) {
+    let offsetX = 0;
+    let offsetY = 0;
+    let isDraggingElement = false;
+    
+    element.onmousedown = function(e) {
+        if (e.target.classList.contains('element-delete') || e.target.closest('.element-delete')) {
+            return;
+        }
+        
+        e.preventDefault();
+        isDraggingElement = true;
+        
+        const rect = element.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+        
+        element.style.cursor = 'grabbing';
+        element.style.zIndex = '1000';
+        
+        function moveElement(e) {
+            if (!isDraggingElement) return;
+            
+            const workspaceRect = seatingWorkspace.getBoundingClientRect();
+            let newX = e.clientX - workspaceRect.left - offsetX;
+            let newY = e.clientY - workspaceRect.top - offsetY;
+            
+            // Contraindre aux limites
+            newX = Math.max(0, Math.min(newX, seatingWorkspace.offsetWidth - element.offsetWidth));
+            newY = Math.max(0, Math.min(newY, seatingWorkspace.offsetHeight - element.offsetHeight));
+            
+            element.style.left = newX + 'px';
+            element.style.top = newY + 'px';
+        }
+        
+        function stopDragging() {
+            isDraggingElement = false;
+            element.style.cursor = 'grab';
+            element.style.zIndex = '';
+            document.removeEventListener('mousemove', moveElement);
+            document.removeEventListener('mouseup', stopDragging);
+        }
+        
+        document.addEventListener('mousemove', moveElement);
+        document.addEventListener('mouseup', stopDragging);
+    };
+}
+
+// Charger un plan de classe depuis le serveur
+function loadSeatingPlan(classroomId) {
+    if (!classroomId) {
+        return;
+    }
+    
+    // S'assurer que seatingWorkspace est initialisé
+    if (!seatingWorkspace) {
+        seatingWorkspace = document.getElementById('seating-workspace');
+        if (!seatingWorkspace) {
+            console.log('Seating workspace not found, unable to load plan');
+            return;
+        }
+    }
+    
+    fetch(`/planning/load-seating-plan/${classroomId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.plan_data) {
+            // Effacer le plan actuel
+            clearSeatingWorkspace();
+            
+            // Recréer les éléments
+            const planData = data.plan_data;
+            
+            // Restaurer les éléments (tables et bureau)
+            if (planData.elements) {
+                planData.elements.forEach(elementData => {
+                    let element;
+                    if (elementData.type === 'desk-single') {
+                        element = createSingleDesk(elementData.id);
+                    } else if (elementData.type === 'desk-double') {
+                        element = createDoubleDesk(elementData.id);
+                    } else if (elementData.type === 'teacher-desk') {
+                        element = createTeacherDesk(elementData.id);
+                    }
+                    
+                    if (element) {
+                        element.style.left = elementData.x + 'px';
+                        element.style.top = elementData.y + 'px';
+                        seatingWorkspace.appendChild(element);
+                        setupElementDragging(element);
+                    }
+                });
+            }
+            
+            // Restaurer le placement des étudiants
+            if (planData.students_placement) {
+                planData.students_placement.forEach(placement => {
+                    const element = document.getElementById(placement.element_id);
+                    const studentLabel = document.querySelector(`[data-student-id="${placement.student_id}"]`);
+                    
+                    if (element && studentLabel) {
+                        const slots = element.querySelectorAll('.student-slot');
+                        const targetSlot = slots[placement.slot_index];
+                        
+                        if (targetSlot && !targetSlot.querySelector('.student-placed')) {
+                            placeStudentInSlot(studentLabel, targetSlot);
+                        }
+                    }
+                });
+            }
+            
+            showNotification('success', 'Plan de classe chargé avec succès !');
+        } else if (data.success && !data.plan_data) {
+            // Pas de plan sauvegardé, c'est normal
+            console.log('Aucun plan sauvegardé pour cette classe');
+        } else {
+            showNotification('error', 'Erreur lors du chargement : ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur de connexion lors du chargement');
+    });
+}
+
+// Effacer l'espace de travail
+function clearSeatingWorkspace() {
+    // S'assurer que seatingWorkspace est initialisé
+    if (!seatingWorkspace) {
+        seatingWorkspace = document.getElementById('seating-workspace');
+        if (!seatingWorkspace) {
+            console.log('Seating workspace not found, unable to clear');
+            return;
+        }
+    }
+    
+    // Supprimer tous les éléments du workspace
+    const elements = seatingWorkspace.querySelectorAll('.seating-element');
+    elements.forEach(element => element.remove());
+    
+    // Remettre tous les étudiants dans la barre latérale
+    const placedStudents = document.querySelectorAll('.student-placed');
+    placedStudents.forEach(student => {
+        student.classList.remove('student-placed');
+        student.classList.add('student-label');
+        student.style.display = 'block';
+        
+        // Remettre dans la barre latérale
+        const studentsSidebar = document.querySelector('.students-sidebar .students-list');
+        if (studentsSidebar) {
+            studentsSidebar.appendChild(student);
+        }
+    });
+}
+
+// Fonction utilitaire pour placer un étudiant dans un slot spécifique
+function placeStudentInSlot(studentLabel, slot) {
+    if (!slot || slot.querySelector('.student-placed')) {
+        return false;
+    }
+    
+    // Cacher le label original dans la barre latérale
+    studentLabel.style.display = 'none';
+    
+    // Créer une copie dans la table
+    const studentPlaced = studentLabel.cloneNode(true);
+    studentPlaced.classList.remove('student-label');
+    studentPlaced.classList.add('student-placed');
+    studentPlaced.style.display = 'block';
+    studentPlaced.style.opacity = '1';
+    
+    // Ajouter un bouton de suppression
+    const removeBtn = document.createElement('span');
+    removeBtn.classList.add('remove-student');
+    removeBtn.innerHTML = '×';
+    removeBtn.onclick = function(e) {
+        e.stopPropagation();
+        removeStudentFromDesk(studentPlaced);
+    };
+    studentPlaced.appendChild(removeBtn);
+    
+    slot.appendChild(studentPlaced);
+    return true;
+}
+
+// Mettre à jour les statistiques (simplifiée)
+function updateSeatingStats() {
+    // Cette fonction peut être étendue plus tard si nécessaire
+    console.log('Seating plan updated');
+}
+
+// Event listeners pour les étiquettes d'étudiants
+document.addEventListener('dragstart', function(e) {
+    if (e.target.classList.contains('student-label')) {
+        e.target.style.opacity = '0.5';
+        // Stocker l'ID de l'étudiant dans dataTransfer (vérifier les deux cas)
+        const studentId = e.target.dataset.studentId || e.target.dataset.studentid;
+        e.dataTransfer.setData('studentId', studentId);
+        e.dataTransfer.effectAllowed = 'move';
+        console.log('Start dragging student:', studentId);
+    }
+});
+
+document.addEventListener('dragend', function(e) {
+    if (e.target.classList.contains('student-label')) {
+        e.target.style.opacity = '';
+    }
+});
+
+// Ajouter des event listeners pour le drag over sur les tables
+document.addEventListener('dragover', function(e) {
+    if (e.target.closest('.seating-element')) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        
+        const desk = e.target.closest('.seating-element');
+        desk.style.boxShadow = '0 0 10px rgba(0, 123, 255, 0.5)';
+        
+        // Pour les tables doubles, mettre en évidence le slot qui sera utilisé
+        if (desk.classList.contains('desk-double')) {
+            const slots = desk.querySelectorAll('.student-slot');
+            const deskRect = desk.getBoundingClientRect();
+            const deskMiddle = deskRect.left + deskRect.width / 2;
+            
+            // Réinitialiser les styles
+            slots.forEach(slot => {
+                if (!slot.classList.contains('occupied')) {
+                    slot.style.background = 'rgba(255,255,255,0.9)';
+                    slot.style.borderColor = '#999';
+                }
+            });
+            
+            // Mettre en évidence le slot approprié
+            if (e.clientX < deskMiddle) {
+                if (!slots[0].classList.contains('occupied')) {
+                    slots[0].style.background = 'rgba(0, 123, 255, 0.2)';
+                    slots[0].style.borderColor = '#007bff';
+                    slots[0].style.borderWidth = '2px';
+                }
+            } else {
+                if (!slots[1].classList.contains('occupied')) {
+                    slots[1].style.background = 'rgba(0, 123, 255, 0.2)';
+                    slots[1].style.borderColor = '#007bff';
+                    slots[1].style.borderWidth = '2px';
+                }
+            }
+        }
+    }
+});
+
+document.addEventListener('dragleave', function(e) {
+    if (e.target.closest('.seating-element')) {
+        const desk = e.target.closest('.seating-element');
+        desk.style.boxShadow = '';
+        
+        // Réinitialiser les styles des slots
+        const slots = desk.querySelectorAll('.student-slot');
+        slots.forEach(slot => {
+            if (!slot.classList.contains('occupied')) {
+                slot.style.background = 'rgba(255,255,255,0.9)';
+                slot.style.borderColor = '#999';
+                slot.style.borderWidth = '1px';
+            }
+        });
+    }
+});
+
+// Gérer le drop directement sur les tables
+document.addEventListener('drop', function(e) {
+    if (e.target.closest('.seating-element')) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const desk = e.target.closest('.seating-element');
+        desk.style.boxShadow = '';
+        
+        const draggedStudentId = e.dataTransfer.getData('studentId');
+        if (!draggedStudentId) return;
+        
+        const draggedElement = document.querySelector(`.student-label[data-student-id="${draggedStudentId}"]`) || 
+                               document.querySelector(`.student-label[data-studentid="${draggedStudentId}"]`);
+        if (!draggedElement) return;
+        
+        console.log('Drop on desk:', desk.id);
+        // Passer la position X du drop pour les tables doubles
+        placeStudentOnDesk(draggedElement, desk, e.clientX);
+    }
+});
+
+// Initialiser le plan de classe quand on change d'onglet
+document.addEventListener('DOMContentLoaded', function() {
+    // Observer les changements d'onglets
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            if (this.dataset.tab === 'seating') {
+                setTimeout(() => {
+                    initializeSeatingPlan();
+                    // Recharger les étudiants au cas où la classe aurait changé
+                    loadStudentsForSeating();
+                }, 300); // Délai plus long pour s'assurer que l'onglet est affiché
+            }
+        });
+    });
+
+    // Charger les étudiants immédiatement si on démarre sur l'onglet seating
+    if (window.location.hash === '#seating') {
+        setTimeout(() => {
+            initializeSeatingPlan();
+            loadStudentsForSeating();
+        }, 500);
+    }
+    
+    // Observer les changements de classe pour recharger les étudiants
+    const classSelect = document.getElementById('classSelect');
+    if (classSelect) {
+        classSelect.addEventListener('change', function() {
+            // Si on est sur l'onglet plan de classe, recharger les étudiants et le plan
+            const seatingTab = document.getElementById('seating-tab');
+            if (seatingTab && seatingTab.classList.contains('active')) {
+                loadStudentsForSeating();
+                // Attendre un délai pour s'assurer que l'espace de travail est prêt
+                setTimeout(() => {
+                    initializeSeatingPlan();
+                    loadSeatingPlan(this.value);
+                }, 200);
+            }
+        });
+    }
+});
+</script>
 
 <!-- Modal nouveau dossier pour les fichiers de classe -->
 <div class="modal" id="newClassFolderModal">
@@ -1856,6 +3498,18 @@ function showTab(tabName) {
     // Charger les fichiers si on est sur l'onglet fichiers
     if (tabName === 'files') {
         loadClassFiles();
+    }
+    
+    // Charger le plan de classe si on est sur l'onglet plan de classe
+    if (tabName === 'seating') {
+        // Attendre un délai pour s'assurer que l'onglet est visible
+        setTimeout(() => {
+            initializeSeatingPlan(); // S'assurer que l'espace de travail est initialisé
+            const classSelect = document.getElementById('classSelect');
+            if (classSelect && classSelect.value) {
+                loadSeatingPlan(classSelect.value);
+            }
+        }, 300);
     }
     
     // Charger les évaluations si on est sur l'onglet notes
