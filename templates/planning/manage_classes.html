@@ -972,14 +972,17 @@
 }
 
 .desk-content {
-    padding: 8px;
+    padding: 6px;
     height: 100%;
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
     position: relative;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 .desk-content i {
@@ -994,14 +997,17 @@
 
 .student-slots {
     display: flex;
-    gap: 8px;
+    gap: 4px;
     margin-top: 4px;
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start; /* Aligner à gauche au lieu de space-between */
+    flex: 1;
+    align-items: center;
 }
 
 .student-slot {
     width: 100%;
+    min-width: 25px; /* Largeur minimale légèrement augmentée pour les slots vides */
     height: 25px;
     background: rgba(255,255,255,0.9);
     border: 1px dashed #999;
@@ -1012,26 +1018,37 @@
     font-size: 0.65rem;
     position: relative;
     margin-top: 2px;
+    box-sizing: border-box;
+    flex-shrink: 0; /* Empêche la réduction */
 }
 
 .student-slot.occupied {
-    background: #007bff;
-    border-color: #007bff;
-    color: white;
-    border-style: solid;
+    background: #4caf50 !important;
+    border: 1px solid #388e3c !important;
+    color: white !important;
 }
 
 .student-placed {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 500;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+    overflow: visible; /* Permettre l'affichage complet */
+    width: 100%;
+    height: 100%;
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 16px 2px 4px; /* Plus de padding à droite pour le bouton */
+    box-sizing: border-box;
+    text-align: center;
 }
 
-.student-remove {
+.student-remove, .remove-student {
     position: absolute;
     top: -5px;
     right: -5px;
@@ -1044,9 +1061,13 @@
     font-size: 0.6rem;
     cursor: pointer;
     display: none;
+    z-index: 10;
+    line-height: 16px;
+    text-align: center;
 }
 
-.student-placed:hover .student-remove {
+.student-placed:hover .student-remove,
+.student-placed:hover .remove-student {
     display: block;
 }
 
@@ -1329,7 +1350,9 @@
 
 /* Types d'éléments */
 .desk-single {
-    width: 80px;
+    min-width: 80px;
+    max-width: 200px;
+    width: 80px; /* Largeur par défaut */
     height: 60px;
     background: #e3f2fd;
     border: 2px solid #2196f3;
@@ -1337,7 +1360,9 @@
 }
 
 .desk-double {
-    width: 120px;
+    min-width: 70px;
+    max-width: 300px;
+    width: 70px; /* Largeur par défaut ajustée pour 2 slots de 25px */
     height: 60px;
     background: #f3e5f5;
     border: 2px solid #9c27b0;
@@ -2110,6 +2135,11 @@ function addElement(elementType) {
     
     seatingWorkspace.appendChild(element);
     
+    // Ajuster la largeur pour les tables doubles vides dès la création
+    if (elementType === 'desk-double') {
+        setTimeout(() => adjustDeskWidth(element), 10);
+    }
+    
     // Masquer le message d'aide
     const helpMessage = document.getElementById('seating-help');
     if (helpMessage) {
@@ -2298,6 +2328,115 @@ function findClosestDesk(x, y) {
     return closestDesk;
 }
 
+// Ajuster la largeur d'une table et de ses slots en fonction du contenu
+function adjustDeskWidth(desk) {
+    const allSlots = desk.querySelectorAll('.student-slot');
+    const occupiedSlots = desk.querySelectorAll('.student-slot.occupied .student-placed');
+    
+    // Si aucun étudiant, revenir à la largeur de base
+    if (occupiedSlots.length === 0) {
+        if (desk.classList.contains('desk-single')) {
+            desk.style.width = '80px';
+            // Remettre le slot à sa largeur par défaut
+            allSlots.forEach(slot => {
+                slot.style.width = '';
+            });
+        } else {
+            // Pour les tables doubles vides, calculer la largeur pour 2 slots de 25px
+            const emptySlotWidth = 25;
+            const gapWidth = 4;
+            const tablePadding = 16;
+            const minTableWidth = (emptySlotWidth * 2) + gapWidth + tablePadding;
+            desk.style.width = Math.max(120, minTableWidth) + 'px';
+            
+            // Définir explicitement la largeur des slots vides
+            allSlots.forEach(slot => {
+                slot.style.width = emptySlotWidth + 'px';
+            });
+        }
+        return;
+    }
+    
+    if (desk.classList.contains('desk-double')) {
+        // Pour les tables doubles, ajuster chaque slot individuellement
+        const slots = desk.querySelectorAll('.student-slot');
+        let totalCalculatedWidth = 0;
+        
+        slots.forEach(slot => {
+            if (slot.classList.contains('occupied')) {
+                const studentPlaced = slot.querySelector('.student-placed');
+                if (studentPlaced) {
+                    const name = studentPlaced.textContent || '';
+                    const cleanName = name.replace('×', '').trim();
+                    
+                    // Mesurer la largeur du texte
+                    const tempElement = document.createElement('span');
+                    tempElement.style.visibility = 'hidden';
+                    tempElement.style.position = 'absolute';
+                    tempElement.style.fontSize = '0.65rem';
+                    tempElement.style.fontWeight = '500';
+                    tempElement.style.fontFamily = window.getComputedStyle(studentPlaced).fontFamily;
+                    tempElement.textContent = cleanName;
+                    
+                    document.body.appendChild(tempElement);
+                    const textWidth = tempElement.offsetWidth;
+                    document.body.removeChild(tempElement);
+                    
+                    // Calculer la largeur optimale pour ce slot
+                    const slotPadding = 24; // Padding + bouton suppression
+                    const slotWidth = Math.max(35, textWidth + slotPadding);
+                    slot.style.width = slotWidth + 'px';
+                    totalCalculatedWidth += slotWidth;
+                }
+            } else {
+                // Slot vide, largeur minimale
+                slot.style.width = '25px';
+                totalCalculatedWidth += 25;
+            }
+        });
+        
+        // Ajouter le gap entre les slots + padding de la table
+        const gapWidth = 4; // CSS gap
+        const tablePadding = 16; // Padding de la table
+        const tableWidth = Math.max(120, totalCalculatedWidth + gapWidth + tablePadding);
+        const maxWidth = 300; // Limite pour les tables doubles
+        desk.style.width = Math.min(tableWidth, maxWidth) + 'px';
+        
+    } else {
+        // Pour les tables simples
+        const slot = allSlots[0];
+        if (slot && slot.classList.contains('occupied')) {
+            const studentPlaced = slot.querySelector('.student-placed');
+            if (studentPlaced) {
+                const name = studentPlaced.textContent || '';
+                const cleanName = name.replace('×', '').trim();
+                
+                // Mesurer la largeur du texte
+                const tempElement = document.createElement('span');
+                tempElement.style.visibility = 'hidden';
+                tempElement.style.position = 'absolute';
+                tempElement.style.fontSize = '0.65rem';
+                tempElement.style.fontWeight = '500';
+                tempElement.style.fontFamily = window.getComputedStyle(studentPlaced).fontFamily;
+                tempElement.textContent = cleanName;
+                
+                document.body.appendChild(tempElement);
+                const textWidth = tempElement.offsetWidth;
+                document.body.removeChild(tempElement);
+                
+                // Calculer les largeurs optimales
+                const slotPadding = 24; // Padding + bouton suppression
+                const slotWidth = Math.max(35, textWidth + slotPadding);
+                slot.style.width = slotWidth + 'px';
+                
+                const tableWidth = Math.max(60, slotWidth + 16); // + padding de la table
+                const maxWidth = 200; // Limite pour les tables simples
+                desk.style.width = Math.min(tableWidth, maxWidth) + 'px';
+            }
+        }
+    }
+}
+
 // Placer un étudiant sur une table
 function placeStudentOnDesk(studentLabel, desk, dropX = null) {
     let targetSlot = null;
@@ -2363,6 +2502,9 @@ function placeStudentOnDesk(studentLabel, desk, dropX = null) {
     // Supprimer l'étiquette de la liste
     studentLabel.remove();
     
+    // Ajuster la largeur de la table en fonction du contenu (avec petit délai pour le rendu)
+    setTimeout(() => adjustDeskWidth(desk), 10);
+    
     // Mettre à jour le compteur
     const studentsCountSpan = document.getElementById('sidebar-students-count');
     if (studentsCountSpan) {
@@ -2385,6 +2527,12 @@ function removeStudentFromDesk(studentId) {
     // Retirer de la table
     slot.classList.remove('occupied');
     studentPlaced.remove();
+    
+    // Ajuster la largeur de la table après suppression (avec petit délai pour le rendu)
+    const desk = slot.closest('.seating-element');
+    if (desk) {
+        setTimeout(() => adjustDeskWidth(desk), 10);
+    }
     
     // Remettre dans la liste des étudiants
     const studentsContainer = document.getElementById('students-labels-container');
@@ -2546,6 +2694,9 @@ function createDoubleDesk(customId = null) {
             <i class="fas fa-times"></i>
         </button>
     `;
+    
+    // Ajuster la largeur pour les tables doubles vides dès la création
+    setTimeout(() => adjustDeskWidth(element), 10);
     
     return element;
 }
@@ -2753,11 +2904,20 @@ function placeStudentInSlot(studentLabel, slot) {
     removeBtn.innerHTML = '×';
     removeBtn.onclick = function(e) {
         e.stopPropagation();
-        removeStudentFromDesk(studentPlaced);
+        removeStudentFromDesk(studentPlaced.dataset.studentId);
     };
     studentPlaced.appendChild(removeBtn);
     
+    // Marquer le slot comme occupé
+    slot.classList.add('occupied');
     slot.appendChild(studentPlaced);
+    
+    // Ajuster la largeur de la table (avec petit délai pour le rendu)
+    const desk = slot.closest('.seating-element');
+    if (desk) {
+        setTimeout(() => adjustDeskWidth(desk), 10);
+    }
+    
     return true;
 }
 

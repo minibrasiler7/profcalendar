@@ -1,0 +1,26 @@
+🔑 INFORMATIONS DE CONNEXION POUR LOLO2
+========================================
+
+👤 Nom d'utilisateur: lolo2
+📧 Email: lolo2@example.com  
+🔐 Mot de passe: [Utilisez le même mot de passe que pour "Loïc Strauch"]
+
+📊 STATUT DU COMPTE:
+- ✅ Configuration initiale complétée
+- ✅ Horaires configurés
+- ✅ Classes créées (9VG2, 10VP6, 10VG2, 10VG3)
+- ✅ Vacances et pauses copiées de lolo strauch
+
+📁 ÉTAT DU GESTIONNAIRE DE FICHIERS:
+- 📂 Aucun fichier personnel (user_files = 0)
+- 🏫 Aucun fichier dans les classes (class_files = 0)
+
+🧪 UTILISATION POUR LES TESTS:
+Ce compte est parfait pour tester le système de copie de fichiers:
+1. Connectez-vous avec lolo2/lolo2
+2. Allez dans le gestionnaire de fichiers
+3. Uploadez quelques fichiers
+4. Testez la copie vers les classes
+5. Vérifiez que les fichiers apparaissent correctement dans l'arborescence
+
+✅ PRÊT À UTILISER!

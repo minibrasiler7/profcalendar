@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Classes File Manager</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Test du Gestionnaire de Fichiers - Classes</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Vérification de l'élément DOM</h2>
+        <div id="test1-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Appel de l'API</h2>
+        <button onclick="testAPI()">Tester l'API</button>
+        <div id="test2-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Chargement du JavaScript</h2>
+        <div id="test3-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 4: Simulation complète</h2>
+        <button onclick="simulateFullLoad()">Simuler le chargement complet</button>
+        <div id="test4-result"></div>
+    </div>
+
+    <script>
+        // Test 1: Vérifier les éléments DOM
+        function test1() {
+            const result = document.getElementById('test1-result');
+            let html = '<h3>Éléments trouvés sur la page /file_manager/:</h3>';
+            
+            // Aller sur la page file_manager dans un iframe
+            html += '<iframe src="/file_manager/" width="100%" height="300" onload="checkIframeDOM(this)"></iframe>';
+            html += '<div id="iframe-results"></div>';
+            
+            result.innerHTML = html;
+        }
+        
+        function checkIframeDOM(iframe) {
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                const results = document.getElementById('iframe-results');
+                let html = '<ul>';
+                
+                // Vérifier classesList
+                const classesList = doc.getElementById('classesList');
+                if (classesList) {
+                    html += '<li class="success">✓ Element classesList trouvé</li>';
+                    html += '<li>Contenu: <pre>' + classesList.innerHTML.substring(0, 200) + '</pre></li>';
+                } else {
+                    html += '<li class="error">✗ Element classesList NON trouvé</li>';
+                }
+                
+                // Vérifier la section
+                const classesSection = doc.getElementById('classesSection');
+                if (classesSection) {
+                    html += '<li class="success">✓ Element classesSection trouvé</li>';
+                } else {
+                    html += '<li class="error">✗ Element classesSection NON trouvé</li>';
+                }
+                
+                html += '</ul>';
+                results.innerHTML = html;
+            } catch (e) {
+                document.getElementById('iframe-results').innerHTML = '<p class="error">Erreur: ' + e.message + '</p>';
+            }
+        }
+        
+        // Test 2: Tester l'API
+        async function testAPI() {
+            const result = document.getElementById('test2-result');
+            result.innerHTML = '<p class="info">Test en cours...</p>';
+            
+            try {
+                const response = await fetch('/file_manager/get-classes');
+                const data = await response.json();
+                
+                let html = '<h3>Résultat de l\'API:</h3>';
+                html += '<p>Status: ' + response.status + '</p>';
+                html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                
+                if (data.success && data.classes) {
+                    html += '<h4>Classes trouvées:</h4><ul>';
+                    data.classes.forEach(cls => {
+                        html += `<li>${cls.name} (ID: ${cls.id}, ${cls.student_count} élèves)</li>`;
+                    });
+                    html += '</ul>';
+                }
+                
+                result.innerHTML = html;
+            } catch (error) {
+                result.innerHTML = '<p class="error">Erreur: ' + error.message + '</p>';
+            }
+        }
+        
+        // Test 3: Vérifier le JS
+        function test3() {
+            const result = document.getElementById('test3-result');
+            let html = '<h3>État du JavaScript:</h3><ul>';
+            
+            // Charger le script
+            const script = document.createElement('script');
+            script.src = '/static/js/file_manager.js';
+            script.onload = function() {
+                html += '<li class="success">✓ Script file_manager.js chargé</li>';
+                
+                // Vérifier les fonctions
+                if (typeof loadClasses !== 'undefined') {
+                    html += '<li class="success">✓ Fonction loadClasses existe</li>';
+                } else {
+                    html += '<li class="error">✗ Fonction loadClasses n\'existe pas</li>';
+                }
+                
+                if (typeof renderClasses !== 'undefined') {
+                    html += '<li class="success">✓ Fonction renderClasses existe</li>';
+                } else {
+                    html += '<li class="error">✗ Fonction renderClasses n\'existe pas</li>';
+                }
+                
+                html += '</ul>';
+                result.innerHTML = html;
+            };
+            script.onerror = function() {
+                result.innerHTML = '<p class="error">Erreur lors du chargement du script</p>';
+            };
+            document.head.appendChild(script);
+        }
+        
+        // Test 4: Simulation complète
+        async function simulateFullLoad() {
+            const result = document.getElementById('test4-result');
+            result.innerHTML = '<p class="info">Simulation en cours...</p>';
+            
+            // Créer un faux élément classesList
+            const fakeContainer = document.createElement('div');
+            fakeContainer.id = 'classesList';
+            document.body.appendChild(fakeContainer);
+            
+            try {
+                // Appeler loadClasses si elle existe
+                if (typeof loadClasses !== 'undefined') {
+                    await loadClasses();
+                    result.innerHTML = '<p class="success">✓ loadClasses exécutée avec succès</p>';
+                    result.innerHTML += '<p>Contenu généré:</p>';
+                    result.innerHTML += '<pre>' + fakeContainer.innerHTML + '</pre>';
+                } else {
+                    result.innerHTML = '<p class="error">✗ loadClasses n\'est pas définie</p>';
+                }
+            } catch (error) {
+                result.innerHTML = '<p class="error">Erreur: ' + error.message + '</p>';
+            } finally {
+                // Nettoyer
+                document.body.removeChild(fakeContainer);
+            }
+        }
+        
+        // Exécuter les tests au chargement
+        window.onload = function() {
+            test1();
+            test3();
+        };
+    </script>
+</body>
+</html>

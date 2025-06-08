@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+
+{% block title %}Calendrier - TeacherPlanner{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="calendar-container">
+    <!-- En-tête avec navigation -->
+    <div class="calendar-header">
+        <div class="calendar-nav">
+            <button class="nav-btn" onclick="navigateWeek('prev')">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <h2 class="current-week-title">
+                Semaine du {{ week_dates[0] | format_date_full }} au {{ week_dates[4] | format_date }}
+            </h2>
+
+            <button class="nav-btn" onclick="navigateWeek('next')">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+
+            <button class="btn btn-primary btn-today" onclick="navigateToToday()">
+                <i class="fas fa-calendar-day"></i> Aujourd'hui
+            </button>
+
+            <button class="btn btn-outline btn-toggle-view" onclick="toggleViewMode()" title="Basculer la vue">
+                <i class="fas fa-expand-alt" id="toggleIcon"></i>
+                <span id="toggleText">Vue étendue</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Conteneur principal avec deux colonnes -->
+    <div class="calendar-main">
+        <!-- Vue hebdomadaire -->
+        <div class="weekly-view">
+            <div class="weekly-view-loading">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+            </div>
+            <h3 class="section-title">
+                <i class="fas fa-calendar-week"></i> Vue hebdomadaire
+            </h3>
+
+            <div class="weekly-schedule">
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th class="time-column">Heure</th>
+                            {% for date in week_dates %}
+                            <th class="day-header {% if date == today %}today{% endif %}">
+                                <div class="day-name">{{ days[loop.index0] }}</div>
+                                <div class="day-date">{{ date.strftime('%d/%m') }}</div>
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for period in periods %}
+                        <tr>
+                            <td class="time-slot">
+                                <div class="period-number">P{{ period.number }}</div>
+                                <div class="period-time">
+                                    {{ period.start.strftime('%H:%M') }}<br>
+                                    {{ period.end.strftime('%H:%M') }}
+                                </div>
+                            </td>
+                            {% for date in week_dates %}
+                            {% set i = loop.index0 %}
+                            <td class="schedule-cell {% if date == today %}today{% endif %}"
+                                data-date="{{ date.strftime('%Y-%m-%d') }}"
+                                data-period="{{ period.number }}"
+                                onclick="openPlanningModal(this)">
+
+                                {% set planning_key = date.strftime('%Y-%m-%d') + '_' + period.number|string %}
+                                {% set schedule_key = i|string + '_' + period.number|string %}
+                                {% set holiday_info = holidays_info[date.strftime('%Y-%m-%d')] %}
+
+                                {% if holiday_info.is_holiday %}
+                                    <!-- Jour férié -->
+                                    <div class="holiday-block">
+                                        <div class="holiday-day-name">{{ holiday_info.name }}</div>
+                                    </div>
+                                {% elif date >= current_user.school_year_start and date <= current_user.school_year_end %}
+                                    {% if planning_key in planning_grid %}
+                                        <!-- Planification spécifique -->
+                                        {% set planning = planning_grid[planning_key] %}
+                                        <div class="class-block planned" style="background-color: {{ planning.classroom.color }};">
+                                            <div class="class-name">{{ planning.classroom.name }}</div>
+                                            <div class="class-subject">{{ planning.classroom.subject }}</div>
+                                            {% if planning.title %}
+                                            <div class="planning-title">{{ planning.title }}</div>
+                                            {% endif %}
+                                        </div>
+                                    {% elif schedule_key in schedule_grid %}
+                                        <!-- Horaire type -->
+                                        {% set schedule = schedule_grid[schedule_key] %}
+                                        <div class="class-block" style="background-color: {{ schedule.classroom.color }}; opacity: 0.7;">
+                                            <div class="class-name">{{ schedule.classroom.name }}</div>
+                                            <div class="class-subject">{{ schedule.classroom.subject }}</div>
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Vue annuelle par classe -->
+        <div class="annual-view">
+            <h3 class="section-title">
+                <i class="fas fa-calendar-alt"></i> Vue annuelle
+            </h3>
+
+            <!-- Onglets des classes -->
+            <div class="class-tabs">
+                {% for classroom in classrooms %}
+                <button class="tab-btn {% if classroom.id == selected_classroom_id %}active{% endif %}"
+                        onclick="selectClassroom({{ classroom.id }})"
+                        style="border-bottom-color: {{ classroom.color }};">
+                    {{ classroom.name }}
+                </button>
+                {% endfor %}
+            </div>
+
+            <!-- Calendrier annuel -->
+            <div class="annual-calendar">
+                {% if selected_classroom_id and selected_classroom_id in annual_data %}
+                    {% set selected_classroom = classrooms | selectattr('id', 'equalto', selected_classroom_id) | first %}
+                    <div class="annual-grid" data-classroom-color="{{ selected_classroom.color if selected_classroom else '#4F46E5' }}">
+                        {% for week in annual_data[selected_classroom_id] %}
+                        <div class="annual-week {% if week.start_date <= today and today <= week.dates[4] %}current-week{% endif %} {% if week.is_holiday %}holiday-week{% endif %}">
+                            <div class="week-info">
+                                <div class="week-date">{{ week.formatted_date }}</div>
+                                <div class="week-number" {% if not week.is_holiday %}onclick="navigateToWeek('{{ week.start_date.strftime('%Y-%m-%d') }}')" title="Cliquez pour voir cette semaine"{% endif %}>
+                                    {% if week.is_holiday %}
+                                        <span class="holiday-label" title="{{ week.holiday_name }}">
+                                            {% if week.holiday_name_short %}
+                                                {{ week.holiday_name_short }}
+                                            {% else %}
+                                                {% set holiday_parts = week.holiday_name.split(' ') %}
+                                                {% if holiday_parts|length > 1 and week.holiday_name|length > 12 %}
+                                                    {{ holiday_parts[0] }}<br>{{ holiday_parts[1:] | join(' ') }}
+                                                {% else %}
+                                                    {{ week.holiday_name }}
+                                                {% endif %}
+                                            {% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span class="week-number-link">S{{ week.week_number }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="week-days">
+                                {% for has_class in week.has_class %}
+                                {% set i = loop.index0 %}
+                                {% set date = week.dates[i] %}
+                                {% set date_str = date.strftime('%Y-%m-%d') %}
+                                {% set holiday_name = week.holidays_by_day[i] %}
+                                <div class="annual-day {% if has_class %}has-class{% endif %} {% if date == today %}today{% endif %} {% if holiday_name %}holiday single-day-holiday{% endif %}"
+                                     data-date="{{ date_str }}"
+                                     data-weekday="{{ i }}"
+                                     data-has-class="{{ 'true' if has_class else 'false' }}"
+                                     onclick="{% if has_class and not holiday_name %}handleAnnualDayClick(this, '{{ date_str }}'){% endif %}"
+                                     title="{{ days[i] }} {{ date.strftime('%d/%m') }}{% if holiday_name %} - {{ holiday_name }}{% endif %}">
+                                    <div class="annual-day-content">
+                                        {% if holiday_name %}
+                                            <div class="annual-holiday-name">{{ holiday_name[:3] }}</div>
+                                        {% elif week.plannings and date_str in week.plannings %}
+                                            <div class="annual-plannings">
+                                                {% for planning in week.plannings[date_str][:3] %}
+                                                    <div class="annual-planning-item" title="{{ planning.title }}">
+                                                        <span class="annual-planning-text">{{ planning.title }}</span>
+                                                    </div>
+                                                {% endfor %}
+                                                {% if week.plannings[date_str]|length > 3 %}
+                                                    <div class="annual-planning-more">+{{ week.plannings[date_str]|length - 3 }}</div>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Légende -->
+            <div class="annual-legend">
+                <div class="legend-item">
+                    <div class="legend-box has-class"></div>
+                    <span>Jour avec cours</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box"></div>
+                    <span>Jour sans cours</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box today"></div>
+                    <span>Aujourd'hui</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de planification -->
+<div class="planning-modal" id="planningModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Planifier le cours</h3>
+            <button class="modal-close" onclick="closePlanningModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Classe</label>
+                <select id="modalClassroom" class="form-control">
+                    <option value="">-- Sélectionner une classe --</option>
+                    {% for classroom in classrooms %}
+                    <option value="{{ classroom.id }}" data-color="{{ classroom.color }}">
+                        {{ classroom.name }} - {{ classroom.subject }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Titre du cours</label>
+                <input type="text" id="modalPlanningTitle" class="form-control"
+                       placeholder="Ex: Introduction aux fractions">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea id="modalDescription" class="form-control" rows="3"
+                          placeholder="Détails du cours, exercices prévus..."></textarea>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closePlanningModal()">Annuler</button>
+            <button class="btn btn-primary" onclick="savePlanning()">
+                <i class="fas fa-save"></i> Enregistrer
+            </button>
+        </div>
+    </div>
+</div>
+
+<form id="weekNavigationForm" method="GET" style="display: none;">
+    <input type="hidden" name="week" id="weekInput">
+    <input type="hidden" name="classroom" value="{{ selected_classroom_id }}">
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/planning.js') }}"></script>
+<script>
+const currentWeek = '{{ current_week.strftime("%Y-%m-%d") }}';
+const selectedClassroomId = {{ selected_classroom_id or 'null' }};
+const periodsData = {{ periods_json | tojson }};
+const classrooms = {{ classrooms_json | tojson }};
+let currentPlanningCell = null;
+let isExtendedView = false;
+
+// Gérer le clic sur une case de la vue annuelle
+function handleAnnualDayClick(element, dateStr) {
+    if (element.dataset.hasClass !== 'true' || element.classList.contains('single-day-holiday')) return;
+
+    // Récupérer l'ID de la classe actuellement sélectionnée dans la vue annuelle
+    const classroomId = selectedClassroomId;
+
+    // Ouvrir le modal de planification journalière avec filtrage par classe
+    openDayPlanningModal(dateStr, classroomId);
+}
+
+function navigateToWeek(weekStartDate) {
+    // Ajouter un effet visuel de chargement sur la vue hebdomadaire uniquement
+    const weeklyView = document.querySelector('.weekly-view');
+    weeklyView.classList.add('loading');
+
+    // Utiliser le formulaire existant avec la date de début de semaine
+    document.getElementById('weekInput').value = weekStartDate;
+
+    // Soumettre le formulaire
+    document.getElementById('weekNavigationForm').submit();
+}
+
+function navigateWeek(direction) {
+    // Ajouter un effet de chargement sur la vue hebdomadaire
+    const weeklyView = document.querySelector('.weekly-view');
+    weeklyView.classList.add('loading');
+
+    const currentDate = new Date('{{ current_week }}');
+    if (direction === 'prev') {
+        currentDate.setDate(currentDate.getDate() - 7);
+    } else {
+        currentDate.setDate(currentDate.getDate() + 7);
+    }
+
+    document.getElementById('weekInput').value = formatDate(currentDate);
+    document.getElementById('weekNavigationForm').submit();
+}
+
+function navigateToToday() {
+    // Ajouter un effet de chargement sur la vue hebdomadaire
+    const weeklyView = document.querySelector('.weekly-view');
+    weeklyView.classList.add('loading');
+
+    const today = new Date();
+    document.getElementById('weekInput').value = formatDate(today);
+    document.getElementById('weekNavigationForm').submit();
+}
+
+function selectClassroom(classroomId) {
+    const url = new URL(window.location);
+    url.searchParams.set('classroom', classroomId);
+    window.location = url;
+}
+
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// Basculer entre vue normale et vue étendue
+function toggleViewMode() {
+    const calendarMain = document.querySelector('.calendar-main');
+    const toggleIcon = document.getElementById('toggleIcon');
+    const toggleText = document.getElementById('toggleText');
+
+    isExtendedView = !isExtendedView;
+
+    if (isExtendedView) {
+        calendarMain.classList.add('extended-view');
+        toggleIcon.className = 'fas fa-compress-alt';
+        toggleText.textContent = 'Vue normale';
+    } else {
+        calendarMain.classList.remove('extended-view');
+        toggleIcon.className = 'fas fa-expand-alt';
+        toggleText.textContent = 'Vue étendue';
+    }
+
+    // Sauvegarder la préférence
+    localStorage.setItem('calendarViewMode', isExtendedView ? 'extended' : 'normal');
+}
+
+// Appliquer la couleur de la classe sélectionnée
+function applyClassroomColor() {
+    const selectedClassroom = {{ classrooms_json | tojson }}.find(c => c.id === selectedClassroomId);
+    if (selectedClassroom && selectedClassroom.color) {
+        const annualGrid = document.querySelector('.annual-grid');
+        if (annualGrid) {
+            // Appliquer la couleur comme variable CSS
+            annualGrid.style.setProperty('--classroom-color', selectedClassroom.color);
+        }
+    }
+}
+
+// Initialiser les données de planification au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    loadWeeklyPlannings();
+    applyClassroomColor();
+
+    // Restaurer la préférence de vue
+    const savedViewMode = localStorage.getItem('calendarViewMode');
+    if (savedViewMode === 'extended' && !isExtendedView) {
+        toggleViewMode();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,660 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier le modèle "{{ template.name }}" - TeacherPlanner{% endblock %}
+
+{% block extra_css %}
+<style>
+.edit-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.form-section {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 2rem;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.section-title h2 {
+    margin: 0;
+    color: var(--dark-color);
+}
+
+.section-title i {
+    font-size: 1.25rem;
+    color: var(--primary-color);
+}
+
+.template-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-left: auto;
+}
+
+.template-status.active {
+    background-color: #D1FAE5;
+    color: #065F46;
+}
+
+.template-status.inactive {
+    background-color: #FEE2E2;
+    color: #991B1B;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--dark-color);
+}
+
+.form-input, .form-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-input:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.thresholds-container {
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    background-color: #F9FAFB;
+}
+
+.threshold-item {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--light-gray);
+    position: relative;
+}
+
+.threshold-item:last-child {
+    margin-bottom: 0;
+}
+
+.threshold-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.threshold-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.threshold-number {
+    background-color: var(--primary-color);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.threshold-input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.threshold-input {
+    width: 80px;
+    padding: 0.5rem;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    text-align: center;
+}
+
+.sanctions-list {
+    margin-top: 1rem;
+}
+
+.sanction-item {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background-color: #F8FAFC;
+    border-radius: var(--border-radius);
+    border: 1px solid #E2E8F0;
+}
+
+.sanction-item:last-child {
+    margin-bottom: 0;
+}
+
+.sanction-description {
+    flex: 1;
+}
+
+.sanction-deadline {
+    width: 120px;
+}
+
+.sanction-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-icon {
+    padding: 0.5rem;
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.btn-icon:hover {
+    transform: scale(1.05);
+}
+
+.btn-add {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.btn-add:hover {
+    background-color: #059669;
+}
+
+.btn-remove {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-remove:hover {
+    background-color: #DC2626;
+}
+
+.btn-remove-threshold {
+    background-color: var(--danger-color);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.btn-remove-threshold:hover {
+    background-color: #DC2626;
+}
+
+.add-threshold-btn {
+    width: 100%;
+    padding: 1rem;
+    border: 2px dashed var(--light-gray);
+    border-radius: var(--border-radius);
+    background-color: transparent;
+    color: var(--gray-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.add-threshold-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background-color: #F8FAFC;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding-top: 2rem;
+    border-top: 1px solid var(--light-gray);
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #7C3AED;
+}
+
+.btn-outline {
+    background-color: transparent;
+    color: var(--gray-color);
+    border: 1px solid var(--light-gray);
+}
+
+.btn-outline:hover {
+    background-color: var(--light-gray);
+}
+
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.error-message {
+    color: var(--danger-color);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.helper-text {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+    margin-top: 0.25rem;
+}
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    z-index: 1100;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification.success {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.notification.error {
+    background-color: var(--danger-color);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-container">
+    <!-- En-tête -->
+    <div class="form-section">
+        <div class="section-title">
+            <i class="fas fa-edit"></i>
+            <h2>Modifier le modèle "{{ template.name }}"</h2>
+            <div class="template-status {% if template.is_active %}active{% else %}inactive{% endif %}">
+                <i class="fas fa-circle"></i>
+                {{ 'Actif' if template.is_active else 'Inactif' }}
+            </div>
+        </div>
+        <p>Modifiez les paramètres de ce modèle de sanction.</p>
+    </div>
+
+    <!-- Informations de base -->
+    <div class="form-section">
+        <div class="section-title">
+            <i class="fas fa-info-circle"></i>
+            <h2>Informations générales</h2>
+        </div>
+
+        <div class="form-group">
+            <label for="templateName" class="form-label">Nom du type de problème *</label>
+            <input type="text" id="templateName" class="form-input" value="{{ template.name }}" required>
+            <div class="helper-text">Choisissez un nom court et descriptif pour ce type de problème</div>
+        </div>
+
+        <div class="form-group">
+            <label for="templateDescription" class="form-label">Description (optionnel)</label>
+            <textarea id="templateDescription" class="form-textarea">{{ template.description or '' }}</textarea>
+        </div>
+    </div>
+
+    <!-- Seuils et sanctions -->
+    <div class="form-section">
+        <div class="section-title">
+            <i class="fas fa-layer-group"></i>
+            <h2>Seuils et sanctions</h2>
+        </div>
+
+        <div class="thresholds-container">
+            <div id="thresholdsList">
+                <!-- Les seuils seront ajoutés ici dynamiquement -->
+            </div>
+            
+            <button type="button" class="add-threshold-btn" onclick="addThreshold()">
+                <i class="fas fa-plus"></i>
+                Ajouter un seuil
+            </button>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="form-actions">
+        <a href="{{ url_for('sanctions.index') }}" class="btn btn-outline">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+        <button type="button" class="btn btn-primary" onclick="saveTemplate()">
+            <i class="fas fa-save"></i> Sauvegarder les modifications
+        </button>
+    </div>
+</div>
+
+<!-- Notification -->
+<div id="notification" class="notification">
+    <span id="notificationText"></span>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let thresholdCounter = 0;
+let sanctionCounters = {};
+const templateId = {{ template.id }};
+
+// Charger les données existantes
+document.addEventListener('DOMContentLoaded', function() {
+    loadExistingData();
+});
+
+async function loadExistingData() {
+    try {
+        const response = await fetch(`/sanctions/get-template/${templateId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const template = result.template;
+            
+            // Charger les seuils existants
+            template.thresholds.forEach(threshold => {
+                addThreshold(threshold.check_count, threshold.sanctions);
+            });
+            
+            // Si aucun seuil, ajouter un seuil vide
+            if (template.thresholds.length === 0) {
+                addThreshold();
+            }
+        } else {
+            showNotification('Erreur lors du chargement du modèle', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+        addThreshold(); // Au moins un seuil par défaut
+    }
+}
+
+function addThreshold(checkCount = null, sanctions = null) {
+    thresholdCounter++;
+    sanctionCounters[thresholdCounter] = 0;
+    
+    const thresholdHtml = `
+        <div class="threshold-item" data-threshold-id="${thresholdCounter}">
+            <div class="threshold-header">
+                <div class="threshold-title">
+                    <div class="threshold-number">${thresholdCounter}</div>
+                    <h3>Seuil ${thresholdCounter}</h3>
+                </div>
+                <button type="button" class="btn-icon btn-remove-threshold" onclick="removeThreshold(${thresholdCounter})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            
+            <div class="threshold-input-group">
+                <label>Déclencher après</label>
+                <input type="number" class="threshold-input" min="1" max="99" value="${checkCount || (thresholdCounter * 3)}" 
+                       placeholder="3" data-field="check_count">
+                <label>coches</label>
+            </div>
+            
+            <div class="sanctions-list" id="sanctionsList_${thresholdCounter}">
+                <label class="form-label">Options de sanctions :</label>
+                <!-- Les sanctions seront ajoutées ici -->
+            </div>
+            
+            <button type="button" class="btn-icon btn-add" onclick="addSanction(${thresholdCounter})" style="margin-top: 0.5rem;">
+                <i class="fas fa-plus"></i> Ajouter une sanction
+            </button>
+        </div>
+    `;
+    
+    document.getElementById('thresholdsList').insertAdjacentHTML('beforeend', thresholdHtml);
+    
+    // Ajouter les sanctions existantes ou une sanction vide
+    if (sanctions && sanctions.length > 0) {
+        sanctions.forEach(sanction => {
+            addSanction(thresholdCounter, sanction.description, sanction.min_days_deadline);
+        });
+    } else {
+        addSanction(thresholdCounter);
+    }
+}
+
+function removeThreshold(thresholdId) {
+    const thresholds = document.querySelectorAll('.threshold-item');
+    if (thresholds.length === 1) {
+        showNotification('Au moins un seuil est requis', 'error');
+        return;
+    }
+    
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce seuil ?')) {
+        document.querySelector(`[data-threshold-id="${thresholdId}"]`).remove();
+        delete sanctionCounters[thresholdId];
+        updateThresholdNumbers();
+    }
+}
+
+function updateThresholdNumbers() {
+    const thresholds = document.querySelectorAll('.threshold-item');
+    thresholds.forEach((threshold, index) => {
+        const number = index + 1;
+        threshold.querySelector('.threshold-number').textContent = number;
+        threshold.querySelector('.threshold-title h3').textContent = `Seuil ${number}`;
+    });
+}
+
+function addSanction(thresholdId, description = '', minDays = null) {
+    sanctionCounters[thresholdId]++;
+    const sanctionId = `${thresholdId}_${sanctionCounters[thresholdId]}`;
+    
+    const sanctionHtml = `
+        <div class="sanction-item" data-sanction-id="${sanctionId}">
+            <div class="sanction-description">
+                <input type="text" class="form-input" placeholder="ex: Copier pages 17-18 de l'aide-mémoire" 
+                       value="${description}" data-field="description" required>
+            </div>
+            <div class="sanction-deadline">
+                <input type="number" class="form-input" placeholder="Jours" min="1" max="30" value="${minDays || ''}" 
+                       data-field="min_days_deadline">
+                <div class="helper-text">Min. jours (optionnel)</div>
+            </div>
+            <div class="sanction-actions">
+                <button type="button" class="btn-icon btn-remove" onclick="removeSanction('${sanctionId}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById(`sanctionsList_${thresholdId}`).insertAdjacentHTML('beforeend', sanctionHtml);
+}
+
+function removeSanction(sanctionId) {
+    const sanctionElement = document.querySelector(`[data-sanction-id="${sanctionId}"]`);
+    const sanctionsList = sanctionElement.closest('.sanctions-list');
+    
+    // Ne pas supprimer s'il n'y a qu'une seule sanction
+    if (sanctionsList.querySelectorAll('.sanction-item').length === 1) {
+        showNotification('Au moins une sanction est requise par seuil', 'error');
+        return;
+    }
+    
+    sanctionElement.remove();
+}
+
+async function saveTemplate() {
+    // Validation
+    const name = document.getElementById('templateName').value.trim();
+    if (!name) {
+        showNotification('Le nom du modèle est obligatoire', 'error');
+        return;
+    }
+    
+    const thresholds = collectThresholdsData();
+    if (thresholds.length === 0) {
+        showNotification('Au moins un seuil est requis', 'error');
+        return;
+    }
+    
+    // Vérifier que tous les seuils ont au moins une sanction
+    for (let threshold of thresholds) {
+        if (threshold.sanctions.length === 0) {
+            showNotification('Chaque seuil doit avoir au moins une sanction', 'error');
+            return;
+        }
+    }
+    
+    const templateData = {
+        template_id: templateId,
+        name: name,
+        description: document.getElementById('templateDescription').value.trim(),
+        thresholds: thresholds
+    };
+    
+    // Désactiver le formulaire pendant la sauvegarde
+    document.body.classList.add('loading');
+    
+    try {
+        const response = await fetch('/sanctions/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(templateData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            // Rediriger vers la liste après 1.5 secondes
+            setTimeout(() => {
+                window.location.href = '/sanctions/';
+            }, 1500);
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+    } finally {
+        document.body.classList.remove('loading');
+    }
+}
+
+function collectThresholdsData() {
+    const thresholds = [];
+    const thresholdElements = document.querySelectorAll('.threshold-item');
+    
+    thresholdElements.forEach(thresholdEl => {
+        const checkCount = parseInt(thresholdEl.querySelector('[data-field="check_count"]').value);
+        const sanctions = [];
+        
+        const sanctionElements = thresholdEl.querySelectorAll('.sanction-item');
+        sanctionElements.forEach(sanctionEl => {
+            const description = sanctionEl.querySelector('[data-field="description"]').value.trim();
+            const minDaysValue = sanctionEl.querySelector('[data-field="min_days_deadline"]').value;
+            const minDays = minDaysValue ? parseInt(minDaysValue) : null;
+            
+            if (description) {
+                sanctions.push({
+                    description: description,
+                    min_days_deadline: minDays
+                });
+            }
+        });
+        
+        if (checkCount && sanctions.length > 0) {
+            thresholds.push({
+                check_count: checkCount,
+                sanctions: sanctions
+            });
+        }
+    });
+    
+    // Trier par nombre de coches
+    thresholds.sort((a, b) => a.check_count - b.check_count);
+    
+    return thresholds;
+}
+
+function showNotification(message, type) {
+    const notification = document.getElementById('notification');
+    const text = document.getElementById('notificationText');
+    
+    text.textContent = message;
+    notification.className = `notification ${type}`;
+    notification.classList.add('show');
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 4000);
+}
+</script>
+{% endblock %}

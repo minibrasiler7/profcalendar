@@ -1,0 +1,638 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des sanctions - TeacherPlanner{% endblock %}
+
+{% block extra_css %}
+<style>
+.sanctions-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.sanctions-header {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 2rem;
+}
+
+.sanctions-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.sanctions-title h1 {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0;
+}
+
+.sanctions-title i {
+    font-size: 2rem;
+    color: #EF4444;
+}
+
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+    background-color: var(--light-gray);
+    border-radius: var(--border-radius);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+    margin-top: 0.25rem;
+}
+
+.templates-section {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 2rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.templates-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.template-card {
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.template-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.template-card.inactive {
+    opacity: 0.6;
+    background-color: #F9FAFB;
+}
+
+.template-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.template-info h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--dark-color);
+}
+
+.template-description {
+    color: var(--gray-color);
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.template-meta {
+    font-size: 0.75rem;
+    color: var(--gray-color);
+}
+
+.template-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-icon {
+    padding: 0.5rem;
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.btn-icon:hover {
+    transform: scale(1.05);
+}
+
+.btn-edit {
+    background-color: #3B82F6;
+    color: white;
+}
+
+.btn-edit:hover {
+    background-color: #2563EB;
+}
+
+.btn-toggle {
+    background-color: var(--warning-color);
+    color: white;
+}
+
+.btn-toggle:hover {
+    background-color: #D97706;
+}
+
+.btn-toggle.inactive {
+    background-color: var(--success-color);
+}
+
+.btn-toggle.inactive:hover {
+    background-color: #059669;
+}
+
+.btn-delete {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-delete:hover {
+    background-color: #DC2626;
+}
+
+.btn-import {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.btn-import:hover {
+    background-color: #0891B2;
+}
+
+.threshold-summary {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.threshold-badge {
+    background-color: var(--light-gray);
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    color: var(--dark-color);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--gray-color);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--light-gray);
+}
+
+.status-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status-active {
+    background-color: #D1FAE5;
+    color: #065F46;
+}
+
+.status-inactive {
+    background-color: #FEE2E2;
+    color: #991B1B;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: var(--white);
+    margin: 5% auto;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--gray-color);
+    padding: 0.25rem;
+}
+
+.modal-close:hover {
+    color: var(--dark-color);
+}
+
+.checkbox-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.checkbox-item:last-child {
+    border-bottom: none;
+}
+
+.checkbox-item input[type="checkbox"] {
+    margin: 0;
+}
+
+.class-info {
+    flex: 1;
+}
+
+.class-name {
+    font-weight: 500;
+    color: var(--dark-color);
+}
+
+.class-subject {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--light-gray);
+}
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    z-index: 1100;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification.success {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.notification.error {
+    background-color: var(--danger-color);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sanctions-container">
+    <div class="sanctions-header">
+        <div class="sanctions-title">
+            <h1>
+                <i class="fas fa-exclamation-triangle"></i>
+                Gestion des sanctions
+            </h1>
+            <a href="{{ url_for('sanctions.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nouveau modèle
+            </a>
+        </div>
+        <p>Créez et gérez vos modèles de sanctions pour automatiser la gestion disciplinaire.</p>
+        
+        <div class="stats-row">
+            <div class="stat-item">
+                <div class="stat-number">{{ stats.total_templates }}</div>
+                <div class="stat-label">Modèles créés</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ stats.active_templates }}</div>
+                <div class="stat-label">Modèles actifs</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ stats.total_imports }}</div>
+                <div class="stat-label">Imports en classes</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="templates-section">
+        <div class="section-header">
+            <h2>Modèles de sanctions</h2>
+            {% if templates %}
+            <button class="btn btn-outline" onclick="openImportModal()">
+                <i class="fas fa-download"></i> Importer vers les classes
+            </button>
+            {% endif %}
+        </div>
+
+        {% if templates %}
+        <div class="templates-grid">
+            {% for template in templates %}
+            <div class="template-card {% if not template.is_active %}inactive{% endif %}" data-template-id="{{ template.id }}">
+                <div class="status-badge {% if template.is_active %}status-active{% else %}status-inactive{% endif %}">
+                    {{ 'Actif' if template.is_active else 'Inactif' }}
+                </div>
+                
+                <div class="template-header">
+                    <div class="template-info">
+                        <h3>{{ template.name }}</h3>
+                        {% if template.description %}
+                        <div class="template-description">{{ template.description }}</div>
+                        {% endif %}
+                        <div class="template-meta">
+                            Créé le {{ template.created_at.strftime('%d/%m/%Y') }}
+                            • {{ template.sorted_thresholds|length }} seuil(s)
+                        </div>
+                    </div>
+                    
+                    <div class="template-actions">
+                        <button class="btn-icon btn-edit" onclick="editTemplate({{ template.id }})" title="Modifier">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon btn-toggle {% if not template.is_active %}inactive{% endif %}" 
+                                onclick="toggleTemplate({{ template.id }})" 
+                                title="{% if template.is_active %}Désactiver{% else %}Activer{% endif %}">
+                            <i class="fas fa-{% if template.is_active %}pause{% else %}play{% endif %}"></i>
+                        </button>
+                        <button class="btn-icon btn-import" onclick="openImportModal({{ template.id }})" title="Importer">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" onclick="deleteTemplate({{ template.id }})" title="Supprimer">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                {% if template.sorted_thresholds %}
+                <div class="threshold-summary">
+                    {% for threshold in template.sorted_thresholds %}
+                    <div class="threshold-badge">
+                        {{ threshold.check_count }} coches ({{ threshold.sanctions.count() }} sanction(s))
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>Aucun modèle de sanction</h3>
+            <p>Créez votre premier modèle pour commencer à gérer les sanctions automatiquement.</p>
+            <a href="{{ url_for('sanctions.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Créer un modèle
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal d'import vers les classes -->
+<div id="importModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Importer vers les classes</h3>
+            <button class="modal-close" onclick="closeImportModal()">&times;</button>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Sélectionnez les classes :</label>
+            <div class="checkbox-list" id="classroomsList">
+                {% for classroom in classrooms %}
+                <div class="checkbox-item">
+                    <input type="checkbox" id="class_{{ classroom.id }}" value="{{ classroom.id }}">
+                    <div class="class-info">
+                        <div class="class-name">{{ classroom.name }}</div>
+                        <div class="class-subject">{{ classroom.subject }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button class="btn btn-outline" onclick="closeImportModal()">Annuler</button>
+            <button class="btn btn-primary" onclick="performImport()">
+                <i class="fas fa-download"></i> Importer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Notification -->
+<div id="notification" class="notification">
+    <span id="notificationText"></span>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentTemplateForImport = null;
+
+// Fonctions de gestion des modèles
+function editTemplate(templateId) {
+    window.location.href = `/sanctions/edit/${templateId}`;
+}
+
+async function toggleTemplate(templateId) {
+    try {
+        const response = await fetch(`/sanctions/toggle-status/${templateId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            // Recharger la page pour mettre à jour l'affichage
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+    }
+}
+
+async function deleteTemplate(templateId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce modèle ? Cette action est irréversible.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/sanctions/delete/${templateId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            // Supprimer la carte visuellement
+            document.querySelector(`[data-template-id="${templateId}"]`).remove();
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+    }
+}
+
+// Fonctions de gestion de l'import
+function openImportModal(templateId = null) {
+    currentTemplateForImport = templateId;
+    document.getElementById('importModal').style.display = 'block';
+    
+    // Décocher toutes les cases
+    document.querySelectorAll('#classroomsList input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+    });
+}
+
+function closeImportModal() {
+    document.getElementById('importModal').style.display = 'none';
+    currentTemplateForImport = null;
+}
+
+async function performImport() {
+    const selectedClasses = [];
+    document.querySelectorAll('#classroomsList input[type="checkbox"]:checked').forEach(cb => {
+        selectedClasses.push(parseInt(cb.value));
+    });
+    
+    if (selectedClasses.length === 0) {
+        showNotification('Veuillez sélectionner au moins une classe', 'error');
+        return;
+    }
+    
+    if (!currentTemplateForImport) {
+        showNotification('Aucun modèle sélectionné', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/sanctions/import-to-class', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                template_id: currentTemplateForImport,
+                classroom_ids: selectedClasses
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            closeImportModal();
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+    }
+}
+
+// Fonction utilitaire pour les notifications
+function showNotification(message, type) {
+    const notification = document.getElementById('notification');
+    const text = document.getElementById('notificationText');
+    
+    text.textContent = message;
+    notification.className = `notification ${type}`;
+    notification.classList.add('show');
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 4000);
+}
+
+// Fermer le modal en cliquant à l'extérieur
+window.onclick = function(event) {
+    const modal = document.getElementById('importModal');
+    if (event.target === modal) {
+        closeImportModal();
+    }
+}
+</script>
+{% endblock %}

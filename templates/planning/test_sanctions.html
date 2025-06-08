@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Système de Sanctions</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        .warning { color: orange; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+        button { margin: 5px; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test du Système de Sanctions</h1>
+    
+    <div class="test-section">
+        <h2>Étape 1: Vérifier les données de base</h2>
+        <button class="btn-primary" onclick="testBasicData()">Vérifier les données</button>
+        <div id="basic-data-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Étape 2: Simuler des compteurs initiaux</h2>
+        <p>Définissez les compteurs initiaux (simulation du début de période)</p>
+        <input type="text" id="initial-counts" placeholder='{"1_1": 2, "2_1": 0}' style="width: 300px;">
+        <button class="btn-warning" onclick="setInitialCounts()">Définir compteurs initiaux</button>
+        <div id="initial-counts-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Étape 3: Tester la détection des seuils</h2>
+        <button class="btn-success" onclick="testThresholdDetection()">Tester détection des seuils</button>
+        <div id="threshold-detection-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Étape 4: Tester le calcul de dates</h2>
+        <input type="number" id="min-days" placeholder="Nombre de jours minimum" min="0" max="30" value="3">
+        <button class="btn-primary" onclick="testDateCalculation()">Calculer prochaine date</button>
+        <div id="date-calculation-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Étape 5: Test complet</h2>
+        <p><strong>Instructions:</strong></p>
+        <ol>
+            <li>Allez dans votre vue leçon</li>
+            <li>Ajoutez des coches à un élève pour franchir un seuil</li>
+            <li>Revenez ici et cliquez sur "Test complet"</li>
+        </ol>
+        <button class="btn-danger" onclick="fullSystemTest()">🚀 Test complet du système</button>
+        <div id="full-test-result"></div>
+    </div>
+
+    <script>
+        // Variables globales pour les tests
+        let classroomId = {{ lesson.classroom_id if lesson else 'null' }};
+        let currentDate = '{{ lesson_date.strftime("%Y-%m-%d") if lesson_date else '' }}';
+        let initialCounts = {};
+
+        async function testBasicData() {
+            const result = document.getElementById('basic-data-result');
+            result.innerHTML = '<p class="info">Vérification en cours...</p>';
+            
+            let html = '<h3>Données de base:</h3><ul>';
+            
+            // Vérifier les variables
+            html += `<li>Classroom ID: ${classroomId}</li>`;
+            html += `<li>Date actuelle: ${currentDate}</li>`;
+            
+            // Tester l'API de vérification des seuils
+            try {
+                const response = await fetch('/planning/check-sanction-thresholds', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        classroom_id: classroomId,
+                        initial_counts: {}
+                    })
+                });
+                
+                if (response.ok) {
+                    html += '<li class="success">✓ API check-sanction-thresholds accessible</li>';
+                    const data = await response.json();
+                    html += `<li>Réponse API: ${data.success ? 'Succès' : 'Erreur'}</li>`;
+                } else {
+                    html += `<li class="error">✗ API check-sanction-thresholds erreur: ${response.status}</li>`;
+                }
+            } catch (error) {
+                html += `<li class="error">✗ Erreur API: ${error.message}</li>`;
+            }
+            
+            html += '</ul>';
+            result.innerHTML = html;
+        }
+
+        function setInitialCounts() {
+            const input = document.getElementById('initial-counts');
+            const result = document.getElementById('initial-counts-result');
+            
+            try {
+                initialCounts = JSON.parse(input.value || '{}');
+                result.innerHTML = `<p class="success">✓ Compteurs initiaux définis: ${Object.keys(initialCounts).length} éléments</p>`;
+            } catch (error) {
+                result.innerHTML = `<p class="error">✗ Format JSON invalide: ${error.message}</p>`;
+            }
+        }
+
+        async function testThresholdDetection() {
+            const result = document.getElementById('threshold-detection-result');
+            result.innerHTML = '<p class="info">Test en cours...</p>';
+            
+            try {
+                const response = await fetch('/planning/check-sanction-thresholds', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        classroom_id: classroomId,
+                        initial_counts: initialCounts
+                    })
+                });
+                
+                const data = await response.json();
+                
+                let html = '<h3>Résultat de la détection:</h3>';
+                html += `<p>Statut: ${data.success ? 'Succès' : 'Erreur'}</p>`;
+                
+                if (data.success) {
+                    html += `<p>Seuils franchis: ${data.threshold_breaches ? data.threshold_breaches.length : 0}</p>`;
+                    
+                    if (data.threshold_breaches && data.threshold_breaches.length > 0) {
+                        html += '<h4>Détails des seuils franchis:</h4><ul>';
+                        data.threshold_breaches.forEach(breach => {
+                            html += `<li><strong>${breach.student_name}</strong> - ${breach.sanction_template} (${breach.threshold} coches): ${breach.sanction_text}</li>`;
+                        });
+                        html += '</ul>';
+                    } else {
+                        html += '<p class="warning">Aucun seuil franchi détecté</p>';
+                    }
+                } else {
+                    html += `<p class="error">Erreur: ${data.message}</p>`;
+                }
+                
+                html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                result.innerHTML = html;
+                
+            } catch (error) {
+                result.innerHTML = `<p class="error">Erreur: ${error.message}</p>`;
+            }
+        }
+
+        async function testDateCalculation() {
+            const result = document.getElementById('date-calculation-result');
+            const minDays = document.getElementById('min-days').value;
+            result.innerHTML = '<p class="info">Calcul en cours...</p>';
+            
+            try {
+                const response = await fetch('/planning/calculate-next-lesson-date', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        classroom_id: classroomId,
+                        min_days: parseInt(minDays),
+                        current_date: currentDate
+                    })
+                });
+                
+                const data = await response.json();
+                
+                let html = '<h3>Calcul de la prochaine date:</h3>';
+                html += `<p>Statut: ${data.success ? 'Succès' : 'Erreur'}</p>`;
+                
+                if (data.success && data.next_date) {
+                    html += `<p class="success">✓ Prochaine date trouvée: ${data.formatted_date}</p>`;
+                    html += `<p>Date: ${data.next_date}</p>`;
+                    html += `<p>Période: ${data.period_number}</p>`;
+                } else {
+                    html += `<p class="warning">Aucune date trouvée: ${data.message}</p>`;
+                }
+                
+                html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                result.innerHTML = html;
+                
+            } catch (error) {
+                result.innerHTML = `<p class="error">Erreur: ${error.message}</p>`;
+            }
+        }
+
+        async function fullSystemTest() {
+            const result = document.getElementById('full-test-result');
+            result.innerHTML = '<p class="info">🚀 Test complet en cours...</p>';
+            
+            try {
+                // Étape 1: Détecter les seuils
+                const thresholdResponse = await fetch('/planning/check-sanction-thresholds', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        classroom_id: classroomId,
+                        initial_counts: initialCounts
+                    })
+                });
+                
+                const thresholdData = await thresholdResponse.json();
+                
+                let html = '<h3>🔍 Résultat du test complet:</h3>';
+                
+                if (!thresholdData.success) {
+                    html += `<p class="error">❌ Échec de la détection: ${thresholdData.message}</p>`;
+                    result.innerHTML = html;
+                    return;
+                }
+                
+                if (!thresholdData.threshold_breaches || thresholdData.threshold_breaches.length === 0) {
+                    html += '<p class="warning">⚠️ Aucun seuil franchi détecté. Ajoutez des coches d\'abord!</p>';
+                    result.innerHTML = html;
+                    return;
+                }
+                
+                html += `<p class="success">✅ ${thresholdData.threshold_breaches.length} seuil(s) franchi(s) détecté(s)</p>`;
+                
+                // Étape 2: Pour chaque seuil, calculer la date et ajouter à la planification
+                for (const breach of thresholdData.threshold_breaches) {
+                    html += `<h4>📝 Traitement de ${breach.student_name}:</h4>`;
+                    html += `<p>Sanction: ${breach.sanction_text}</p>`;
+                    
+                    if (breach.min_days_deadline) {
+                        // Calculer la date
+                        const dateResponse = await fetch('/planning/calculate-next-lesson-date', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                classroom_id: classroomId,
+                                min_days: breach.min_days_deadline,
+                                current_date: currentDate
+                            })
+                        });
+                        
+                        const dateData = await dateResponse.json();
+                        
+                        if (dateData.success && dateData.next_date) {
+                            html += `<p class="success">📅 Date de rendu: ${dateData.formatted_date}</p>`;
+                            
+                            // Ajouter à la planification
+                            const planningResponse = await fetch('/planning/add-sanction-to-planning', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    date: dateData.next_date,
+                                    period_number: dateData.period_number,
+                                    classroom_id: classroomId,
+                                    student_name: breach.student_name,
+                                    sanction_text: breach.sanction_text
+                                })
+                            });
+                            
+                            const planningData = await planningResponse.json();
+                            if (planningData.success) {
+                                html += '<p class="success">✅ Ajouté à la planification</p>';
+                            } else {
+                                html += `<p class="error">❌ Erreur planification: ${planningData.message}</p>`;
+                            }
+                        } else {
+                            html += `<p class="warning">⚠️ Pas de date trouvée: ${dateData.message}</p>`;
+                        }
+                    } else {
+                        html += '<p class="info">ℹ️ Pas de délai minimum défini</p>';
+                    }
+                }
+                
+                html += '<hr><p class="success"><strong>🎉 Test complet terminé!</strong></p>';
+                result.innerHTML = html;
+                
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ Erreur du test complet: ${error.message}</p>`;
+            }
+        }
+
+        // Initialiser les tests au chargement
+        window.onload = function() {
+            if (classroomId) {
+                testBasicData();
+            } else {
+                document.getElementById('basic-data-result').innerHTML = '<p class="error">❌ Pas de classe sélectionnée. Allez d\'abord dans une vue leçon.</p>';
+            }
+        };
+    </script>
+</body>
+</html>
