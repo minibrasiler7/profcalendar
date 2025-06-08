@@ -3628,27 +3628,6 @@ function initializeSanctionSystem() {
     {% if is_current and remaining_seconds > 0 %}
     startSanctionMonitoring();
     {% endif %}
-    
-    // MODE TEST : Ajouter un bouton de test si pas en cours
-    {% if not is_current %}
-    addTestButton();
-    {% endif %}
-}
-
-// Fonction pour ajouter un bouton de test
-function addTestButton() {
-    const sanctionsTab = document.querySelector('.tracking-tab[onclick*="sanctions"]');
-    if (sanctionsTab) {
-        const testButton = document.createElement('button');
-        testButton.className = 'btn btn-warning';
-        testButton.style.cssText = 'margin-left: 1rem; padding: 0.5rem 1rem; font-size: 0.875rem;';
-        testButton.innerHTML = '<i class="fas fa-flask"></i> Tester sanctions';
-        testButton.onclick = function() {
-            console.log('Test des sanctions déclenché');
-            checkForSanctionThresholds();
-        };
-        sanctionsTab.parentElement.appendChild(testButton);
-    }
 }
 
 function startSanctionMonitoring() {

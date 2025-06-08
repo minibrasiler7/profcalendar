@@ -361,6 +361,12 @@
             <span>Gestion des sanctions</span>
         </a>
 
+        <!-- Nouveau bouton pour le suivi des absences -->
+        <a href="{{ url_for('attendance.index') }}" class="action-button" style="background-color: #F0FDF4; border-color: #10B981;">
+            <i class="fas fa-calendar-check" style="color: #10B981;"></i>
+            <span>Suivi des absences</span>
+        </a>
+
         <a href="{{ url_for('setup.initial_setup') }}" class="action-button">
             <i class="fas fa-cog"></i>
             <span>Paramètres</span>

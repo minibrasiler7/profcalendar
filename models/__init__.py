@@ -8,7 +8,9 @@ from models.attendance import Attendance
 from models.file_manager import FileFolder, UserFile, FileShare
 from models.sanctions import SanctionTemplate, SanctionThreshold, SanctionOption, ClassroomSanctionImport, StudentSanctionRecord
 from models.student_sanctions import StudentSanctionCount
+from models.evaluation import Evaluation, EvaluationGrade
 
 __all__ = ['User', 'Holiday', 'Break', 'Classroom', 'Schedule', 'Planning',
            'Student', 'Grade', 'ClassFile', 'Chapter', 'ClassroomChapter', 'Attendance', 'FileFolder', 'UserFile', 'FileShare',
-           'SanctionTemplate', 'SanctionThreshold', 'SanctionOption', 'ClassroomSanctionImport', 'StudentSanctionRecord', 'StudentSanctionCount']
+           'SanctionTemplate', 'SanctionThreshold', 'SanctionOption', 'ClassroomSanctionImport', 'StudentSanctionRecord', 'StudentSanctionCount',
+           'Evaluation', 'EvaluationGrade']

@@ -889,6 +889,17 @@ def manage_classes():
 
     # Récupérer les données de la classe sélectionnée
     students = Student.query.filter_by(classroom_id=selected_classroom_id).order_by(Student.last_name, Student.first_name).all()
+    
+    # Convertir les étudiants en dictionnaires pour le JSON (utilisé en JavaScript)
+    students_json = []
+    for student in students:
+        students_json.append({
+            'id': student.id,
+            'first_name': student.first_name,
+            'last_name': student.last_name,
+            'full_name': student.full_name,
+            'email': student.email
+        })
 
     # Récupérer les notes récentes
     recent_grades = Grade.query.filter_by(classroom_id=selected_classroom_id).order_by(Grade.date.desc()).limit(10).all()
@@ -931,6 +942,7 @@ def manage_classes():
                          selected_classroom=selected_classroom,
                          selected_classroom_id=selected_classroom_id,
                          students=students,
+                         students_json=students_json,
                          recent_grades=recent_grades,
                          imported_sanctions=imported_sanctions,
                          sanctions_data=sanctions_data)

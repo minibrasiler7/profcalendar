@@ -46,6 +46,8 @@ def create_app(config_class=Config):
     from routes.file_manager import file_manager_bp
     from routes.class_files import class_files_bp
     from routes.sanctions import sanctions_bp
+    from routes.evaluations import evaluations_bp
+    from routes.attendance import attendance_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(setup_bp)
@@ -54,6 +56,8 @@ def create_app(config_class=Config):
     app.register_blueprint(file_manager_bp)
     app.register_blueprint(class_files_bp)
     app.register_blueprint(sanctions_bp)
+    app.register_blueprint(evaluations_bp)
+    app.register_blueprint(attendance_bp)
 
     # Route d'accueil
     @app.route('/')

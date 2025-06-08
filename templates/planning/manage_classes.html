@@ -311,70 +311,157 @@
     box-shadow: var(--shadow-sm);
 }
 
-.upload-zone {
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.drop-zone {
     border: 2px dashed var(--primary-color);
     border-radius: var(--border-radius);
     padding: 3rem;
     text-align: center;
     background-color: #F9FAFB;
-    margin-bottom: 2rem;
-    cursor: pointer;
+    margin-bottom: 1rem;
     transition: all 0.3s ease;
 }
 
-.upload-zone:hover {
-    background-color: #EFF6FF;
-    border-color: var(--primary-hover);
+.drop-zone.active {
+    background-color: #DBEAFE;
+    border-color: #2563EB;
 }
 
-.upload-zone i {
+.drop-zone i {
     font-size: 3rem;
     color: var(--primary-color);
     margin-bottom: 1rem;
 }
 
-.files-grid {
+/* Breadcrumb */
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem;
+}
+
+.breadcrumb-item {
+    color: var(--gray-color);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.breadcrumb-item:hover {
+    color: var(--primary-color);
+}
+
+.breadcrumb-separator {
+    color: var(--light-gray);
+}
+
+/* File grid */
+.file-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 1rem;
+    margin-top: 1rem;
 }
 
-.file-card {
+.file-item {
+    position: relative;
     background-color: var(--light-gray);
-    padding: 1rem;
     border-radius: var(--border-radius);
+    padding: 1rem;
     text-align: center;
-    transition: all 0.2s ease;
     cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
-.file-card:hover {
+.file-item:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-sm);
 }
 
-.file-icon {
+.file-item.folder {
+    background-color: #F3F4F6;
+}
+
+.item-icon {
     font-size: 2.5rem;
     margin-bottom: 0.5rem;
 }
 
-.file-icon.pdf { color: #DC2626; }
-.file-icon.doc { color: #2563EB; }
-.file-icon.img { color: #059669; }
-.file-icon.other { color: #6B7280; }
+.item-icon i {
+    display: block;
+}
 
-.file-name {
+.item-icon img.thumbnail {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.item-name {
     font-size: 0.875rem;
     font-weight: 500;
-    margin-bottom: 0.25rem;
+    color: var(--dark-color);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    width: 100%;
+    margin-bottom: 0.25rem;
 }
 
-.file-size {
+.item-info {
     font-size: 0.75rem;
     color: var(--gray-color);
+}
+
+.item-actions {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.file-item:hover .item-actions {
+    opacity: 1;
+}
+
+.action-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background-color: var(--white);
+    color: var(--gray-color);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.action-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.action-btn.danger:hover {
+    background-color: var(--danger-color);
+    color: white;
 }
 
 /* Sanctions section */
@@ -535,6 +622,226 @@
         font-size: 0.875rem;
     }
 }
+
+/* Styles pour les en-têtes d'évaluations */
+.eval-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.eval-header:hover {
+    background-color: rgba(79, 70, 229, 0.05);
+}
+
+.eval-column.selected .eval-header {
+    background-color: rgba(79, 70, 229, 0.15);
+}
+
+.eval-title {
+    flex: 1;
+    font-weight: 600;
+}
+
+.eval-actions {
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.eval-header:hover .eval-actions {
+    opacity: 1;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--gray-color);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.btn-icon:hover {
+    background-color: rgba(79, 70, 229, 0.2);
+    color: var(--primary-color);
+}
+
+.edit-eval-btn:hover {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.delete-eval-btn:hover {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+/* Ligne de moyennes */
+.average-row {
+    background-color: rgba(79, 70, 229, 0.05);
+    border-top: 2px solid var(--primary-color);
+}
+
+.average-row .average-label {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.average-row .average-cell {
+    font-weight: 600;
+    background-color: rgba(79, 70, 229, 0.1);
+}
+
+.class-average {
+    background-color: rgba(79, 70, 229, 0.2) !important;
+    color: var(--primary-color);
+}
+
+/* Styles pour les TA dépliés */
+.ta-column {
+    background-color: rgba(156, 39, 176, 0.05);
+}
+
+.expanded-ta-item {
+    background-color: rgba(156, 39, 176, 0.1);
+    border-left: 3px solid #9C27B0;
+}
+
+.expanded-ta-item .eval-title {
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+.expand-ta-btn:hover,
+.collapse-ta-btn:hover {
+    background-color: rgba(156, 39, 176, 0.2);
+    color: #9C27B0;
+}
+
+/* Styles pour l'onglet absences */
+.attendance-mini-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.attendance-mini-tab {
+    flex: 1;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: #6c757d;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.attendance-mini-tab.active {
+    background: white;
+    color: #007bff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.attendance-mini-tab:hover:not(.active) {
+    background: rgba(0, 123, 255, 0.05);
+    color: #495057;
+}
+
+.attendance-content {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.attendance-filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 15px;
+    margin-bottom: 20px;
+    align-items: end;
+}
+
+.attendance-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+}
+
+.attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.attendance-table th {
+    background: #f8f9fa;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.attendance-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.attendance-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.attendance-table tbody tr.absence-row {
+    background-color: #ffebee !important;
+}
+
+.attendance-table tbody tr.absence-row:hover {
+    background-color: #fce4ec !important;
+}
+
+.attendance-table tbody tr.late-row {
+    background-color: #fff3e0 !important;
+}
+
+.attendance-table tbody tr.late-row:hover {
+    background-color: #ffe0b2 !important;
+}
+
+.badge-absence {
+    background: #dc3545;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+
+.badge-late {
+    background: #fd7e14;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
 </style>
 {% endblock %}
 
@@ -572,6 +879,9 @@
                 </button>
                 <button class="tab-button" onclick="showTab('sanctions')">
                     <i class="fas fa-exclamation-triangle"></i> Coches
+                </button>
+                <button class="tab-button" onclick="showTab('attendance')">
+                    <i class="fas fa-calendar-check"></i> Absences
                 </button>
             </div>
         </div>
@@ -666,7 +976,7 @@
                 <h2 class="section-title">
                     <i class="fas fa-clipboard-check"></i> Gestion des notes
                 </h2>
-                <button class="btn btn-primary">
+                <button class="btn btn-primary" onclick="showNewEvaluationModal()">
                     <i class="fas fa-plus"></i> Nouvelle évaluation
                 </button>
             </div>
@@ -687,49 +997,41 @@
                 </div>
             </div>
 
-            <!-- Tableau des notes récentes -->
-            {% if recent_grades %}
-            <div class="grades-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Évaluation</th>
-                            <th>Élève</th>
-                            <th>Note</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for grade in recent_grades %}
-                        <tr>
-                            <td>{{ grade.date.strftime('%d/%m/%Y') }}</td>
-                            <td>{{ grade.title }}</td>
-                            <td>{{ grade.student.full_name }}</td>
-                            <td>
-                                <span class="grade-badge {% if grade.percentage >= 80 %}excellent{% elif grade.percentage >= 60 %}good{% elif grade.percentage >= 40 %}average{% else %}poor{% endif %}">
-                                    {{ grade.grade }}/{{ grade.max_grade }}
-                                </span>
-                            </td>
-                            <td>
-                                <button class="btn-icon" title="Modifier">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <!-- Tableau des évaluations -->
+            <div id="evaluationsContainer">
+                <!-- Les évaluations seront chargées dynamiquement -->
             </div>
-            {% else %}
-            <div class="empty-state">
+            
+            <!-- État vide pour les évaluations -->
+            <div class="empty-state" id="evaluationsEmptyState" style="display: none;">
                 <i class="fas fa-clipboard-check"></i>
-                <p>Aucune note enregistrée</p>
-                <button class="btn btn-primary">
+                <p>Aucune évaluation créée</p>
+                <button class="btn btn-primary" onclick="showNewEvaluationModal()">
                     <i class="fas fa-plus"></i> Créer une première évaluation
                 </button>
             </div>
-            {% endif %}
+            
+            <!-- Histogramme des notes -->
+            <div id="gradeHistogram" style="display: none; margin-top: 2rem;">
+                <h3>Analyse de l'évaluation sélectionnée</h3>
+                <div class="histogram-container">
+                    <canvas id="histogramChart" width="400" height="200"></canvas>
+                </div>
+                <div class="evaluation-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Moyenne :</span>
+                        <span class="stat-value" id="selectedEvalAverage">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Note la plus haute :</span>
+                        <span class="stat-value" id="selectedEvalMax">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Note la plus basse :</span>
+                        <span class="stat-value" id="selectedEvalMin">-</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -740,22 +1042,44 @@
                 <h2 class="section-title">
                     <i class="fas fa-folder-open"></i> Fichiers de la classe
                 </h2>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="showNewClassFolderModal()">
+                        <i class="fas fa-folder-plus"></i> Nouveau dossier
+                    </button>
+                    <button class="btn btn-success" onclick="document.getElementById('classFileInput').click()">
+                        <i class="fas fa-upload"></i> Uploader
+                    </button>
+                    <input type="file" id="classFileInput" multiple accept=".pdf,.png,.jpg,.jpeg" style="display: none;" onchange="handleClassFileSelect(event)">
+                </div>
             </div>
 
-            <!-- Zone d'upload -->
-            <div class="upload-zone" onclick="alert('Fonctionnalité d\'upload à venir')">
+            <!-- Zone de drop -->
+            <div class="drop-zone" id="classDropZone">
                 <i class="fas fa-cloud-upload-alt"></i>
-                <p>Glissez vos fichiers ici ou cliquez pour parcourir</p>
+                <p>Glissez vos fichiers ou dossiers ici</p>
                 <p style="font-size: 0.875rem; color: var(--gray-color);">
-                    PDF, Word, Images • Max 10 MB
+                    PDF, PNG, JPG • Max 80 MB • Les dossiers seront importés avec leur structure
                 </p>
             </div>
 
-            <!-- Grille de fichiers (exemple) -->
-            <div class="empty-state">
+            <!-- Navigation fil d'ariane -->
+            <div class="breadcrumb" id="classBreadcrumb" style="display: none;">
+                <a href="javascript:void(0)" class="breadcrumb-item" onclick="navigateToClassRoot()">
+                    <i class="fas fa-home"></i> Racine
+                </a>
+                <!-- Les éléments du breadcrumb seront ajoutés dynamiquement -->
+            </div>
+
+            <!-- Grille des fichiers -->
+            <div class="file-grid" id="classFileGrid">
+                <!-- Les fichiers seront chargés dynamiquement -->
+            </div>
+
+            <!-- État vide -->
+            <div class="empty-state" id="classEmptyState" style="display: none;">
                 <i class="fas fa-folder-open"></i>
-                <p>Aucun fichier pour cette classe</p>
-                <p style="font-size: 0.875rem;">Les fichiers uploadés apparaîtront ici</p>
+                <p>Ce dossier est vide</p>
+                <p style="font-size: 0.875rem;">Créez un dossier ou uploadez des fichiers pour commencer</p>
             </div>
         </div>
     </div>
@@ -822,7 +1146,690 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- Onglet Absences -->
+    <div id="attendance-tab" class="tab-content">
+        <div class="attendance-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-calendar-check"></i> Suivi des absences
+                </h2>
+            </div>
+
+            <!-- Sous-onglets -->
+            <div class="attendance-mini-tabs">
+                <button class="attendance-mini-tab active" onclick="showAttendanceTab('class-absences')">
+                    <i class="fas fa-user-times"></i> Absences
+                </button>
+                <button class="attendance-mini-tab" onclick="showAttendanceTab('class-late')">
+                    <i class="fas fa-clock"></i> Retards
+                </button>
+                <button class="attendance-mini-tab" onclick="showAttendanceTab('class-justified')">
+                    <i class="fas fa-check-circle"></i> Absences justifiées
+                </button>
+            </div>
+
+            <!-- Contenu des sous-onglets -->
+            <!-- Absences -->
+            <div id="class-absences" class="attendance-content">
+                <div class="attendance-filters">
+                    <div class="form-group">
+                        <label class="form-label">Date de début</label>
+                        <input type="date" class="form-control" id="class-start-date-absences">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date de fin</label>
+                        <input type="date" class="form-control" id="class-end-date-absences">
+                    </div>
+                    <button class="btn btn-primary" onclick="loadClassAbsences()">
+                        <i class="fas fa-search"></i> Filtrer
+                    </button>
+                </div>
+
+                <div class="attendance-table-container">
+                    <div class="loading-spinner" id="class-loading-absences" style="text-align: center; padding: 40px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                    </div>
+                    <table class="attendance-table" id="class-absences-table" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Élève</th>
+                                <th>Période(s)</th>
+                                <th>Horaires</th>
+                                <th>Commentaire</th>
+                            </tr>
+                        </thead>
+                        <tbody id="class-absences-tbody"></tbody>
+                    </table>
+                    <div class="no-data" id="class-no-absences" style="display: none; text-align: center; padding: 40px; color: #666;">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>Aucune absence trouvée pour cette classe.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Retards -->
+            <div id="class-late" class="attendance-content" style="display: none;">
+                <div class="attendance-filters">
+                    <div class="form-group">
+                        <label class="form-label">Date de début</label>
+                        <input type="date" class="form-control" id="class-start-date-late">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date de fin</label>
+                        <input type="date" class="form-control" id="class-end-date-late">
+                    </div>
+                    <button class="btn btn-primary" onclick="loadClassLateArrivals()">
+                        <i class="fas fa-search"></i> Filtrer
+                    </button>
+                </div>
+
+                <div class="attendance-table-container">
+                    <div class="loading-spinner" id="class-loading-late" style="text-align: center; padding: 40px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                    </div>
+                    <table class="attendance-table" id="class-late-table" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Élève</th>
+                                <th>Période(s)</th>
+                                <th>Horaires</th>
+                                <th>Minutes de retard</th>
+                                <th>Commentaire</th>
+                            </tr>
+                        </thead>
+                        <tbody id="class-late-tbody"></tbody>
+                    </table>
+                    <div class="no-data" id="class-no-late" style="display: none; text-align: center; padding: 40px; color: #666;">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>Aucun retard trouvé pour cette classe.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Absences justifiées -->
+            <div id="class-justified" class="attendance-content" style="display: none;">
+                <div style="text-align: center; padding: 60px 20px; background: #f8f9fa; border-radius: 8px; color: #666;">
+                    <i class="fas fa-tools" style="font-size: 3em; margin-bottom: 20px; color: #007bff;"></i>
+                    <h3>Fonctionnalité en développement</h3>
+                    <p>Cette section permettra aux parents de justifier les absences de leurs enfants via un portail dédié.</p>
+                    <p style="color: #999;">Cette fonctionnalité sera disponible prochainement.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- Modal nouveau dossier pour les fichiers de classe -->
+<div class="modal" id="newClassFolderModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-folder-plus"></i> Nouveau dossier</h3>
+            <button class="modal-close" onclick="closeModal('newClassFolderModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="newClassFolderForm" onsubmit="createClassFolder(event)">
+                <div class="form-group">
+                    <label class="form-label">Nom du dossier</label>
+                    <input type="text" id="classFolderName" class="form-control" required
+                           placeholder="Ex: Exercices">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeModal('newClassFolderModal')">
+                Annuler
+            </button>
+            <button type="submit" form="newClassFolderForm" class="btn btn-primary">
+                <i class="fas fa-check"></i> Créer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'aperçu pour les fichiers de classe -->
+<div class="modal" id="classPreviewModal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h3 id="classPreviewTitle">Aperçu</h3>
+            <button class="modal-close" onclick="closeModal('classPreviewModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="classPreviewContent" class="preview-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de renommage pour les fichiers de classe -->
+<div class="modal" id="classRenameModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-edit"></i> Renommer</h3>
+            <button class="modal-close" onclick="closeModal('classRenameModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="classRenameForm" onsubmit="saveClassRename(event)">
+                <input type="hidden" id="classRenameType">
+                <input type="hidden" id="classRenameId">
+                <div class="form-group">
+                    <label class="form-label">Nouveau nom</label>
+                    <input type="text" id="classRenameName" class="form-control" required>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeModal('classRenameModal')">
+                Annuler
+            </button>
+            <button type="submit" form="classRenameForm" class="btn btn-primary">
+                <i class="fas fa-check"></i> Renommer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Indicateur de progression pour les fichiers de classe -->
+<div class="upload-progress" id="classUploadProgress">
+    <div class="progress-header">
+        <span>Upload en cours...</span>
+        <span id="classProgressPercent">0%</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill" id="classProgressFill"></div>
+    </div>
+    <div class="progress-info" id="classProgressInfo"></div>
+</div>
+
+<!-- Modal nouvelle évaluation -->
+<div class="modal" id="newEvaluationModal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h3><i class="fas fa-clipboard-check"></i> Nouvelle évaluation</h3>
+            <button class="modal-close" onclick="closeModal('newEvaluationModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="newEvaluationForm" onsubmit="createEvaluation(event)">
+                <!-- Étape 1: Informations de base -->
+                <div class="eval-step" id="evalStep1">
+                    <h4>Informations de l'évaluation</h4>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Titre de l'évaluation <span style="color: var(--danger-color);">*</span></label>
+                        <input type="text" id="evalTitle" class="form-control" required placeholder="Ex: Test de mathématiques chapitre 3">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Date de l'évaluation</label>
+                        <input type="date" id="evalDate" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Note maximale</label>
+                        <input type="number" id="evalMaxPoints" class="form-control" min="1" step="0.5" value="20" required>
+                        <small class="form-text">Les notes seront saisies directement selon cette échelle</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Note minimale</label>
+                        <input type="number" id="evalMinPoints" class="form-control" min="0" step="0.5" value="0" required>
+                        <small class="form-text">Note la plus basse possible</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Type d'évaluation <span style="color: var(--danger-color);">*</span></label>
+                        <div class="radio-group">
+                            <label class="radio-item">
+                                <input type="radio" name="evalType" value="significatif" checked onchange="handleEvalTypeChange()">
+                                <span class="radio-custom"></span>
+                                <span class="radio-label">
+                                    <strong>Test significatif</strong><br>
+                                    <small>Compte pour 1 note directement</small>
+                                </span>
+                            </label>
+                            <label class="radio-item">
+                                <input type="radio" name="evalType" value="ta" onchange="handleEvalTypeChange()">
+                                <span class="radio-custom"></span>
+                                <span class="radio-label">
+                                    <strong>Élément de test assimilé (TA)</strong><br>
+                                    <small>Sera groupé avec d'autres éléments TA pour former 1 note</small>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Configuration TA (masqué par défaut) -->
+                    <div class="form-group" id="taConfigGroup" style="display: none;">
+                        <label class="form-label">Configuration du test assimilé</label>
+                        <div class="radio-group">
+                            <label class="radio-item">
+                                <input type="radio" name="taMode" value="new" checked onchange="handleTAModeChange()">
+                                <span class="radio-custom"></span>
+                                <span class="radio-label">Créer un nouveau groupe TA</span>
+                            </label>
+                            <label class="radio-item" id="existingTAOption" style="display: none;">
+                                <input type="radio" name="taMode" value="existing" onchange="handleTAModeChange()">
+                                <span class="radio-custom"></span>
+                                <span class="radio-label">Ajouter à un groupe TA existant</span>
+                            </label>
+                        </div>
+                        
+                        <div id="newTAGroup" class="form-group">
+                            <label class="form-label">Nom du groupe TA</label>
+                            <input type="text" id="taGroupName" class="form-control" placeholder="Ex: TA1 - Algèbre">
+                        </div>
+                        
+                        <div id="existingTAGroup" class="form-group" style="display: none;">
+                            <label class="form-label">Groupe TA existant</label>
+                            <select id="taGroupSelect" class="form-control">
+                                <!-- Sera rempli dynamiquement -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-primary" onclick="nextEvalStep()">
+                            Suivant : Saisir les notes <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Étape 2: Saisie des notes -->
+                <div class="eval-step" id="evalStep2" style="display: none;">
+                    <h4>Saisie des notes</h4>
+                    <p>Entrez les notes pour chaque élève (laissez vide si absent)</p>
+                    
+                    <div class="grades-input-container" id="gradesInputContainer">
+                        <!-- Sera rempli dynamiquement avec la liste des élèves -->
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="prevEvalStep()">
+                            <i class="fas fa-arrow-left"></i> Retour
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Créer l'évaluation
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Styles pour les modals */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-content.modal-large {
+    max-width: 900px;
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--light-gray);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--gray-color);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background-color: var(--light-gray);
+    color: var(--dark-color);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--light-gray);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.preview-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+}
+
+.preview-content iframe {
+    width: 100%;
+    height: 600px;
+    border: none;
+}
+
+.preview-content img {
+    max-width: 100%;
+    max-height: 600px;
+    object-fit: contain;
+}
+
+/* Upload progress */
+.upload-progress {
+    position: fixed;
+    bottom: -100px;
+    right: 20px;
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    padding: 1rem;
+    min-width: 300px;
+    transition: bottom 0.3s ease;
+    z-index: 1001;
+}
+
+.upload-progress.show {
+    bottom: 20px;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.progress-bar {
+    height: 4px;
+    background-color: var(--light-gray);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: var(--primary-color);
+    transition: width 0.3s ease;
+}
+
+.progress-info {
+    font-size: 0.75rem;
+    color: var(--gray-color);
+}
+
+/* Styles pour les évaluations */
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.radio-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    border: 2px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.radio-item:hover {
+    border-color: var(--primary-color);
+    background-color: #F9FAFB;
+}
+
+.radio-item input[type="radio"] {
+    display: none;
+}
+
+.radio-custom {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--light-gray);
+    border-radius: 50%;
+    position: relative;
+    margin-top: 2px;
+    transition: all 0.2s ease;
+}
+
+.radio-item input[type="radio"]:checked + .radio-custom {
+    border-color: var(--primary-color);
+    background-color: var(--primary-color);
+}
+
+.radio-item input[type="radio"]:checked + .radio-custom::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    background-color: white;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.radio-label {
+    flex: 1;
+}
+
+.radio-label strong {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.radio-label small {
+    color: var(--gray-color);
+    font-size: 0.875rem;
+}
+
+.eval-step h4 {
+    margin-bottom: 1.5rem;
+    color: var(--primary-color);
+}
+
+.grades-input-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+}
+
+.grade-input-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.grade-input-row:last-child {
+    border-bottom: none;
+}
+
+.student-name {
+    flex: 1;
+    font-weight: 500;
+}
+
+.grade-input {
+    width: 100px;
+    padding: 0.5rem;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    text-align: center;
+}
+
+.grade-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+/* Tableau des évaluations */
+.evaluations-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.evaluations-table th,
+.evaluations-table td {
+    padding: 0.75rem;
+    text-align: center;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.evaluations-table th {
+    background-color: var(--light-gray);
+    font-weight: 600;
+    color: var(--dark-color);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.evaluations-table th.student-column {
+    text-align: left;
+    min-width: 150px;
+}
+
+.evaluations-table th.eval-column {
+    min-width: 80px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.evaluations-table th.eval-column:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.evaluations-table th.eval-column.selected {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.evaluations-table th.average-column {
+    background-color: var(--primary-color);
+    color: white;
+    min-width: 100px;
+}
+
+.evaluations-table tr:hover {
+    background-color: #F9FAFB;
+}
+
+.grade-cell {
+    font-weight: 500;
+}
+
+.grade-cell.excellent { color: #059669; }
+.grade-cell.good { color: #2563EB; }
+.grade-cell.average { color: #F59E0B; }
+.grade-cell.poor { color: #DC2626; }
+.grade-cell.absent { color: var(--gray-color); font-style: italic; }
+
+.average-cell {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+/* Histogramme */
+.histogram-container {
+    margin: 1rem 0;
+    text-align: center;
+}
+
+.evaluation-stats {
+    display: flex;
+    justify-content: space-around;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--gray-color);
+    margin-bottom: 0.25rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+</style>
 
 <script>
 // Variables globales
@@ -845,6 +1852,21 @@ function showTab(tabName) {
 
     // Activer le bouton correspondant
     event.target.closest('.tab-button').classList.add('active');
+    
+    // Charger les fichiers si on est sur l'onglet fichiers
+    if (tabName === 'files') {
+        loadClassFiles();
+    }
+    
+    // Charger les évaluations si on est sur l'onglet notes
+    if (tabName === 'grades') {
+        loadEvaluations();
+    }
+    
+    // Initialiser l'onglet absences si on est sur l'onglet absences
+    if (tabName === 'attendance') {
+        initializeClassAbsencesTab();
+    }
 }
 
 // Changer de classe
@@ -1305,6 +2327,1768 @@ document.addEventListener('DOMContentLoaded', function() {
             element.classList.add('warning');
         }
     });
+    
+    // Initialiser le gestionnaire de fichiers de classe
+    initClassFileManager();
 });
+
+// Variables pour la gestion des fichiers de classe
+let currentClassFolder = null;
+let classFolderPath = [];
+let classUploadQueue = [];
+let isClassUploading = false;
+let allClassFiles = []; // Stocker tous les fichiers pour la navigation
+
+// Variables pour la gestion des évaluations
+let evaluations = [];
+let selectedEvaluationId = null;
+let existingTAGroups = [];
+let expandedTAGroups = new Set(); // Stocker les groupes TA dépliés
+
+// Initialiser le gestionnaire de fichiers de classe
+function initClassFileManager() {
+    // Initialiser le drag & drop
+    initClassDragAndDrop();
+}
+
+// Charger les fichiers de la classe
+async function loadClassFiles(folderPath = '') {
+    const classroomId = {{ selected_classroom_id }};
+    currentClassFolder = folderPath;
+    
+    try {
+        const url = `/api/class-files/list/${classroomId}`;
+            
+        const response = await fetch(url);
+        const result = await response.json();
+        
+        console.log('Réponse API:', result);
+        
+        if (result.success) {
+            allClassFiles = result.files || [];
+            renderClassFiles(folderPath);
+            updateClassBreadcrumb(folderPath);
+        } else {
+            console.error('Erreur API:', result.message);
+            showNotification('error', result.message || 'Erreur lors du chargement des fichiers');
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des fichiers:', error);
+        showNotification('error', 'Erreur lors du chargement des fichiers');
+    }
+}
+
+// Afficher les fichiers et dossiers
+function renderClassFiles(currentPath) {
+    const fileGrid = document.getElementById('classFileGrid');
+    const emptyState = document.getElementById('classEmptyState');
+    
+    console.log('Rendu des fichiers pour le chemin:', currentPath);
+    
+    // Filtrer les fichiers selon le chemin actuel
+    let filesToShow = [];
+    let foldersToShow = new Set();
+    
+    if (currentPath === '') {
+        // À la racine - montrer les fichiers racine et les dossiers de premier niveau
+        allClassFiles.forEach(file => {
+            if (!file.folder_path || file.folder_path.trim() === '') {
+                filesToShow.push(file);
+            } else {
+                // Extraire le premier niveau de dossier
+                const firstFolder = file.folder_path.split('/')[0];
+                foldersToShow.add(firstFolder);
+            }
+        });
+    } else {
+        // Dans un dossier - montrer les fichiers de ce dossier et les sous-dossiers
+        allClassFiles.forEach(file => {
+            if (file.folder_path && file.folder_path.startsWith(currentPath)) {
+                const relativePath = file.folder_path.substring(currentPath.length);
+                if (relativePath.startsWith('/')) {
+                    const remainingPath = relativePath.substring(1);
+                    if (remainingPath === '') {
+                        // Fichier directement dans ce dossier
+                        filesToShow.push(file);
+                    } else {
+                        // Sous-dossier
+                        const nextFolder = remainingPath.split('/')[0];
+                        foldersToShow.add(nextFolder);
+                    }
+                } else if (relativePath === '') {
+                    // Fichier directement dans ce dossier
+                    filesToShow.push(file);
+                }
+            }
+        });
+    }
+    
+    console.log('Fichiers à afficher:', filesToShow);
+    console.log('Dossiers à afficher:', Array.from(foldersToShow));
+    
+    if (filesToShow.length === 0 && foldersToShow.size === 0) {
+        fileGrid.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    fileGrid.style.display = 'grid';
+    emptyState.style.display = 'none';
+    
+    let html = '';
+    
+    // Afficher les dossiers
+    foldersToShow.forEach(folderName => {
+        const folderPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+        const filesInFolder = allClassFiles.filter(f => 
+            f.folder_path && f.folder_path.startsWith(folderPath)
+        );
+        
+        html += `
+            <div class="file-item folder" data-folder-path="${folderPath}" data-type="folder" ondblclick="openClassFolder('${folderPath}')">
+                <div class="item-icon" style="color: #F59E0B;">
+                    <i class="fas fa-folder"></i>
+                </div>
+                <div class="item-name" title="${folderName}">${folderName}</div>
+                <div class="item-info">${filesInFolder.length} fichier(s)</div>
+                <div class="item-actions">
+                    <button class="action-btn" onclick="openClassFolder('${folderPath}')" title="Ouvrir">
+                        <i class="fas fa-folder-open"></i>
+                    </button>
+                    <button class="action-btn danger" onclick="deleteClassFolder('${folderPath}')" title="Supprimer">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    // Afficher les fichiers
+    filesToShow.forEach(file => {
+        const icon = getFileIcon(file.file_type);
+        const iconColor = getFileIconColor(file.file_type);
+        
+        html += `
+            <div class="file-item file" data-id="${file.id}" data-type="file" ondblclick="previewClassFile(${file.id}, '${file.file_type}')">
+                <div class="item-icon">
+                    ${file.thumbnail 
+                        ? `<img src="/api/class-files/preview/${file.id}?thumbnail=1" alt="${file.original_filename}" class="thumbnail">`
+                        : `<i class="${icon}" style="color: ${iconColor};"></i>`
+                    }
+                </div>
+                <div class="item-name" title="${file.original_filename}">${file.original_filename}</div>
+                <div class="item-info">${formatFileSize(file.file_size)}</div>
+                <div class="item-actions">
+                    <button class="action-btn" onclick="previewClassFile(${file.id}, '${file.file_type}')" title="Aperçu">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <a href="/api/class-files/download/${file.id}" class="action-btn" title="Télécharger">
+                        <i class="fas fa-download"></i>
+                    </a>
+                    <button class="action-btn" onclick="renameClassItem('file', ${file.id}, '${file.original_filename}')" title="Renommer">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn danger" onclick="deleteClassFile(${file.id})" title="Supprimer">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    fileGrid.innerHTML = html;
+}
+
+// Mettre à jour le fil d'ariane
+function updateClassBreadcrumb(currentPath) {
+    const breadcrumbEl = document.getElementById('classBreadcrumb');
+    
+    if (!currentPath || currentPath === '') {
+        breadcrumbEl.style.display = 'none';
+        return;
+    }
+    
+    breadcrumbEl.style.display = 'flex';
+    
+    let html = `
+        <a href="javascript:void(0)" class="breadcrumb-item" onclick="navigateToClassRoot()">
+            <i class="fas fa-home"></i> Racine
+        </a>
+    `;
+    
+    const pathParts = currentPath.split('/').filter(part => part.trim() !== '');
+    let cumulativePath = '';
+    
+    pathParts.forEach((part, index) => {
+        cumulativePath += (index === 0 ? '' : '/') + part;
+        html += `<span class="breadcrumb-separator">/</span>`;
+        html += `<a href="javascript:void(0)" class="breadcrumb-item" onclick="openClassFolder('${cumulativePath}')">${part}</a>`;
+    });
+    
+    breadcrumbEl.innerHTML = html;
+}
+
+// Navigation
+function navigateToClassRoot() {
+    loadClassFiles('');
+}
+
+function openClassFolder(folderPath) {
+    loadClassFiles(folderPath);
+}
+
+// Drag & Drop
+function initClassDragAndDrop() {
+    const dropZone = document.getElementById('classDropZone');
+    const fileGrid = document.getElementById('classFileGrid');
+    
+    if (!dropZone) return;
+    
+    // Prévenir le comportement par défaut
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+        fileGrid.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    // Afficher la zone de drop
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.add('active'));
+        fileGrid.addEventListener(eventName, () => dropZone.classList.add('active'));
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.remove('active'));
+        fileGrid.addEventListener(eventName, () => dropZone.classList.remove('active'));
+    });
+    
+    // Gérer le drop
+    dropZone.addEventListener('drop', handleClassDrop);
+    fileGrid.addEventListener('drop', handleClassDrop);
+}
+
+// Gérer le drop de fichiers
+async function handleClassDrop(e) {
+    const dt = e.dataTransfer;
+    const items = dt.items;
+    
+    if (items && items.length > 0) {
+        const entries = [];
+        
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            if (item.kind === 'file') {
+                const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : item.getAsEntry();
+                if (entry) {
+                    entries.push(entry);
+                }
+            }
+        }
+        
+        if (entries.length > 0) {
+            await handleClassFileSystemEntries(entries);
+        }
+    } else if (dt.files.length > 0) {
+        handleClassFiles(dt.files);
+    }
+}
+
+// Gérer les entrées du système de fichiers
+async function handleClassFileSystemEntries(entries) {
+    showNotification('info', 'Analyse de la structure en cours...');
+    
+    const fileStructure = {
+        folders: new Set(),
+        files: []
+    };
+    
+    for (const entry of entries) {
+        await traverseClassFileSystem(entry, '', fileStructure);
+    }
+    
+    // Créer les dossiers
+    if (fileStructure.folders.size > 0) {
+        await createClassFolderStructure(Array.from(fileStructure.folders));
+    }
+    
+    // Uploader les fichiers
+    if (fileStructure.files.length > 0) {
+        await uploadClassFilesWithStructure(fileStructure.files);
+    }
+}
+
+// Parcourir récursivement le système de fichiers
+async function traverseClassFileSystem(entry, path, fileStructure) {
+    if (entry.isFile) {
+        const file = await new Promise((resolve) => entry.file(resolve));
+        
+        // Vérifier le type de fichier
+        if (validateClassFile(file)) {
+            fileStructure.files.push({
+                file: file,
+                path: path,
+                relativePath: path + file.name
+            });
+        }
+    } else if (entry.isDirectory) {
+        const folderPath = path + entry.name + '/';
+        fileStructure.folders.add(folderPath);
+        
+        const dirReader = entry.createReader();
+        let entries = [];
+        
+        const readEntries = async () => {
+            const results = await new Promise((resolve) => dirReader.readEntries(resolve));
+            if (results.length > 0) {
+                entries = entries.concat(results);
+                await readEntries();
+            }
+        };
+        
+        await readEntries();
+        
+        for (const childEntry of entries) {
+            await traverseClassFileSystem(childEntry, folderPath, fileStructure);
+        }
+    }
+}
+
+// Créer la structure de dossiers dans la classe
+async function createClassFolderStructure(folderPaths) {
+    const classroomId = {{ selected_classroom_id }};
+    folderPaths.sort((a, b) => a.split('/').length - b.split('/').length);
+    
+    try {
+        const response = await fetch('/api/class-files/create-folder-structure', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                classroom_id: classroomId,
+                folders: folderPaths,
+                parent_id: currentClassFolder
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            showNotification('error', 'Erreur lors de la création des dossiers');
+            return false;
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur lors de la création de la structure');
+        return false;
+    }
+}
+
+// Uploader les fichiers avec leur structure
+async function uploadClassFilesWithStructure(filesData) {
+    const totalFiles = filesData.length;
+    let uploadedCount = 0;
+    
+    showClassUploadProgress();
+    
+    for (const fileData of filesData) {
+        const formData = new FormData();
+        formData.append('file', fileData.file);
+        formData.append('classroom_id', {{ selected_classroom_id }});
+        formData.append('folder_path', fileData.path);
+        
+        if (currentClassFolder) {
+            formData.append('parent_folder_id', currentClassFolder);
+        }
+        
+        try {
+            const xhr = new XMLHttpRequest();
+            
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const fileProgress = (e.loaded / e.total) * 100;
+                    const totalProgress = ((uploadedCount + fileProgress / 100) / totalFiles) * 100;
+                    updateClassUploadProgress(totalProgress, `${fileData.file.name} (${uploadedCount + 1}/${totalFiles})`);
+                }
+            });
+            
+            await new Promise((resolve, reject) => {
+                xhr.onload = () => {
+                    if (xhr.status === 200) {
+                        uploadedCount++;
+                        resolve(JSON.parse(xhr.responseText));
+                    } else {
+                        reject(new Error(`Upload failed: ${xhr.status}`));
+                    }
+                };
+                xhr.onerror = reject;
+                
+                xhr.open('POST', '/api/class-files/upload');
+                xhr.send(formData);
+            });
+            
+        } catch (error) {
+            console.error(`Erreur lors de l'upload de ${fileData.file.name}:`, error);
+        }
+    }
+    
+    hideClassUploadProgress();
+    showNotification('success', `${uploadedCount} fichier(s) uploadé(s) avec succès`);
+    
+    // Recharger les fichiers
+    loadClassFiles(currentClassFolder);
+}
+
+// Gérer la sélection de fichiers
+function handleClassFileSelect(e) {
+    const files = e.target.files;
+    handleClassFiles(files);
+}
+
+// Traiter les fichiers sélectionnés
+function handleClassFiles(files) {
+    const validFiles = [];
+    
+    [...files].forEach(file => {
+        if (validateClassFile(file)) {
+            validFiles.push(file);
+        }
+    });
+    
+    if (validFiles.length > 0) {
+        uploadClassFiles(validFiles);
+    }
+}
+
+// Valider un fichier
+function validateClassFile(file) {
+    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+    const maxSize = 80 * 1024 * 1024; // 80 MB
+    
+    if (!allowedTypes.includes(file.type)) {
+        showNotification('error', `Type de fichier non autorisé: ${file.name}`);
+        return false;
+    }
+    
+    if (file.size > maxSize) {
+        showNotification('error', `Fichier trop volumineux: ${file.name} (max 80 MB)`);
+        return false;
+    }
+    
+    return true;
+}
+
+// Uploader des fichiers
+async function uploadClassFiles(files) {
+    showClassUploadProgress();
+    
+    let uploadedCount = 0;
+    const totalFiles = files.length;
+    
+    for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('classroom_id', {{ selected_classroom_id }});
+        
+        if (currentClassFolder) {
+            formData.append('folder_id', currentClassFolder);
+        }
+        
+        try {
+            const xhr = new XMLHttpRequest();
+            
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const fileProgress = (e.loaded / e.total) * 100;
+                    const totalProgress = ((uploadedCount + fileProgress / 100) / totalFiles) * 100;
+                    updateClassUploadProgress(totalProgress, `${file.name} (${uploadedCount + 1}/${totalFiles})`);
+                }
+            });
+            
+            const response = await new Promise((resolve, reject) => {
+                xhr.onload = () => {
+                    if (xhr.status === 200) {
+                        resolve(JSON.parse(xhr.responseText));
+                    } else {
+                        reject(new Error(`Upload failed: ${xhr.status}`));
+                    }
+                };
+                xhr.onerror = reject;
+                
+                xhr.open('POST', '/api/class-files/upload');
+                xhr.send(formData);
+            });
+            
+            if (response.success) {
+                uploadedCount++;
+            } else {
+                showNotification('error', response.message || `Erreur lors de l'upload de ${file.name}`);
+            }
+        } catch (error) {
+            console.error('Erreur upload:', error);
+            showNotification('error', `Erreur lors de l'upload de ${file.name}`);
+        }
+    }
+    
+    hideClassUploadProgress();
+    
+    if (uploadedCount > 0) {
+        showNotification('success', `${uploadedCount} fichier(s) uploadé(s) avec succès`);
+        loadClassFiles(currentClassFolder);
+    }
+}
+
+// Progress upload
+function showClassUploadProgress() {
+    const progress = document.getElementById('classUploadProgress');
+    progress.classList.add('show');
+}
+
+function hideClassUploadProgress() {
+    const progress = document.getElementById('classUploadProgress');
+    progress.classList.remove('show');
+    
+    document.getElementById('classProgressFill').style.width = '0%';
+    document.getElementById('classProgressPercent').textContent = '0%';
+    document.getElementById('classProgressInfo').textContent = '';
+}
+
+function updateClassUploadProgress(percent, filename) {
+    document.getElementById('classProgressFill').style.width = percent + '%';
+    document.getElementById('classProgressPercent').textContent = Math.round(percent) + '%';
+    document.getElementById('classProgressInfo').textContent = filename;
+}
+
+// Modals
+function showNewClassFolderModal() {
+    document.getElementById('newClassFolderModal').classList.add('show');
+    document.getElementById('classFolderName').focus();
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('show');
+    
+    // Si c'est le modal d'évaluation, remettre le formulaire en mode création
+    if (modalId === 'newEvaluationModal') {
+        resetEvaluationForm();
+    }
+}
+
+// Créer un dossier
+async function createClassFolder(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('classFolderName').value;
+    const classroomId = {{ selected_classroom_id }};
+    
+    try {
+        const response = await fetch('/api/class-files/create-folder', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                classroom_id: classroomId,
+                parent_id: currentClassFolder
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', 'Dossier créé avec succès');
+            closeModal('newClassFolderModal');
+            document.getElementById('classFolderName').value = '';
+            loadClassFiles(currentClassFolder);
+        } else {
+            showNotification('error', result.message || 'Erreur lors de la création du dossier');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur lors de la création du dossier');
+    }
+}
+
+// Aperçu fichier
+function previewClassFile(fileId, fileType) {
+    const modal = document.getElementById('classPreviewModal');
+    const content = document.getElementById('classPreviewContent');
+    const title = document.getElementById('classPreviewTitle');
+    
+    title.textContent = 'Aperçu';
+    
+    if (fileType === 'pdf') {
+        content.innerHTML = `<iframe src="/api/class-files/preview/${fileId}"></iframe>`;
+    } else {
+        content.innerHTML = `<img src="/api/class-files/preview/${fileId}" alt="Aperçu">`;
+    }
+    
+    modal.classList.add('show');
+}
+
+// Renommer
+function renameClassItem(type, id, currentName) {
+    const modal = document.getElementById('classRenameModal');
+    document.getElementById('classRenameType').value = type;
+    document.getElementById('classRenameId').value = id;
+    document.getElementById('classRenameName').value = currentName;
+    
+    modal.classList.add('show');
+    document.getElementById('classRenameName').focus();
+    document.getElementById('classRenameName').select();
+}
+
+async function saveClassRename(e) {
+    e.preventDefault();
+    
+    const type = document.getElementById('classRenameType').value;
+    const id = document.getElementById('classRenameId').value;
+    const name = document.getElementById('classRenameName').value;
+    
+    try {
+        const response = await fetch('/api/class-files/rename', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                type: type,
+                id: id,
+                name: name
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', 'Renommage effectué avec succès');
+            closeModal('classRenameModal');
+            loadClassFiles(currentClassFolder);
+        } else {
+            showNotification('error', result.message || 'Erreur lors du renommage');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur lors du renommage');
+    }
+}
+
+// Suppression
+async function deleteClassFile(fileId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce fichier ?')) return;
+    
+    try {
+        const response = await fetch(`/api/class-files/delete/${fileId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', 'Fichier supprimé avec succès');
+            // Recharger les fichiers
+            loadClassFiles(currentClassFolder);
+        } else {
+            showNotification('error', result.message || 'Erreur lors de la suppression');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur lors de la suppression');
+    }
+}
+
+async function deleteClassFolder(folderPath) {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer le dossier "${folderPath}" et tout son contenu ?`)) return;
+    
+    try {
+        const response = await fetch('/api/class-files/delete-folder-by-path', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                classroom_id: {{ selected_classroom_id }},
+                folder_path: folderPath
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', `Dossier "${folderPath}" supprimé avec succès`);
+            // Recharger les fichiers
+            loadClassFiles(currentClassFolder);
+        } else {
+            showNotification('error', result.message || 'Erreur lors de la suppression');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur lors de la suppression');
+    }
+}
+
+// Helpers
+function getFileIcon(fileType) {
+    switch(fileType) {
+        case 'pdf': return 'fas fa-file-pdf';
+        case 'png':
+        case 'jpg':
+        case 'jpeg': return 'fas fa-file-image';
+        default: return 'fas fa-file';
+    }
+}
+
+function getFileIconColor(fileType) {
+    switch(fileType) {
+        case 'pdf': return '#DC2626';
+        case 'png':
+        case 'jpg':
+        case 'jpeg': return '#059669';
+        default: return '#6B7280';
+    }
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// ==================== FONCTIONS ÉVALUATIONS ====================
+
+// Charger les évaluations de la classe
+async function loadEvaluations() {
+    const classroomId = {{ selected_classroom_id }};
+    
+    try {
+        const response = await fetch(`/api/evaluations/classroom/${classroomId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            evaluations = result.evaluations || [];
+            existingTAGroups = result.ta_groups || [];
+            renderEvaluationsTable();
+        } else {
+            console.error('Erreur API évaluations:', result.message);
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des évaluations:', error);
+    }
+}
+
+// Afficher le modal de nouvelle évaluation
+function showNewEvaluationModal() {
+    document.getElementById('newEvaluationModal').classList.add('show');
+    
+    // Initialiser la date à aujourd'hui
+    document.getElementById('evalDate').value = new Date().toISOString().split('T')[0];
+    
+    // Réinitialiser le formulaire
+    document.getElementById('evalStep1').style.display = 'block';
+    document.getElementById('evalStep2').style.display = 'none';
+    
+    // Gérer l'activation des champs note maximale et minimale
+    const maxPointsInput = document.getElementById('evalMaxPoints');
+    const maxPointsHelpText = document.querySelector('#evalMaxPoints + small');
+    const minPointsInput = document.getElementById('evalMinPoints');
+    const minPointsHelpText = document.querySelector('#evalMinPoints + small');
+    
+    if (!evaluations || evaluations.length === 0) {
+        // Aucune évaluation existante : permettre la modification
+        maxPointsInput.removeAttribute('readonly');
+        maxPointsInput.style.backgroundColor = '';
+        maxPointsHelpText.textContent = 'Cette note maximale sera utilisée pour toutes les évaluations de cette classe';
+        maxPointsHelpText.style.color = '#6B7280';
+        
+        minPointsInput.removeAttribute('readonly');
+        minPointsInput.style.backgroundColor = '';
+        minPointsHelpText.textContent = 'Cette note minimale sera utilisée pour toutes les évaluations de cette classe';
+        minPointsHelpText.style.color = '#6B7280';
+    } else {
+        // Des évaluations existent : verrouiller sur les valeurs existantes
+        const existingMaxPoints = evaluations[0].max_points;
+        const existingMinPoints = evaluations[0].min_points || 0;
+        
+        maxPointsInput.value = existingMaxPoints;
+        maxPointsInput.setAttribute('readonly', 'readonly');
+        maxPointsInput.style.backgroundColor = '#F9FAFB';
+        maxPointsHelpText.textContent = `Les notes seront saisies sur ${existingMaxPoints} (cohérence avec les tests existants)`;
+        maxPointsHelpText.style.color = '#9CA3AF';
+        
+        minPointsInput.value = existingMinPoints;
+        minPointsInput.setAttribute('readonly', 'readonly');
+        minPointsInput.style.backgroundColor = '#F9FAFB';
+        minPointsHelpText.textContent = `Note minimale: ${existingMinPoints} (cohérence avec les tests existants)`;
+        minPointsHelpText.style.color = '#9CA3AF';
+    }
+    
+    // Charger les groupes TA existants
+    loadExistingTAGroups();
+}
+
+// Charger les groupes TA existants
+function loadExistingTAGroups() {
+    const select = document.getElementById('taGroupSelect');
+    const existingOption = document.getElementById('existingTAOption');
+    
+    select.innerHTML = '';
+    
+    if (existingTAGroups.length > 0) {
+        existingOption.style.display = 'block';
+        existingTAGroups.forEach(group => {
+            const option = document.createElement('option');
+            option.value = group;
+            option.textContent = group;
+            select.appendChild(option);
+        });
+    } else {
+        existingOption.style.display = 'none';
+    }
+}
+
+// Gérer le changement de type d'évaluation
+function handleEvalTypeChange() {
+    const taConfig = document.getElementById('taConfigGroup');
+    const evalType = document.querySelector('input[name="evalType"]:checked').value;
+    
+    if (evalType === 'ta') {
+        taConfig.style.display = 'block';
+    } else {
+        taConfig.style.display = 'none';
+    }
+}
+
+// Gérer le changement de mode TA
+function handleTAModeChange() {
+    const newTAGroup = document.getElementById('newTAGroup');
+    const existingTAGroup = document.getElementById('existingTAGroup');
+    const taMode = document.querySelector('input[name="taMode"]:checked').value;
+    
+    if (taMode === 'new') {
+        newTAGroup.style.display = 'block';
+        existingTAGroup.style.display = 'none';
+    } else {
+        newTAGroup.style.display = 'none';
+        existingTAGroup.style.display = 'block';
+    }
+}
+
+// Passer à l'étape suivante
+function nextEvalStep() {
+    // Valider l'étape 1
+    const title = document.getElementById('evalTitle').value.trim();
+    const date = document.getElementById('evalDate').value;
+    const evalType = document.querySelector('input[name="evalType"]:checked').value;
+    
+    if (!title || !date) {
+        showNotification('error', 'Veuillez remplir tous les champs obligatoires');
+        return;
+    }
+    
+    // Valider la configuration TA si nécessaire
+    if (evalType === 'ta') {
+        const taMode = document.querySelector('input[name="taMode"]:checked').value;
+        if (taMode === 'new') {
+            const taGroupName = document.getElementById('taGroupName').value.trim();
+            if (!taGroupName) {
+                showNotification('error', 'Veuillez entrer un nom pour le groupe TA');
+                return;
+            }
+        }
+    }
+    
+    // Générer les champs de saisie des notes
+    generateGradeInputs();
+    
+    // Passer à l'étape 2
+    document.getElementById('evalStep1').style.display = 'none';
+    document.getElementById('evalStep2').style.display = 'block';
+}
+
+// Revenir à l'étape précédente
+function prevEvalStep() {
+    document.getElementById('evalStep1').style.display = 'block';
+    document.getElementById('evalStep2').style.display = 'none';
+}
+
+// Générer les champs de saisie des notes
+function generateGradeInputs() {
+    const container = document.getElementById('gradesInputContainer');
+    const maxPoints = document.getElementById('evalMaxPoints').value;
+    const minPoints = document.getElementById('evalMinPoints').value;
+    
+    let html = '';
+    
+    // Récupérer les élèves de la classe
+    const students = {{ students_json|tojson|safe }};
+    
+    students.forEach(student => {
+        html += `
+            <div class="grade-input-row">
+                <div class="student-name">${student.full_name}</div>
+                <input type="number" 
+                       class="grade-input" 
+                       data-student-id="${student.id}"
+                       min="${minPoints}" 
+                       max="${maxPoints}" 
+                       step="0.5" 
+                       placeholder="${minPoints} - ${maxPoints}">
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// Créer l'évaluation
+async function createEvaluation(event) {
+    event.preventDefault();
+    
+    const classroomId = {{ selected_classroom_id }};
+    
+    // Récupérer les données du formulaire
+    const title = document.getElementById('evalTitle').value.trim();
+    const date = document.getElementById('evalDate').value;
+    const maxPoints = parseFloat(document.getElementById('evalMaxPoints').value);
+    const minPoints = parseFloat(document.getElementById('evalMinPoints').value);
+    const evalType = document.querySelector('input[name="evalType"]:checked').value;
+    
+    let taGroupName = null;
+    if (evalType === 'ta') {
+        const taMode = document.querySelector('input[name="taMode"]:checked').value;
+        if (taMode === 'new') {
+            taGroupName = document.getElementById('taGroupName').value.trim();
+        } else {
+            taGroupName = document.getElementById('taGroupSelect').value;
+        }
+    }
+    
+    // Récupérer les notes (directement sur 20)
+    const grades = [];
+    const gradeInputs = document.querySelectorAll('.grade-input');
+    gradeInputs.forEach(input => {
+        const studentId = input.dataset.studentId;
+        const note = input.value ? parseFloat(input.value) : null;
+        
+        grades.push({
+            student_id: parseInt(studentId),
+            points: note  // Les notes sont directement stockées comme points
+        });
+    });
+    
+    const evaluationData = {
+        classroom_id: classroomId,
+        title: title,
+        date: date,
+        max_points: maxPoints,
+        min_points: minPoints,
+        type: evalType,
+        ta_group_name: taGroupName,
+        grades: grades
+    };
+    
+    try {
+        const response = await fetch('/api/evaluations/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(evaluationData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', 'Évaluation créée avec succès');
+            closeModal('newEvaluationModal');
+            loadEvaluations(); // Recharger le tableau
+        } else {
+            showNotification('error', result.message || 'Erreur lors de la création');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur lors de la création de l\'évaluation');
+    }
+}
+
+// Afficher le tableau des évaluations
+function renderEvaluationsTable() {
+    const container = document.getElementById('evaluationsContainer');
+    const emptyState = document.getElementById('evaluationsEmptyState');
+    
+    if (!evaluations || evaluations.length === 0) {
+        container.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    
+    const students = {{ students_json|tojson|safe }};
+    
+    // Organiser les évaluations par type et calcul des moyennes TA
+    const processedEvaluations = processEvaluations(evaluations);
+    
+    let html = `
+        <table class="evaluations-table">
+            <thead>
+                <tr>
+                    <th class="student-column">Élève</th>
+    `;
+    
+    // En-têtes des colonnes d'évaluations
+    processedEvaluations.forEach(eval => {
+        const isTA = eval.type === 'ta';
+        const isExpandedTA = eval.isExpandedTA;
+        const isGroupedTA = isTA && !isExpandedTA;
+        
+        let title;
+        if (isExpandedTA) {
+            title = eval.title; // Titre de l'évaluation individuelle
+        } else if (isTA) {
+            title = `TA: ${eval.ta_group_name}`;
+        } else {
+            title = eval.title;
+        }
+        
+        const isExpanded = isGroupedTA && expandedTAGroups.has(eval.ta_group_name);
+        
+        html += `
+            <th class="eval-column ${isTA || isExpandedTA ? 'ta-column' : ''} ${isExpandedTA ? 'expanded-ta-item' : ''}" data-eval-id="${eval.id}">
+                <div class="eval-header" onclick="selectEvaluation('${eval.id}')">
+                    <span class="eval-title">${title}</span>
+                    <div class="eval-actions">
+                        ${isGroupedTA ? `<button class="btn-icon expand-ta-btn" onclick="event.stopPropagation(); toggleTAExpansion('${eval.ta_group_name}')" title="${isExpanded ? 'Regrouper les tests TA' : 'Voir les tests individuels'}">
+                            <i class="fas fa-${isExpanded ? 'compress' : 'expand'}-alt"></i>
+                        </button>` : ''}
+                        ${isExpandedTA ? `<button class="btn-icon collapse-ta-btn" onclick="event.stopPropagation(); toggleTAExpansion('${eval.parentTAGroup}')" title="Regrouper les tests TA">
+                            <i class="fas fa-compress-alt"></i>
+                        </button>` : ''}
+                        ${!isTA && !isExpandedTA ? `<button class="btn-icon edit-eval-btn" onclick="event.stopPropagation(); editEvaluation(${eval.id})" title="Modifier l'évaluation">
+                            <i class="fas fa-edit"></i>
+                        </button>` : ''}
+                        ${isExpandedTA ? `<button class="btn-icon edit-eval-btn" onclick="event.stopPropagation(); editEvaluation(${eval.id})" title="Modifier l'évaluation">
+                            <i class="fas fa-edit"></i>
+                        </button>` : ''}
+                        ${!isTA && !isExpandedTA ? `<button class="btn-icon delete-eval-btn" onclick="event.stopPropagation(); deleteEvaluation(${eval.id})" title="Supprimer l'évaluation">
+                            <i class="fas fa-trash"></i>
+                        </button>` : ''}
+                        ${isExpandedTA ? `<button class="btn-icon delete-eval-btn" onclick="event.stopPropagation(); deleteEvaluation(${eval.id})" title="Supprimer l'évaluation">
+                            <i class="fas fa-trash"></i>
+                        </button>` : ''}
+                    </div>
+                </div>
+            </th>
+        `;
+    });
+    
+    html += `<th class="average-column">Moyenne</th></tr></thead><tbody>`;
+    
+    // Lignes des élèves
+    students.forEach(student => {
+        html += `<tr><td class="student-name">${student.full_name}</td>`;
+        
+        // Notes pour chaque évaluation
+        processedEvaluations.forEach(eval => {
+            const grade = getStudentGradeForEvaluation(student.id, eval);
+            const gradeDisplay = formatGradeDisplay(grade, eval.max_points);
+            html += `<td class="grade-cell ${getGradeClass(grade, eval.max_points)}">${gradeDisplay}</td>`;
+        });
+        
+        // Moyenne générale de l'élève
+        const studentAverage = calculateStudentAverage(student.id, processedEvaluations);
+        html += `<td class="average-cell">${studentAverage.toFixed(1)}</td>`;
+        
+        html += '</tr>';
+    });
+    
+    // Ligne de moyennes par test
+    html += '<tr class="average-row">';
+    html += '<td class="student-name average-label"><strong>Moyenne par test</strong></td>';
+    
+    processedEvaluations.forEach(eval => {
+        const testAverage = calculateTestAverage(eval, students);
+        html += `<td class="grade-cell average-cell"><strong>${testAverage !== null ? testAverage.toFixed(1) : '-'}</strong></td>`;
+    });
+    
+    // Moyenne générale de la classe
+    const classAverage = calculateClassAverage(processedEvaluations, students);
+    html += `<td class="average-cell class-average"><strong>${classAverage !== null ? classAverage.toFixed(1) : '-'}</strong></td>`;
+    
+    html += '</tr>';
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+// Traiter les évaluations (grouper les TA)
+function processEvaluations(rawEvaluations) {
+    const processed = [];
+    const taGroups = {};
+    
+    rawEvaluations.forEach(eval => {
+        if (eval.type === 'significatif') {
+            processed.push(eval);
+        } else if (eval.type === 'ta') {
+            if (!taGroups[eval.ta_group_name]) {
+                taGroups[eval.ta_group_name] = {
+                    id: `ta_${eval.ta_group_name}`,
+                    title: eval.ta_group_name,
+                    type: 'ta',
+                    ta_group_name: eval.ta_group_name,
+                    max_points: eval.max_points,
+                    evaluations: []
+                };
+            }
+            taGroups[eval.ta_group_name].evaluations.push(eval);
+        }
+    });
+    
+    // Ajouter les groupes TA traités ou les évaluations individuelles si dépliés
+    Object.values(taGroups).forEach(taGroup => {
+        if (expandedTAGroups.has(taGroup.ta_group_name)) {
+            // Si le groupe est déplié, ajouter les évaluations individuelles
+            taGroup.evaluations.forEach(eval => {
+                processed.push({
+                    ...eval,
+                    isExpandedTA: true,
+                    parentTAGroup: taGroup.ta_group_name
+                });
+            });
+        } else {
+            // Sinon, ajouter le groupe TA regroupé
+            processed.push(taGroup);
+        }
+    });
+    
+    return processed;
+}
+
+// Obtenir la note d'un élève pour une évaluation
+function getStudentGradeForEvaluation(studentId, evaluation) {
+    if (evaluation.isExpandedTA) {
+        // Pour les évaluations TA individuelles dépliées
+        const grade = evaluation.grades?.find(g => g.student_id === studentId);
+        if (!grade || grade.points === null) return null;
+        return grade.points;
+    } else if (evaluation.type === 'ta') {
+        // Pour les TA groupés, calculer la moyenne des évaluations du groupe
+        const taGrades = [];
+        evaluation.evaluations.forEach(eval => {
+            const grade = eval.grades?.find(g => g.student_id === studentId);
+            if (grade && grade.points !== null) {
+                taGrades.push(grade.points);
+            }
+        });
+        
+        if (taGrades.length === 0) return null;
+        return taGrades.reduce((sum, grade) => sum + grade, 0) / taGrades.length;
+    } else {
+        // Pour les évaluations significatives
+        const grade = evaluation.grades?.find(g => g.student_id === studentId);
+        if (!grade || grade.points === null) return null;
+        return grade.points;
+    }
+}
+
+// Formater l'affichage d'une note
+function formatGradeDisplay(grade, maxPoints) {
+    if (grade === null) return 'Abs.';
+    return grade.toFixed(1);
+}
+
+// Obtenir la classe CSS selon la note
+function getGradeClass(grade, maxPoints) {
+    if (grade === null) return 'absent';
+    const percentage = (grade / maxPoints) * 100;
+    
+    if (percentage >= 80) return 'excellent';
+    if (percentage >= 60) return 'good';
+    if (percentage >= 40) return 'average';
+    return 'poor';
+}
+
+// Calculer la moyenne générale d'un élève
+function calculateStudentAverage(studentId, processedEvaluations) {
+    const grades = [];
+    
+    // Ne compter que les évaluations significatives et les groupes TA (pas les éléments individuels)
+    processedEvaluations.forEach(eval => {
+        if (!eval.isExpandedTA) { // Exclure les évaluations TA individuelles dépliées
+            const grade = getStudentGradeForEvaluation(studentId, eval);
+            if (grade !== null) {
+                grades.push(grade);
+            }
+        }
+    });
+    
+    if (grades.length === 0) return 0;
+    return grades.reduce((sum, grade) => sum + grade, 0) / grades.length;
+}
+
+// Calculer la moyenne d'un test pour tous les élèves
+function calculateTestAverage(evaluation, students) {
+    const grades = [];
+    
+    students.forEach(student => {
+        const grade = getStudentGradeForEvaluation(student.id, evaluation);
+        if (grade !== null) {
+            grades.push(grade);
+        }
+    });
+    
+    if (grades.length === 0) return null;
+    return grades.reduce((sum, grade) => sum + grade, 0) / grades.length;
+}
+
+// Calculer la moyenne générale de la classe
+function calculateClassAverage(processedEvaluations, students) {
+    const studentAverages = [];
+    
+    students.forEach(student => {
+        const average = calculateStudentAverage(student.id, processedEvaluations);
+        if (average > 0) {
+            studentAverages.push(average);
+        }
+    });
+    
+    if (studentAverages.length === 0) return null;
+    return studentAverages.reduce((sum, avg) => sum + avg, 0) / studentAverages.length;
+}
+
+// Sélectionner une évaluation pour afficher l'histogramme
+function selectEvaluation(evalId) {
+    console.log('Selecting evaluation:', evalId);
+    selectedEvaluationId = evalId;
+    
+    // Mettre à jour l'apparence des colonnes
+    document.querySelectorAll('.eval-column').forEach(col => {
+        col.classList.remove('selected');
+    });
+    const columnElement = document.querySelector(`[data-eval-id="${evalId}"]`);
+    if (columnElement) {
+        columnElement.classList.add('selected');
+    }
+    
+    // Afficher l'histogramme
+    showEvaluationHistogram(evalId);
+}
+
+// Afficher l'histogramme d'une évaluation
+function showEvaluationHistogram(evalId) {
+    console.log('Showing histogram for evaluation:', evalId);
+    const evaluation = findEvaluationById(evalId);
+    console.log('Found evaluation:', evaluation);
+    
+    if (!evaluation) {
+        console.log('No evaluation found');
+        return;
+    }
+    
+    const students = {{ students_json|tojson|safe }};
+    const grades = [];
+    
+    students.forEach(student => {
+        const grade = getStudentGradeForEvaluation(student.id, evaluation);
+        if (grade !== null) {
+            grades.push(grade);
+        }
+    });
+    
+    console.log('Grades for histogram:', grades);
+    
+    if (grades.length === 0) {
+        console.log('No grades found');
+        document.getElementById('gradeHistogram').style.display = 'none';
+        return;
+    }
+    
+    // Calculer les statistiques
+    const average = grades.reduce((sum, grade) => sum + grade, 0) / grades.length;
+    const max = Math.max(...grades);
+    const min = Math.min(...grades);
+    
+    // Mettre à jour les statistiques
+    document.getElementById('selectedEvalAverage').textContent = average.toFixed(1);
+    document.getElementById('selectedEvalMax').textContent = max.toFixed(1);
+    document.getElementById('selectedEvalMin').textContent = min.toFixed(1);
+    
+    // Dessiner l'histogramme
+    drawHistogram(grades, evaluation.max_points);
+    
+    document.getElementById('gradeHistogram').style.display = 'block';
+}
+
+// Trouver une évaluation par ID
+function findEvaluationById(evalId) {
+    const processedEvaluations = processEvaluations(evaluations);
+    return processedEvaluations.find(eval => eval.id == evalId);
+}
+
+// Dessiner l'histogramme simple (sans Chart.js)
+function drawHistogram(grades, maxPoints) {
+    const canvas = document.getElementById('histogramChart');
+    const ctx = canvas.getContext('2d');
+    
+    // Effacer le canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Déterminer la précision d'arrondi selon la note maximale
+    let roundingPrecision;
+    if (maxPoints >= 10) {
+        roundingPrecision = 0.5; // Arrondi à 0.5 si note maximale >= 10
+    } else {
+        roundingPrecision = 0.25; // Arrondi à 0.25 si note maximale < 10
+    }
+    
+    // Compter chaque note exacte (arrondie)
+    const noteCounts = {};
+    
+    grades.forEach(grade => {
+        // Arrondir la note selon la précision
+        const roundedGrade = Math.round(grade / roundingPrecision) * roundingPrecision;
+        const key = roundedGrade.toFixed(2);
+        noteCounts[key] = (noteCounts[key] || 0) + 1;
+    });
+    
+    // Convertir en tableau ordonné
+    const sortedNotes = Object.keys(noteCounts)
+        .map(key => parseFloat(key))
+        .sort((a, b) => a - b);
+    
+    if (sortedNotes.length === 0) return;
+    
+    // Dessiner l'histogramme
+    const barWidth = Math.min(canvas.width / sortedNotes.length, 60); // Largeur maximale de 60px
+    const maxCount = Math.max(...Object.values(noteCounts));
+    const startX = (canvas.width - (barWidth * sortedNotes.length)) / 2; // Centrer les barres
+    
+    ctx.fillStyle = '#4F46E5';
+    
+    sortedNotes.forEach((note, index) => {
+        const count = noteCounts[note.toFixed(2)];
+        const barHeight = (count / maxCount) * (canvas.height - 60);
+        const x = startX + (index * barWidth);
+        const y = canvas.height - barHeight - 30;
+        
+        // Dessiner la barre
+        ctx.fillRect(x + 2, y, barWidth - 4, barHeight);
+        
+        // Labels
+        ctx.fillStyle = '#374151';
+        ctx.font = '11px Arial';
+        ctx.textAlign = 'center';
+        
+        // Afficher la note (absolue)
+        const noteLabel = note % 1 === 0 ? note.toString() : note.toFixed(1);
+        ctx.fillText(noteLabel, x + barWidth / 2, canvas.height - 10);
+        
+        // Afficher le nombre d'élèves
+        ctx.fillText(count.toString(), x + barWidth / 2, y - 5);
+        
+        ctx.fillStyle = '#4F46E5';
+    });
+}
+
+// Éditer une évaluation existante
+async function editEvaluation(evalId) {
+    // Trouver l'évaluation dans la liste
+    const evaluation = evaluations.find(eval => eval.id === evalId);
+    if (!evaluation) {
+        showNotification('error', 'Évaluation introuvable');
+        return;
+    }
+    
+    // Pré-remplir le formulaire avec les données existantes
+    document.getElementById('evalTitle').value = evaluation.title;
+    document.getElementById('evalDate').value = evaluation.date;
+    document.getElementById('evalMaxPoints').value = evaluation.max_points;
+    document.getElementById('evalMinPoints').value = evaluation.min_points || 0;
+    
+    // Sélectionner le type d'évaluation
+    const typeRadio = document.querySelector(`input[name="evalType"][value="${evaluation.type}"]`);
+    if (typeRadio) {
+        typeRadio.checked = true;
+        handleEvalTypeChange();
+    }
+    
+    // Si c'est un TA, configurer le groupe
+    if (evaluation.type === 'ta' && evaluation.ta_group_name) {
+        const existingTARadio = document.querySelector('input[name="taMode"][value="existing"]');
+        if (existingTARadio) {
+            existingTARadio.checked = true;
+            handleTAModeChange();
+            document.getElementById('taGroupSelect').value = evaluation.ta_group_name;
+        }
+    }
+    
+    // Passer à l'étape 2 directement
+    nextEvalStep();
+    
+    // Pré-remplir les notes
+    const students = {{ students_json|tojson|safe }};
+    students.forEach(student => {
+        const gradeInput = document.querySelector(`input[data-student-id="${student.id}"]`);
+        if (gradeInput) {
+            const gradeData = evaluation.grades?.find(g => g.student_id === student.id);
+            if (gradeData && gradeData.points !== null) {
+                gradeInput.value = gradeData.points;
+            }
+        }
+    });
+    
+    // Modifier le formulaire pour la mise à jour au lieu de la création
+    const form = document.getElementById('newEvaluationForm');
+    form.onsubmit = (event) => updateEvaluation(event, evalId);
+    
+    // Changer le titre du modal
+    document.querySelector('#newEvaluationModal .modal-header h3').innerHTML = 
+        '<i class="fas fa-edit"></i> Modifier l\'évaluation';
+    
+    // Afficher le modal
+    document.getElementById('newEvaluationModal').classList.add('show');
+}
+
+// Mettre à jour une évaluation existante
+async function updateEvaluation(event, evalId) {
+    event.preventDefault();
+    
+    // Récupérer les données du formulaire (même logique que createEvaluation)
+    const title = document.getElementById('evalTitle').value.trim();
+    const date = document.getElementById('evalDate').value;
+    const evalType = document.querySelector('input[name="evalType"]:checked').value;
+    
+    let taGroupName = null;
+    if (evalType === 'ta') {
+        const taMode = document.querySelector('input[name="taMode"]:checked').value;
+        if (taMode === 'new') {
+            taGroupName = document.getElementById('taGroupName').value.trim();
+        } else {
+            taGroupName = document.getElementById('taGroupSelect').value;
+        }
+    }
+    
+    // Récupérer les notes
+    const grades = [];
+    const gradeInputs = document.querySelectorAll('.grade-input');
+    gradeInputs.forEach(input => {
+        const studentId = input.dataset.studentId;
+        const note = input.value ? parseFloat(input.value) : null;
+        
+        grades.push({
+            student_id: parseInt(studentId),
+            points: note
+        });
+    });
+    
+    const evaluationData = {
+        title: title,
+        date: date,
+        max_points: parseFloat(document.getElementById('evalMaxPoints').value),
+        min_points: parseFloat(document.getElementById('evalMinPoints').value),
+        type: evalType,
+        ta_group_name: taGroupName,
+        grades: grades
+    };
+    
+    try {
+        const response = await fetch(`/api/evaluations/${evalId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(evaluationData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', 'Évaluation modifiée avec succès');
+            closeModal('newEvaluationModal');
+            loadEvaluations(); // Recharger le tableau
+            
+            // Remettre le formulaire en mode création
+            resetEvaluationForm();
+        } else {
+            showNotification('error', result.message || 'Erreur lors de la modification');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur lors de la modification de l\'évaluation');
+    }
+}
+
+// Remettre le formulaire en mode création
+function resetEvaluationForm() {
+    const form = document.getElementById('newEvaluationForm');
+    form.onsubmit = createEvaluation;
+    
+    // Remettre le titre original
+    document.querySelector('#newEvaluationModal .modal-header h3').innerHTML = 
+        '<i class="fas fa-clipboard-check"></i> Nouvelle évaluation';
+        
+    // Réinitialiser le formulaire
+    form.reset();
+    document.getElementById('evalStep1').style.display = 'block';
+    document.getElementById('evalStep2').style.display = 'none';
+}
+
+// Supprimer une évaluation
+async function deleteEvaluation(evalId) {
+    // Trouver l'évaluation pour afficher son nom
+    const evaluation = evaluations.find(eval => eval.id === evalId);
+    if (!evaluation) {
+        showNotification('error', 'Évaluation introuvable');
+        return;
+    }
+    
+    // Demander confirmation
+    const confirmMessage = `Êtes-vous sûr de vouloir supprimer l'évaluation "${evaluation.title}" ?\n\nCette action est irréversible et supprimera toutes les notes associées.`;
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/evaluations/${evalId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('success', 'Évaluation supprimée avec succès');
+            loadEvaluations(); // Recharger le tableau
+            
+            // Masquer l'histogramme si l'évaluation supprimée était sélectionnée
+            if (selectedEvaluationId === evalId) {
+                document.getElementById('gradeHistogram').style.display = 'none';
+                selectedEvaluationId = null;
+            }
+        } else {
+            showNotification('error', result.message || 'Erreur lors de la suppression');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur lors de la suppression de l\'évaluation');
+    }
+}
+
+// Basculer l'expansion d'un groupe TA
+function toggleTAExpansion(taGroupName) {
+    if (expandedTAGroups.has(taGroupName)) {
+        // Replier : retirer du set
+        expandedTAGroups.delete(taGroupName);
+    } else {
+        // Déplier : ajouter au set
+        expandedTAGroups.add(taGroupName);
+    }
+    
+    // Recharger le tableau pour refléter les changements
+    renderEvaluationsTable();
+}
+
+// === GESTION DE L'ONGLET ABSENCES ===
+
+// Gérer les sous-onglets de l'onglet Absences
+function showAttendanceTab(tabName) {
+    // Masquer tous les contenus
+    document.querySelectorAll('.attendance-content').forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    // Désactiver tous les boutons
+    document.querySelectorAll('.attendance-mini-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Afficher le contenu sélectionné
+    document.getElementById(tabName).style.display = 'block';
+    
+    // Activer le bouton correspondant
+    event.target.classList.add('active');
+    
+    // Charger les données initiales si nécessaire
+    if (tabName === 'class-absences') {
+        initializeClassAbsencesTab();
+    } else if (tabName === 'class-late') {
+        initializeClassLateTab();
+    }
+}
+
+// Initialiser l'onglet Absences
+function initializeClassAbsencesTab() {
+    // Définir les dates par défaut (année scolaire)
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    let startYear = currentMonth < 7 ? currentYear - 1 : currentYear;
+    let endYear = startYear + 1;
+    
+    document.getElementById('class-start-date-absences').value = `${startYear}-09-01`;
+    document.getElementById('class-end-date-absences').value = `${endYear}-07-31`;
+    
+    loadClassAbsences();
+}
+
+// Initialiser l'onglet Retards
+function initializeClassLateTab() {
+    // Définir les dates par défaut (année scolaire)
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    let startYear = currentMonth < 7 ? currentYear - 1 : currentYear;
+    let endYear = startYear + 1;
+    
+    document.getElementById('class-start-date-late').value = `${startYear}-09-01`;
+    document.getElementById('class-end-date-late').value = `${endYear}-07-31`;
+    
+    loadClassLateArrivals();
+}
+
+// Charger les absences pour la classe sélectionnée
+function loadClassAbsences() {
+    const selectedClassroomId = document.getElementById('classSelect').value;
+    if (!selectedClassroomId) return;
+    
+    showClassLoading('absences');
+    
+    const params = new URLSearchParams({
+        start_date: document.getElementById('class-start-date-absences').value,
+        end_date: document.getElementById('class-end-date-absences').value,
+        classroom_id: selectedClassroomId
+    });
+    
+    fetch(`{{ url_for('attendance.get_absences') }}?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            hideClassLoading('absences');
+            
+            if (data.success) {
+                displayClassAbsences(data.absences);
+            } else {
+                showNotification('error', 'Erreur lors du chargement des absences: ' + data.message);
+            }
+        })
+        .catch(error => {
+            hideClassLoading('absences');
+            showNotification('error', 'Erreur de connexion: ' + error.message);
+        });
+}
+
+// Charger les retards pour la classe sélectionnée
+function loadClassLateArrivals() {
+    const selectedClassroomId = document.getElementById('classSelect').value;
+    if (!selectedClassroomId) return;
+    
+    showClassLoading('late');
+    
+    const params = new URLSearchParams({
+        start_date: document.getElementById('class-start-date-late').value,
+        end_date: document.getElementById('class-end-date-late').value,
+        classroom_id: selectedClassroomId
+    });
+    
+    fetch(`{{ url_for('attendance.get_late_arrivals') }}?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            hideClassLoading('late');
+            
+            if (data.success) {
+                displayClassLateArrivals(data.late_arrivals);
+            } else {
+                showNotification('error', 'Erreur lors du chargement des retards: ' + data.message);
+            }
+        })
+        .catch(error => {
+            hideClassLoading('late');
+            showNotification('error', 'Erreur de connexion: ' + error.message);
+        });
+}
+
+// Afficher le spinner de chargement
+function showClassLoading(type) {
+    document.getElementById(`class-loading-${type}`).style.display = 'block';
+    document.getElementById(`class-${type}-table`).style.display = 'none';
+    document.getElementById(`class-no-${type}`).style.display = 'none';
+}
+
+// Masquer le spinner de chargement
+function hideClassLoading(type) {
+    document.getElementById(`class-loading-${type}`).style.display = 'none';
+}
+
+// Afficher les absences dans le tableau
+function displayClassAbsences(absences) {
+    const tbody = document.getElementById('class-absences-tbody');
+    const table = document.getElementById('class-absences-table');
+    const noData = document.getElementById('class-no-absences');
+    
+    tbody.innerHTML = '';
+    
+    if (absences.length === 0) {
+        table.style.display = 'none';
+        noData.style.display = 'block';
+        return;
+    }
+    
+    absences.forEach(absence => {
+        const row = tbody.insertRow();
+        row.className = 'absence-row'; // Ajouter la classe pour le fond rouge clair
+        row.innerHTML = `
+            <td>${absence.date}</td>
+            <td>${absence.student_name}</td>
+            <td>${absence.periods}</td>
+            <td>${absence.time_range}</td>
+            <td>${absence.comment || '-'}</td>
+        `;
+    });
+    
+    table.style.display = 'table';
+    noData.style.display = 'none';
+}
+
+// Afficher les retards dans le tableau
+function displayClassLateArrivals(lateArrivals) {
+    const tbody = document.getElementById('class-late-tbody');
+    const table = document.getElementById('class-late-table');
+    const noData = document.getElementById('class-no-late');
+    
+    tbody.innerHTML = '';
+    
+    if (lateArrivals.length === 0) {
+        table.style.display = 'none';
+        noData.style.display = 'block';
+        return;
+    }
+    
+    lateArrivals.forEach(late => {
+        const row = tbody.insertRow();
+        row.className = 'late-row'; // Ajouter la classe pour le fond jaune clair
+        row.innerHTML = `
+            <td>${late.date}</td>
+            <td>${late.student_name}</td>
+            <td>${late.periods}</td>
+            <td>${late.time_range}</td>
+            <td><span class="badge-late">${late.late_minutes} min</span></td>
+            <td>${late.comment || '-'}</td>
+        `;
+    });
+    
+    table.style.display = 'table';
+    noData.style.display = 'none';
+}
 </script>
 {% endblock %}
