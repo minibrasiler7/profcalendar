@@ -733,6 +733,33 @@ def lesson_view():
                 else:
                     time_remaining = f"{minutes}:{remaining_seconds % 60:02d}"
 
+    # Récupérer le plan de classe actif pour cette classe
+    seating_plan = None
+    if lesson and lesson_classroom:
+        try:
+            from models.seating_plan import SeatingPlan
+            import json
+            
+            seating_plan_record = SeatingPlan.query.filter_by(
+                classroom_id=lesson.classroom_id,
+                user_id=current_user.id,
+                is_active=True
+            ).first()
+            
+            if seating_plan_record:
+                try:
+                    seating_plan = {
+                        'id': seating_plan_record.id,
+                        'name': seating_plan_record.name,
+                        'plan_data': json.loads(seating_plan_record.plan_data)
+                    }
+                except json.JSONDecodeError:
+                    seating_plan = None
+        except Exception as e:
+            # Si la table seating_plans n'existe pas encore, on ignore l'erreur
+            print(f"Erreur lors de la récupération du plan de classe: {e}")
+            seating_plan = None
+
     return render_template('planning/lesson_view.html',
                          lesson=lesson,
                          planning=planning,
@@ -743,7 +770,8 @@ def lesson_view():
                          students=students,
                          attendance_records=attendance_records,
                          imported_sanctions=imported_sanctions,
-                         sanctions_data=sanctions_data)
+                         sanctions_data=sanctions_data,
+                         seating_plan=seating_plan)
 
 @planning_bp.route('/get-class-resources/<int:classroom_id>')
 @login_required

@@ -7,6 +7,7 @@ from models.schedule import Schedule
 from models.planning import Planning
 from models.student import Student, Grade, ClassFile, Chapter, ClassroomChapter
 from models.attendance import Attendance
+from models.seating_plan import SeatingPlan
 
 app = create_app()
 
