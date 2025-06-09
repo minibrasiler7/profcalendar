@@ -735,8 +735,8 @@ def lesson_view():
 
     # Récupérer le plan de classe actif pour cette classe
     seating_plan = None
-    if lesson and lesson_classroom:
-        try:
+    try:
+        if lesson and lesson_classroom:
             from models.seating_plan import SeatingPlan
             import json
             
@@ -747,18 +747,14 @@ def lesson_view():
             ).first()
             
             if seating_plan_record:
-                try:
-                    seating_plan = {
-                        'id': seating_plan_record.id,
-                        'name': seating_plan_record.name,
-                        'plan_data': json.loads(seating_plan_record.plan_data)
-                    }
-                except json.JSONDecodeError:
-                    seating_plan = None
-        except Exception as e:
-            # Si la table seating_plans n'existe pas encore, on ignore l'erreur
-            print(f"Erreur lors de la récupération du plan de classe: {e}")
-            seating_plan = None
+                seating_plan = {
+                    'id': seating_plan_record.id,
+                    'name': seating_plan_record.name,
+                    'plan_data': json.loads(seating_plan_record.plan_data)
+                }
+    except Exception as e:
+        print(f"Erreur plan de classe: {e}")
+        seating_plan = None
 
     return render_template('planning/lesson_view.html',
                          lesson=lesson,

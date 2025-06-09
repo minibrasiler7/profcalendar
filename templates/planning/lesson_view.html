@@ -183,7 +183,7 @@ if (typeof pdfjsLib !== 'undefined') {
     order: 3;
 }
 
-.planning-section, .resources-section, .attendance-section, .seating-plan-section {
+.planning-section, .resources-section, .attendance-section {
     background-color: var(--white);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-sm);
@@ -966,32 +966,6 @@ if (typeof pdfjsLib !== 'undefined') {
             </div>
         </div>
 
-        <!-- Section plan de classe -->
-        {% if seating_plan %}
-        <div class="seating-plan-section">
-            <div class="section-header">
-                <h2 class="section-title">
-                    <i class="fas fa-th"></i> Plan de classe
-                </h2>
-                <div class="seating-plan-actions">
-                    <button class="btn btn-outline btn-sm" onclick="printSeatingPlanLesson()">
-                        <i class="fas fa-print"></i> Imprimer
-                    </button>
-                    <a href="{{ url_for('planning.manage_classes') }}?classroom={{ lesson.classroom_id }}" class="btn btn-outline btn-sm">
-                        <i class="fas fa-edit"></i> Modifier
-                    </a>
-                </div>
-            </div>
-            
-            <div class="seating-plan-content">
-                <div class="seating-plan-viewer" id="seating-plan-viewer">
-                    <div class="seating-workspace-lesson" id="seating-workspace-lesson">
-                        <!-- Le plan de classe sera affiché ici -->
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
 
         <!-- Section présences -->
         <div class="attendance-section">
@@ -1009,6 +983,11 @@ if (typeof pdfjsLib !== 'undefined') {
                 {% if imported_sanctions %}
                 <button class="tracking-tab" onclick="showTrackingTab('sanctions')">
                     <i class="fas fa-exclamation-triangle"></i> Coches ({{ imported_sanctions|length }})
+                </button>
+                {% endif %}
+                {% if seating_plan %}
+                <button class="tracking-tab" onclick="showTrackingTab('seating-plan')">
+                    <i class="fas fa-th"></i> Plan de classe
                 </button>
                 {% endif %}
             </div>
@@ -1107,7 +1086,21 @@ if (typeof pdfjsLib !== 'undefined') {
                 </div>
             </div>
             {% endif %}
+            
+            <!-- Section plan de classe -->
+            {% if seating_plan %}
+            <div class="seating-plan-content tracking-content" id="seating-plan-content">
+                <div class="seating-plan-container">
+                    <div class="seating-plan-viewer" id="seating-plan-viewer">
+                        <div class="seating-workspace" id="seating-workspace">
+                            <!-- Le plan de classe sera affiché ici -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
+        <!-- Fin de attendance-section -->
 
         <!-- Section ressources -->
         <div class="resources-section">
@@ -3639,6 +3632,13 @@ function showTrackingTab(tabName) {
     
     // Afficher le contenu correspondant
     document.getElementById(tabName + '-content').classList.add('active');
+    
+    // Si c'est l'onglet plan de classe, charger le plan
+    if (tabName === 'seating-plan') {
+        setTimeout(() => {
+            loadSeatingPlan();
+        }, 100);
+    }
 }
 
 // Fonctions pour l'initialisation du système de sanctions
@@ -3901,67 +3901,107 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialiser le système de surveillance des sanctions
     initializeSanctionSystem();
     
-    // Charger le plan de classe si disponible
+    // Gestionnaire de redimensionnement pour le plan de classe
     {% if seating_plan %}
-    loadSeatingPlanForLesson();
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            const seatingContent = document.getElementById('seating-plan-content');
+            if (seatingContent && seatingContent.classList.contains('active')) {
+                adjustSeatingScale();
+            }
+        }, 250);
+    });
     {% endif %}
 });
 
-// Fonction pour charger et afficher le plan de classe
-function loadSeatingPlanForLesson() {
-    const planData = {{ seating_plan.plan_data | tojson | safe }};
-    const workspace = document.getElementById('seating-workspace-lesson');
-    
-    if (!workspace || !planData) {
-        console.log('Workspace ou données du plan non trouvés');
-        return;
-    }
-    
-    // Effacer le contenu existant
-    workspace.innerHTML = '';
-    
-    // Restaurer les éléments (tables et bureau)
-    if (planData.elements) {
-        planData.elements.forEach(elementData => {
-            const element = createSeatingElementForLesson(elementData);
-            if (element) {
-                element.style.left = elementData.x + 'px';
-                element.style.top = elementData.y + 'px';
-                workspace.appendChild(element);
-            }
-        });
-    }
-    
-    // Restaurer le placement des étudiants
-    if (planData.students_placement) {
-        planData.students_placement.forEach(placement => {
-            const element = workspace.querySelector(`[data-element-id="${placement.element_id}"]`);
-            if (element) {
-                const slots = element.querySelectorAll('.student-slot');
-                const targetSlot = slots[placement.slot_index];
-                
-                if (targetSlot) {
-                    // Trouver le nom de l'étudiant
-                    const student = {{ students | tojson | safe }}.find(s => s.id === placement.student_id);
-                    if (student) {
-                        const studentName = student.first_name + (student.last_name ? ' ' + student.last_name : '');
-                        
-                        // Marquer le slot comme occupé
-                        targetSlot.classList.add('occupied');
-                        targetSlot.innerHTML = `<div class="student-placed">${studentName}</div>`;
-                    }
-                }
-            }
-        });
+// Fonction pour afficher des infos debug dans le panneau
+function updateDebugPanel(message) {
+    const debugPanel = document.getElementById('js-debug-info');
+    if (debugPanel) {
+        debugPanel.innerHTML += '<div>' + message + '</div>';
     }
 }
 
-// Fonction pour créer un élément de plan de classe en lecture seule
-function createSeatingElementForLesson(elementData) {
+// Fonction pour charger et afficher le plan de classe
+function loadSeatingPlan() {
+    {% if seating_plan %}
+    console.log('Chargement du plan de classe...');
+    
+    const workspace = document.getElementById('seating-workspace');
+    const viewer = document.getElementById('seating-plan-viewer');
+    
+    if (!workspace || !viewer) {
+        console.error('Workspace ou viewer non trouvé');
+        return;
+    }
+    
+    // Nettoyer le workspace
+    workspace.innerHTML = '';
+    workspace.style.transform = 'none';
+    
+    // Récupérer les données du plan
+    const planData = {{ seating_plan.plan_data | tojson | safe }};
+    console.log('Données du plan:', planData);
+    
+    const elements = planData.elements || [];
+    const studentsPlacement = planData.students_placement || [];
+    
+    // Créer les éléments du plan
+    elements.forEach((elementData) => {
+        const element = createSeatingElement(elementData);
+        if (element) {
+            element.style.left = elementData.x + 'px';
+            element.style.top = elementData.y + 'px';
+            workspace.appendChild(element);
+        }
+    });
+    
+    // Données des étudiants
+    const studentsData = [
+        {% for student in students %}
+        {
+            id: {{ student.id }},
+            first_name: "{{ student.first_name }}",
+            last_name: "{{ student.last_name or '' }}",
+            full_name: "{{ student.full_name }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    // Placer les étudiants
+    studentsPlacement.forEach((placement) => {
+        const element = workspace.querySelector(`[data-element-id="${placement.element_id}"]`);
+        if (element) {
+            const slots = element.querySelectorAll('.student-slot');
+            if (slots[placement.slot_index]) {
+                const slot = slots[placement.slot_index];
+                const student = studentsData.find(s => 
+                    s.id === placement.student_id || String(s.id) === String(placement.student_id)
+                );
+                
+                if (student) {
+                    slot.innerHTML = `<div class="student-placed">${student.full_name}</div>`;
+                    slot.classList.add('occupied');
+                }
+            }
+        }
+    });
+    
+    // Ajuster l'échelle après le chargement
+    setTimeout(() => {
+        adjustSeatingScale();
+    }, 200);
+    {% endif %}
+}
+
+// Fonction pour créer un élément du plan
+function createSeatingElement(elementData) {
     const element = document.createElement('div');
     element.className = 'seating-element';
     element.dataset.elementId = elementData.id;
-    element.dataset.type = elementData.type;
+    element.style.position = 'absolute';
     
     if (elementData.type === 'desk-single') {
         element.className += ' desk-single';
@@ -3970,91 +4010,83 @@ function createSeatingElementForLesson(elementData) {
         element.innerHTML = '<div class="student-slots"><div class="student-slot"></div></div>';
     } else if (elementData.type === 'desk-double') {
         element.className += ' desk-double';
-        element.style.width = '120px';
+        element.style.width = '140px';
         element.style.height = '60px';
         element.innerHTML = '<div class="student-slots"><div class="student-slot"></div><div class="student-slot"></div></div>';
     } else if (elementData.type === 'teacher-desk') {
         element.className += ' teacher-desk';
-        element.style.width = '140px';
+        element.style.width = '120px';
         element.style.height = '80px';
-        element.innerHTML = 'Bureau';
+        element.innerHTML = 'Bureau du professeur';
     }
     
     return element;
 }
 
-// Fonction pour imprimer le plan de classe depuis la vue lesson
-function printSeatingPlanLesson() {
-    const workspace = document.getElementById('seating-workspace-lesson');
-    if (!workspace) {
-        alert('Plan de classe non trouvé');
+// Fonction pour ajuster l'échelle du plan pour qu'il s'adapte au conteneur
+function adjustSeatingScale() {
+    const workspace = document.getElementById('seating-workspace');
+    const viewer = document.getElementById('seating-plan-viewer');
+    
+    if (!workspace || !viewer) return;
+    
+    // Attendre que le viewer ait une taille
+    if (viewer.offsetWidth === 0) {
+        setTimeout(adjustSeatingScale, 100);
         return;
     }
     
     const elements = workspace.querySelectorAll('.seating-element');
-    if (elements.length === 0) {
-        alert('Aucun élément à imprimer dans le plan de classe');
-        return;
-    }
+    if (elements.length === 0) return;
     
-    // Créer un titre temporaire
-    const printTitle = document.createElement('div');
-    printTitle.innerHTML = `<h2>Plan de classe - {{ lesson.classroom.name }}</h2>`;
-    printTitle.id = 'print-title-lesson';
-    printTitle.style.position = 'absolute';
-    printTitle.style.top = '0px';
-    printTitle.style.left = '0px';
-    printTitle.style.width = '100%';
-    printTitle.style.textAlign = 'center';
-    printTitle.style.zIndex = '1000';
-    printTitle.style.backgroundColor = 'white';
+    // Calculer les limites du contenu
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     
-    // Ajouter le titre
-    workspace.appendChild(printTitle);
+    elements.forEach(element => {
+        const x = parseFloat(element.style.left) || 0;
+        const y = parseFloat(element.style.top) || 0;
+        const width = element.offsetWidth;
+        const height = element.offsetHeight;
+        
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x + width);
+        maxY = Math.max(maxY, y + height);
+    });
     
-    // Styles d'impression temporaires
-    const printStyles = document.createElement('style');
-    printStyles.id = 'lesson-print-styles';
-    printStyles.innerHTML = `
-        @media print {
-            body * { visibility: hidden; }
-            .seating-workspace-lesson, .seating-workspace-lesson *, #print-title-lesson, #print-title-lesson * {
-                visibility: visible;
-            }
-            .seating-workspace-lesson {
-                position: fixed !important;
-                top: 0 !important;
-                left: 15% !important;
-                width: 80% !important;
-                height: 100% !important;
-                background: white !important;
-                background-image: none !important;
-                padding: 50px 20px !important;
-            }
-            #print-title-lesson {
-                position: absolute !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100% !important;
-            }
-        }
-    `;
-    document.head.appendChild(printStyles);
+    // Ajouter une marge
+    const margin = 40;
+    minX -= margin;
+    minY -= margin;
+    maxX += margin;
+    maxY += margin;
     
-    try {
-        window.print();
-    } catch (error) {
-        console.error('Erreur lors de l\'impression:', error);
-    } finally {
-        // Nettoyer après impression
-        setTimeout(() => {
-            const titleElement = document.getElementById('print-title-lesson');
-            const stylesElement = document.getElementById('lesson-print-styles');
-            if (titleElement) titleElement.remove();
-            if (stylesElement) stylesElement.remove();
-        }, 500);
-    }
+    // Calculer les dimensions du contenu
+    const contentWidth = maxX - minX;
+    const contentHeight = maxY - minY;
+    
+    // Obtenir les dimensions du viewer
+    const viewerWidth = viewer.offsetWidth;
+    const viewerHeight = viewer.offsetHeight || 400; // Hauteur par défaut
+    
+    // Calculer l'échelle pour adapter le contenu
+    const scaleX = viewerWidth / contentWidth;
+    const scaleY = viewerHeight / contentHeight;
+    const scale = Math.min(scaleX, scaleY, 1); // Ne pas agrandir au-delà de 100%
+    
+    // Centrer le contenu
+    const scaledWidth = contentWidth * scale;
+    const scaledHeight = contentHeight * scale;
+    const translateX = (viewerWidth - scaledWidth) / 2 - minX * scale;
+    const translateY = (viewerHeight - scaledHeight) / 2 - minY * scale;
+    
+    // Appliquer la transformation
+    workspace.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    workspace.style.transformOrigin = '0 0';
+    
+    console.log(`Plan ajusté: échelle ${scale}, translation (${translateX}, ${translateY})`);
 }
+
 
 </script>
 
@@ -4468,75 +4500,64 @@ function printSeatingPlanLesson() {
     }
 }
 
-/* Styles pour la section plan de classe */
-.seating-plan-section {
-    min-height: 300px;
-}
-
-.seating-plan-actions {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.seating-plan-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+/* Styles pour le plan de classe dans l'onglet */
+.seating-plan-container {
+    height: 100%;
+    padding: 1rem;
 }
 
 .seating-plan-viewer {
     background: #f8f9fa;
     border: 1px solid #dee2e6;
     border-radius: 8px;
-    min-height: 250px;
     position: relative;
     overflow: hidden;
+    width: 100%;
+    height: 400px;
 }
 
-.seating-workspace-lesson {
+.seating-workspace {
     width: 100%;
-    height: 250px;
+    height: 100%;
     position: relative;
     background: white;
-    background-image: 
-        radial-gradient(circle, #e9ecef 1px, transparent 1px);
+    background-image: radial-gradient(circle, #e9ecef 1px, transparent 1px);
     background-size: 20px 20px;
 }
 
-/* Éléments du plan de classe dans la vue lesson */
-.seating-workspace-lesson .seating-element {
+/* Éléments du plan */
+.seating-element {
     position: absolute;
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-weight: 500;
     cursor: default;
     user-select: none;
 }
 
-.seating-workspace-lesson .desk-single {
+.desk-single {
     background: #e3f2fd;
     border: 2px solid #2196f3;
     color: #1976d2;
 }
 
-.seating-workspace-lesson .desk-double {
+.desk-double {
     background: #f3e5f5;
     border: 2px solid #9c27b0;
     color: #7b1fa2;
 }
 
-.seating-workspace-lesson .teacher-desk {
+.teacher-desk {
     background: #fff3e0;
     border: 2px solid #ff9800;
     color: #f57c00;
     font-weight: 600;
 }
 
-.seating-workspace-lesson .student-slots {
+.student-slots {
     display: flex;
     gap: 4px;
     justify-content: center;
@@ -4545,53 +4566,39 @@ function printSeatingPlanLesson() {
     padding: 4px;
 }
 
-.seating-workspace-lesson .student-slot {
+.student-slot {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid #999;
+    border: 1px solid #ccc;
     border-radius: 4px;
-    background: rgba(255,255,255,0.9);
+    background: white;
     height: 80%;
-    min-width: 25px;
-    font-size: 0.6rem;
+    min-width: 30px;
+    font-size: 0.7rem;
     text-align: center;
-    padding: 2px;
+    padding: 2px 4px;
+    overflow: hidden;
+    flex: 1;
 }
 
-.seating-workspace-lesson .student-slot.occupied {
+.student-slot.occupied {
     background: #4caf50;
     border-color: #388e3c;
     color: white;
-    font-weight: 600;
 }
 
-.seating-workspace-lesson .student-placed {
+.student-placed {
     color: white;
-    font-size: 0.6rem;
+    font-size: 0.65rem;
     line-height: 1.1;
     text-align: center;
-}
-
-/* Masquer les boutons de suppression dans la vue lesson */
-.seating-workspace-lesson .remove-student {
-    display: none;
-}
-
-/* Styles d'impression pour la section plan de classe */
-@media print {
-    .seating-plan-section {
-        page-break-inside: avoid;
-    }
-    
-    .seating-plan-actions {
-        display: none;
-    }
-    
-    .seating-workspace-lesson {
-        background-image: none;
-        border: 1px solid #ccc;
-    }
+    font-weight: 600;
+    width: 100%;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Styles pour le Modal Viewer/Annotateur Amélioré */
