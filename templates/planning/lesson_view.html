@@ -2232,6 +2232,7 @@ let currentFileId = null;
 let currentAnnotationTool = 'pen';
 let currentTool = 'pen'; // Variable manquante
 let currentColor = '#000000';
+let currentAnnotationColor = '#ff0000'; // Variable pour les annotations
 let currentStrokeWidth = 3;
 let isDrawing = false;
 let isNavigating = false; // Nouveau: indique qu'on est en train de naviguer entre pages
@@ -2304,6 +2305,12 @@ async function openFileViewer(fileId, filename, fileType) {
         }
         
         setupAnnotationTools();
+        
+        // Configurer les événements des boutons d'interface
+        setTimeout(() => {
+            console.log('🔧 Configuration des événements d\'interface...');
+            setupToolEvents();
+        }, 100);
         
     } catch (error) {
         console.error('Erreur lors du chargement du fichier:', error);
@@ -2449,6 +2456,7 @@ async function loadPDF(fileId) {
     // Initialiser les variables d'annotation
     currentTool = 'pen';
     currentColor = '#000000';
+    currentAnnotationColor = '#ff0000';
     currentStrokeWidth = 3;
     
     // Vérifier que PDF.js est chargé
@@ -2966,6 +2974,268 @@ console.log('   - diagnoseCSSIssue() : Diagnostic CSS complet');
 console.log('   - fixScrollIssue() : NOUVEAU - Correction automatique du problème');
 console.log('   - forceGoToPage1() : Force page 1 avec reset observer');
 console.log('   - retryRender() : Relancer le rendu si échec');
+
+// Fonctions de débogage pour les outils d'annotation
+window.annotationDebug = {
+    // Tester l'état des variables d'annotation
+    checkVariables: function() {
+        console.log('🎨 === ÉTAT DES VARIABLES D\'ANNOTATION ===');
+        console.log('  - currentTool:', currentTool);
+        console.log('  - currentAnnotationTool:', currentAnnotationTool);
+        console.log('  - currentStrokeWidth:', currentStrokeWidth);
+        console.log('  - currentAnnotationColor:', currentAnnotationColor);
+        console.log('  - Les deux tools sont synchronisés:', currentTool === currentAnnotationTool);
+    },
+    
+    // Tester tous les éléments DOM des outils
+    checkDOMElements: function() {
+        console.log('🔍 === VÉRIFICATION DES ÉLÉMENTS DOM ===');
+        
+        // Boutons d'outils
+        const penTool = document.getElementById('penTool');
+        const highlighterTool = document.getElementById('highlighterTool');
+        const eraserTool = document.getElementById('eraserTool');
+        
+        console.log('  Boutons d\'outils:');
+        console.log('    - penTool:', penTool ? 'trouvé' : 'MANQUANT', penTool);
+        console.log('    - highlighterTool:', highlighterTool ? 'trouvé' : 'MANQUANT', highlighterTool);
+        console.log('    - eraserTool:', eraserTool ? 'trouvé' : 'MANQUANT', eraserTool);
+        
+        if (penTool) console.log('    - penTool classList:', penTool.classList.toString());
+        if (highlighterTool) console.log('    - highlighterTool classList:', highlighterTool.classList.toString());
+        if (eraserTool) console.log('    - eraserTool classList:', eraserTool.classList.toString());
+        
+        // Sélecteur de couleur
+        const colorPicker = document.getElementById('annotationColor');
+        console.log('  - colorPicker:', colorPicker ? 'trouvé' : 'MANQUANT', colorPicker);
+        if (colorPicker) {
+            console.log('    - value:', colorPicker.value);
+            console.log('    - disabled:', colorPicker.disabled);
+        }
+        
+        // Curseur d'épaisseur
+        const strokeWidthSlider = document.getElementById('strokeWidth');
+        const strokeWidthValue = document.getElementById('strokeWidthValue');
+        console.log('  - strokeWidthSlider:', strokeWidthSlider ? 'trouvé' : 'MANQUANT', strokeWidthSlider);
+        console.log('  - strokeWidthValue:', strokeWidthValue ? 'trouvé' : 'MANQUANT', strokeWidthValue);
+        
+        if (strokeWidthSlider) {
+            console.log('    - value:', strokeWidthSlider.value);
+            console.log('    - min:', strokeWidthSlider.min);
+            console.log('    - max:', strokeWidthSlider.max);
+            console.log('    - disabled:', strokeWidthSlider.disabled);
+            console.log('    - step:', strokeWidthSlider.step);
+        }
+        
+        if (strokeWidthValue) {
+            console.log('    - textContent:', strokeWidthValue.textContent);
+        }
+    },
+    
+    // Tester les événements
+    testEvents: function() {
+        console.log('🎯 === TEST DES ÉVÉNEMENTS ===');
+        
+        console.log('  Test de changement d\'outil vers pen...');
+        setAnnotationTool('pen');
+        this.checkVariables();
+        
+        setTimeout(() => {
+            console.log('  Test de changement d\'outil vers highlighter...');
+            setAnnotationTool('highlighter');
+            this.checkVariables();
+            
+            setTimeout(() => {
+                console.log('  Test de changement d\'outil vers eraser...');
+                setAnnotationTool('eraser');
+                this.checkVariables();
+                
+                setTimeout(() => {
+                    console.log('  Test de changement de couleur...');
+                    setAnnotationColor('#00ff00');
+                    this.checkVariables();
+                    
+                    setTimeout(() => {
+                        console.log('  Test de changement d\'épaisseur...');
+                        setStrokeWidth(8);
+                        this.checkVariables();
+                    }, 500);
+                }, 500);
+            }, 500);
+        }, 500);
+    },
+    
+    // Tester les événements des sliders manuellement
+    testSliderEvents: function() {
+        console.log('🎚️ === TEST MANUEL DU SLIDER ===');
+        
+        const strokeWidthSlider = document.getElementById('strokeWidth');
+        if (!strokeWidthSlider) {
+            console.error('❌ Slider non trouvé');
+            return;
+        }
+        
+        console.log('  Valeur initiale du slider:', strokeWidthSlider.value);
+        console.log('  Variable currentStrokeWidth:', currentStrokeWidth);
+        
+        // Simuler un changement de valeur
+        console.log('  Simulation changement vers 7...');
+        strokeWidthSlider.value = 7;
+        
+        // Déclencher l'événement manuellement
+        const inputEvent = new Event('input', { bubbles: true });
+        strokeWidthSlider.dispatchEvent(inputEvent);
+        
+        setTimeout(() => {
+            console.log('  Après événement input:');
+            console.log('    - slider.value:', strokeWidthSlider.value);
+            console.log('    - currentStrokeWidth:', currentStrokeWidth);
+            console.log('    - strokeWidthValue.textContent:', document.getElementById('strokeWidthValue')?.textContent);
+        }, 100);
+    },
+    
+    // Vérifier l'état des boutons d'outils
+    checkToolButtons: function() {
+        console.log('🔘 === ÉTAT DES BOUTONS D\'OUTILS ===');
+        
+        ['penTool', 'highlighterTool', 'eraserTool'].forEach(toolId => {
+            const btn = document.getElementById(toolId);
+            if (btn) {
+                console.log(`  ${toolId}:`);
+                console.log(`    - active: ${btn.classList.contains('active')}`);
+                console.log(`    - disabled: ${btn.disabled}`);
+                console.log(`    - onclick: ${btn.onclick ? 'défini' : 'NON DÉFINI'}`);
+                console.log(`    - classList: ${btn.classList.toString()}`);
+            } else {
+                console.log(`  ${toolId}: INTROUVABLE`);
+            }
+        });
+    },
+    
+    // Test complet
+    fullTest: function() {
+        console.log('🧪 === TEST COMPLET DES OUTILS D\'ANNOTATION ===');
+        this.checkVariables();
+        this.checkDOMElements();
+        this.checkToolButtons();
+        
+        setTimeout(() => {
+            this.testSliderEvents();
+        }, 1000);
+        
+        setTimeout(() => {
+            this.testEvents();
+        }, 2000);
+    },
+    
+    // Forcer la réinitialisation des outils
+    resetTools: function() {
+        console.log('🔄 === RÉINITIALISATION FORCÉE DES OUTILS ===');
+        
+        // Réinitialiser les variables
+        currentTool = 'pen';
+        currentAnnotationTool = 'pen';
+        currentStrokeWidth = 3;
+        currentColor = '#ff0000';
+        currentAnnotationColor = '#ff0000';
+        
+        // Réinitialiser l'interface
+        setAnnotationTool('pen');
+        setStrokeWidth(3);
+        setAnnotationColor('#ff0000');
+        
+        console.log('✅ Outils réinitialisés');
+        this.checkVariables();
+    },
+    
+    // Reconfigurer manuellement les événements
+    rebindEvents: function() {
+        console.log('🔄 === RECONFIGURATION DES ÉVÉNEMENTS ===');
+        
+        // Supprimer les anciens événements en clonant les éléments
+        const toolButtons = document.querySelectorAll('[data-tool]');
+        console.log('🔘 Reconfiguration de', toolButtons.length, 'boutons d\'outils');
+        
+        toolButtons.forEach((btn, index) => {
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn.addEventListener('click', () => {
+                console.log('🖱️ [REBOUND] Clic sur bouton outil:', newBtn.dataset.tool);
+                setAnnotationTool(newBtn.dataset.tool);
+            });
+            
+            console.log(`  ✅ Bouton ${index} reconfiguré: ${newBtn.id} (${newBtn.dataset.tool})`);
+        });
+        
+        // Reconfigurer les couleurs
+        const colorButtons = document.querySelectorAll('.color-btn');
+        console.log('🎨 Reconfiguration de', colorButtons.length, 'boutons de couleur');
+        
+        colorButtons.forEach(btn => {
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn.addEventListener('click', () => {
+                console.log('🖱️ [REBOUND] Clic sur couleur:', newBtn.dataset.color);
+                setAnnotationColor(newBtn.dataset.color);
+            });
+        });
+        
+        // Reconfigurer le slider d'épaisseur
+        const strokeWidthSlider = document.getElementById('strokeWidth');
+        if (strokeWidthSlider) {
+            console.log('📏 Reconfiguration du slider d\'épaisseur');
+            
+            // Cloner le slider pour supprimer les anciens événements
+            const newSlider = strokeWidthSlider.cloneNode(true);
+            strokeWidthSlider.parentNode.replaceChild(newSlider, strokeWidthSlider);
+            
+            // Réattacher les événements
+            newSlider.addEventListener('input', (e) => {
+                console.log('🖱️ [REBOUND] Slider input:', e.target.value);
+                setStrokeWidth(e.target.value);
+            });
+            
+            newSlider.addEventListener('change', (e) => {
+                console.log('🖱️ [REBOUND] Slider change:', e.target.value);
+                setStrokeWidth(e.target.value);
+            });
+            
+            console.log('✅ Slider d\'épaisseur reconfiguré');
+        } else {
+            console.warn('⚠️ Slider d\'épaisseur non trouvé');
+        }
+        
+        // Reconfigurer le color picker
+        const colorPicker = document.getElementById('annotationColor');
+        if (colorPicker) {
+            console.log('🎨 Reconfiguration du color picker');
+            
+            const newColorPicker = colorPicker.cloneNode(true);
+            colorPicker.parentNode.replaceChild(newColorPicker, colorPicker);
+            
+            newColorPicker.addEventListener('change', (e) => {
+                console.log('🖱️ [REBOUND] Color picker:', e.target.value);
+                setAnnotationColor(e.target.value);
+            });
+            
+            console.log('✅ Color picker reconfiguré');
+        }
+        
+        console.log('✅ Tous les événements reconfigurés');
+    }
+};
+
+console.log('🎨 Fonctions de debug annotation disponibles: window.annotationDebug');
+console.log('   - checkVariables() : Vérifier l\'état des variables');
+console.log('   - checkDOMElements() : Vérifier les éléments DOM');
+console.log('   - testEvents() : Tester les changements d\'outils');
+console.log('   - testSliderEvents() : Tester le slider manuellement');
+console.log('   - checkToolButtons() : Vérifier l\'état des boutons');
+console.log('   - fullTest() : Test complet de tous les outils');
+console.log('   - resetTools() : Réinitialiser tous les outils');
+console.log('   - rebindEvents() : NOUVEAU - Reconfigurer les événements des boutons');
 
 // Fonction de correction automatique du scroll (appliquée à chaque chargement de PDF)
 function applyScrollFix() {
@@ -3891,26 +4161,47 @@ function setupAnnotationTools() {
     
     // Détecteurs de clics globaux supprimés pour simplifier
     
-    // Événements des outils
-    setupToolEvents();
+    // Événements des outils configurés maintenant dans le bon ordre après loadAnnotations()
 }
 
 // Fonctions de diagnostic supprimées pour simplifier le code
 
 function setupToolEvents() {
+    console.log('🔧 === CONFIGURATION DES ÉVÉNEMENTS D\'OUTILS ===');
+    
     // Outils de dessin
-    document.querySelectorAll('[data-tool]').forEach(btn => {
-        btn.addEventListener('click', () => setAnnotationTool(btn.dataset.tool));
+    const toolButtons = document.querySelectorAll('[data-tool]');
+    console.log('🔘 Boutons d\'outils trouvés:', toolButtons.length);
+    
+    toolButtons.forEach((btn, index) => {
+        console.log(`  Bouton ${index}: ${btn.id || 'sans ID'} (data-tool: ${btn.dataset.tool})`);
+        btn.addEventListener('click', () => {
+            console.log('🖱️ Clic sur bouton outil:', btn.dataset.tool);
+            setAnnotationTool(btn.dataset.tool);
+        });
     });
     
     // Couleurs
-    document.querySelectorAll('.color-btn').forEach(btn => {
-        btn.addEventListener('click', () => setAnnotationColor(btn.dataset.color));
+    const colorButtons = document.querySelectorAll('.color-btn');
+    console.log('🎨 Boutons de couleur trouvés:', colorButtons.length);
+    
+    colorButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            console.log('🖱️ Clic sur couleur:', btn.dataset.color);
+            setAnnotationColor(btn.dataset.color);
+        });
     });
     
-    document.getElementById('annotationColor').addEventListener('change', (e) => {
-        setAnnotationColor(e.target.value);
-    });
+    const colorPicker = document.getElementById('annotationColor');
+    if (colorPicker) {
+        console.log('🎨 Color picker trouvé et configuré');
+        colorPicker.addEventListener('change', (e) => {
+            console.log('🖱️ Changement color picker:', e.target.value);
+            setAnnotationColor(e.target.value);
+        });
+    } else {
+        console.warn('⚠️ Color picker non trouvé');
+    }
     
     // Épaisseur
     const strokeWidthSlider = document.getElementById('strokeWidth');
@@ -3923,16 +4214,12 @@ function setupToolEvents() {
         console.log('📏 Disabled:', strokeWidthSlider.disabled);
         
         strokeWidthSlider.addEventListener('input', (e) => {
-            currentStrokeWidth = parseInt(e.target.value);
-            strokeWidthValue.textContent = currentStrokeWidth;
-            console.log('🎨 Stroke width changed to:', currentStrokeWidth);
+            setStrokeWidth(e.target.value);
         });
         
         // Ajouter aussi l'événement 'change' pour les navigateurs qui ne supportent pas bien 'input'
         strokeWidthSlider.addEventListener('change', (e) => {
-            currentStrokeWidth = parseInt(e.target.value);
-            strokeWidthValue.textContent = currentStrokeWidth;
-            console.log('🎨 Stroke width changed to (change event):', currentStrokeWidth);
+            setStrokeWidth(e.target.value);
         });
         
         // Test si le curseur est accessible
@@ -3954,16 +4241,28 @@ function setupToolEvents() {
 
 // Changer d'outil d'annotation
 function setAnnotationTool(tool) {
+    // Synchroniser les deux variables pour éviter les incohérences
     currentAnnotationTool = tool;
+    currentTool = tool;
+    
+    console.log('🔧 Outil changé vers:', tool);
     
     // Mettre à jour l'interface
     document.querySelectorAll('[data-tool]').forEach(btn => {
         btn.classList.remove('active');
     });
     
-    document.querySelector(`[data-tool="${tool}"]`).classList.add('active');
+    const toolBtn = document.querySelector(`[data-tool="${tool}"]`);
+    if (toolBtn) {
+        toolBtn.classList.add('active');
+    }
     
-    // Changer le curseur
+    // Changer le curseur sur tous les canvas d'annotation
+    document.querySelectorAll('.annotation-canvas').forEach(canvas => {
+        canvas.style.cursor = tool === 'eraser' ? 'grab' : 'crosshair';
+    });
+    
+    // Changer le curseur sur le canvas principal si disponible
     if (annotationCanvas) {
         annotationCanvas.style.cursor = tool === 'eraser' ? 'grab' : 'crosshair';
     }
@@ -3972,6 +4271,9 @@ function setAnnotationTool(tool) {
 // Changer de couleur
 function setAnnotationColor(color) {
     currentColor = color;
+    currentAnnotationColor = color; // Synchroniser les deux variables
+    
+    console.log('🎨 Couleur changée vers:', color);
     
     // Mettre à jour l'interface
     document.querySelectorAll('.color-btn').forEach(btn => {
@@ -3983,7 +4285,30 @@ function setAnnotationColor(color) {
         colorBtn.classList.add('active');
     }
     
-    document.getElementById('annotationColor').value = color;
+    // Mettre à jour l'input color picker
+    const colorPicker = document.getElementById('annotationColor');
+    if (colorPicker) {
+        colorPicker.value = color;
+    }
+}
+
+// Fonction pour mettre à jour la taille du trait
+function setStrokeWidth(width) {
+    currentStrokeWidth = parseInt(width);
+    
+    console.log('📏 Épaisseur changée vers:', currentStrokeWidth);
+    
+    // Mettre à jour l'affichage de la valeur
+    const strokeWidthValue = document.getElementById('strokeWidthValue');
+    if (strokeWidthValue) {
+        strokeWidthValue.textContent = currentStrokeWidth;
+    }
+    
+    // Mettre à jour le slider
+    const strokeWidthSlider = document.getElementById('strokeWidth');
+    if (strokeWidthSlider) {
+        strokeWidthSlider.value = currentStrokeWidth;
+    }
 }
 
 // Fonction de dessin simple - basée sur la logique de la gomme qui fonctionne
