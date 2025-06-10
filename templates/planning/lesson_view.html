@@ -1178,6 +1178,24 @@ if (typeof pdfjsLib !== 'undefined') {
     <span id="savingText">Sauvegarde...</span>
 </div>
 
+<!-- Vue côte-à-côte pour édition avec PDF -->
+<div class="split-view-container" id="splitViewContainer">
+    <div class="split-view-left">
+        <div class="split-view-header">
+            <h2>Éditer la planification</h2>
+        </div>
+        <div id="splitViewPlanningEdit">
+            <!-- Le contenu du formulaire sera copié ici -->
+        </div>
+    </div>
+    <div class="split-view-right" id="splitViewRight">
+        <button class="split-view-close" onclick="closeSplitView()" title="Fermer la vue côte-à-côte">
+            <i class="fas fa-times"></i>
+        </button>
+        <!-- Le viewer PDF sera intégré ici -->
+    </div>
+</div>
+
 <!-- Modal Viewer/Annotateur -->
 <div class="file-viewer-modal" id="fileViewerModal">
     <div class="viewer-header">
@@ -1276,6 +1294,7 @@ const lessonDate = '{{ lesson_date.strftime("%Y-%m-%d") }}';
 const periodNumber = {{ lesson.period_number }};
 const classroomId = {{ lesson.classroom_id }};
 let isEditingPlanning = false;
+let isSplitViewActive = false;
 
 // Variables pour le système de sanctions
 let initialSanctionCounts = {};
@@ -1337,6 +1356,15 @@ function changeLayout(layout) {
     setTimeout(() => {
         lessonMain.style.transform = 'scale(1)';
     }, 150);
+    
+    // Recalculer la taille du plan de classe si l'onglet est actif
+    setTimeout(() => {
+        const seatingPlanContent = document.getElementById('seating-plan-content');
+        if (seatingPlanContent && seatingPlanContent.classList.contains('active')) {
+            console.log('Recalcul de la taille du plan de classe après changement de layout');
+            adjustSeatingScale();
+        }
+    }, 200);
 }
 
 // Initialiser les contrôles de disposition
@@ -2250,7 +2278,13 @@ async function openFileViewer(fileId, filename, fileType) {
     currentScale = 1.0;
     annotations = [];
     
-    // Afficher le modal
+    // Si l'éditeur de planification est actif, ouvrir en vue split
+    if (isEditingPlanning) {
+        openSplitView(fileId, filename, fileType);
+        return;
+    }
+    
+    // Sinon, ouvrir normalement
     const modal = document.getElementById('fileViewerModal');
     modal.classList.add('show');
     
@@ -3556,6 +3590,12 @@ async function loadImage(fileId, container) {
 // Fermer le viewer amélioré
 function closeFileViewer() {
     try {
+        // Si on est en vue split, fermer toute la vue split
+        if (isSplitViewActive) {
+            closeSplitView();
+            return;
+        }
+        
         // Sauvegarder les annotations de la page actuelle avant de fermer
         console.log('📄 Fermeture du viewer - sauvegarde des annotations de la page actuelle...');
         saveCurrentPageAnnotations();
@@ -3597,6 +3637,167 @@ function closeFileViewer() {
         if (modal) {
             modal.style.display = 'none';
         }
+    }
+}
+
+// Fonctions pour la vue côte-à-côte (split view)
+async function openSplitView(fileId, filename, fileType) {
+    isSplitViewActive = true;
+    
+    // Copier le formulaire de planification dans la vue split
+    const planningEdit = document.getElementById('planningEdit');
+    const splitViewPlanningEdit = document.getElementById('splitViewPlanningEdit');
+    splitViewPlanningEdit.innerHTML = planningEdit.innerHTML;
+    
+    // Copier les valeurs actuelles
+    const originalTitle = document.getElementById('planningTitle').value;
+    const originalDescription = document.getElementById('planningDescription').value;
+    
+    setTimeout(() => {
+        const splitTitle = splitViewPlanningEdit.querySelector('#planningTitle');
+        const splitDescription = splitViewPlanningEdit.querySelector('#planningDescription');
+        if (splitTitle) splitTitle.value = originalTitle;
+        if (splitDescription) splitDescription.value = originalDescription;
+        
+        // Attacher les événements au nouveau formulaire
+        const splitForm = splitViewPlanningEdit.querySelector('#planningForm');
+        if (splitForm) {
+            splitForm.onsubmit = function(e) {
+                e.preventDefault();
+                savePlanningFromSplitView();
+            };
+        }
+    }, 100);
+    
+    // Afficher la vue split
+    const splitContainer = document.getElementById('splitViewContainer');
+    splitContainer.classList.add('active');
+    
+    // Masquer le contenu normal
+    document.querySelector('.lesson-container').style.display = 'none';
+    
+    // Intégrer le viewer PDF dans la partie droite
+    const modal = document.getElementById('fileViewerModal');
+    const splitViewRight = document.getElementById('splitViewRight');
+    
+    modal.classList.add('embedded');
+    splitViewRight.appendChild(modal);
+    modal.classList.add('show');
+    
+    // Initialiser les canvas
+    initializeCanvases();
+    
+    // Charger le fichier
+    try {
+        if (fileType.toLowerCase() === 'pdf') {
+            await loadPDF(fileId);
+            await loadAnnotations(fileId);
+        } else if (['png', 'jpg', 'jpeg'].includes(fileType.toLowerCase())) {
+            await loadImage(fileId);
+            await loadAnnotations(fileId);
+        }
+        
+        setupAnnotationTools();
+        
+    } catch (error) {
+        console.error('Erreur lors du chargement du fichier:', error);
+        showError('Erreur lors du chargement du fichier');
+    }
+}
+
+function closeSplitView() {
+    // Synchroniser les valeurs de retour
+    const splitTitle = document.querySelector('#splitViewPlanningEdit #planningTitle');
+    const splitDescription = document.querySelector('#splitViewPlanningEdit #planningDescription');
+    const originalTitle = document.getElementById('planningTitle');
+    const originalDescription = document.getElementById('planningDescription');
+    
+    if (splitTitle && originalTitle) {
+        originalTitle.value = splitTitle.value;
+    }
+    if (splitDescription && originalDescription) {
+        originalDescription.value = splitDescription.value;
+    }
+    
+    // Sauvegarder les annotations avant de fermer
+    if (currentFileId && (Object.keys(annotationsByPage).length > 0 || annotations.length > 0)) {
+        saveCurrentPageAnnotations();
+        saveAnnotations();
+    }
+    
+    // Fermer le viewer PDF sans rappeler closeSplitView
+    const modal = document.getElementById('fileViewerModal');
+    if (modal) {
+        modal.classList.remove('show');
+        modal.classList.remove('embedded');
+        document.body.appendChild(modal);
+    }
+    
+    // Nettoyer les variables du viewer
+    currentFileId = null;
+    annotations = [];
+    annotationsByPage = {};
+    undoHistoryByPage = {};
+    pdfDoc = null;
+    currentPageNum = 1;
+    currentScale = 1.0;
+    
+    // Masquer la vue split
+    const splitContainer = document.getElementById('splitViewContainer');
+    splitContainer.classList.remove('active');
+    
+    // Réafficher le contenu normal
+    document.querySelector('.lesson-container').style.display = '';
+    
+    // Réinitialiser le flag
+    isSplitViewActive = false;
+}
+
+async function savePlanningFromSplitView() {
+    const splitTitle = document.querySelector('#splitViewPlanningEdit #planningTitle');
+    const splitDescription = document.querySelector('#splitViewPlanningEdit #planningDescription');
+    
+    if (!splitTitle || !splitDescription) return;
+    
+    showSavingIndicator(true);
+    
+    try {
+        const response = await fetch('/planning/save-lesson-planning', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                date: lessonDate,
+                period_number: periodNumber,
+                classroom_id: classroomId,
+                title: splitTitle.value,
+                description: splitDescription.value,
+                checklist_states: checklistStates
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess('Planification enregistrée');
+            
+            // Synchroniser avec le formulaire original
+            const originalTitle = document.getElementById('planningTitle');
+            const originalDescription = document.getElementById('planningDescription');
+            if (originalTitle) originalTitle.value = splitTitle.value;
+            if (originalDescription) originalDescription.value = splitDescription.value;
+            
+            // Mettre à jour l'affichage si nécessaire
+            updatePlanningDisplay();
+        } else {
+            showError(data.message || 'Erreur lors de la sauvegarde');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors de la sauvegarde');
+    } finally {
+        showSavingIndicator(false);
     }
 }
 
@@ -3642,10 +3843,14 @@ function showTrackingTab(tabName) {
     // Afficher le contenu correspondant
     document.getElementById(tabName + '-content').classList.add('active');
     
-    // Si c'est l'onglet plan de classe, charger le plan
+    // Si c'est l'onglet plan de classe, charger le plan et ajuster l'échelle
     if (tabName === 'seating-plan') {
         setTimeout(() => {
             loadSeatingPlan();
+            // Ajustement supplémentaire pour s'assurer que l'échelle est correcte
+            setTimeout(() => {
+                adjustSeatingScale();
+            }, 150);
         }, 100);
     }
 }
@@ -4064,6 +4269,23 @@ function loadSeatingPlan() {
     currentWarnings = {};
     warningHistory = [];
     updateUndoButton();
+    
+    // Observer les changements de taille du conteneur
+    if (window.ResizeObserver) {
+        const resizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                if (entry.target.id === 'seating-plan-viewer') {
+                    console.log('Plan de classe viewer redimensionné, ajustement de l\'échelle');
+                    adjustSeatingScale();
+                }
+            }
+        });
+        
+        const viewer = document.getElementById('seating-plan-viewer');
+        if (viewer) {
+            resizeObserver.observe(viewer);
+        }
+    }
     
     {% endif %}
 }
@@ -4787,6 +5009,91 @@ function adjustSeatingScale() {
     padding: 0 2px;
 }
 
+/* Vue côte-à-côte pour édition de planification avec visualisation PDF */
+.split-view-container {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #f5f5f5;
+    z-index: 9999;
+}
+
+.split-view-container.active {
+    display: flex;
+}
+
+.split-view-left {
+    width: 40%;
+    height: 100%;
+    background-color: white;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+    padding: 2rem;
+}
+
+.split-view-left .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.split-view-left .form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #D1D5DB;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.split-view-left .form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.split-view-left textarea.form-control {
+    resize: vertical;
+    min-height: 200px;
+}
+
+.split-view-right {
+    width: 60%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.split-view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.split-view-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10001;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.split-view-close:hover {
+    background-color: rgba(0, 0, 0, 0.9);
+}
+
 /* Styles pour le Modal Viewer/Annotateur Amélioré */
 .file-viewer-modal {
     position: fixed;
@@ -4802,6 +5109,17 @@ function adjustSeatingScale() {
 
 .file-viewer-modal.show {
     display: flex;
+}
+
+/* Mode intégré pour le viewer dans la vue split */
+.file-viewer-modal.embedded {
+    position: absolute;
+    background-color: transparent;
+}
+
+.file-viewer-modal.embedded .viewer-header {
+    background-color: #2d3748;
+    color: white;
 }
 
 .viewer-header {
