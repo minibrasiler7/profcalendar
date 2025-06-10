@@ -1200,18 +1200,8 @@ if (typeof pdfjsLib !== 'undefined') {
 <div class="file-viewer-modal" id="fileViewerModal">
     <div class="viewer-header">
         <div class="viewer-title">
-            <span id="pageInfo" class="page-info">Page 1 / 1</span>
         </div>
         <div class="viewer-tools">
-            <!-- Navigation PDF -->
-            <div class="tool-group">
-                <button class="tool-btn" id="prevPageBtn" onclick="previousPage()" title="Page précédente">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <button class="tool-btn" id="nextPageBtn" onclick="nextPage()" title="Page suivante">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
             
             <!-- Outils de dessin -->
             <div class="tool-group">
@@ -2410,6 +2400,20 @@ async function openFileViewer(fileId, filename, fileType) {
             
             console.log('🧪 Fonction de test créée: window.annotationTest()');
             
+            // NOUVEAU: Test du système de dessin lissé
+            window.testSmoothDrawing = function() {
+                console.log('🎨 === TEST SYSTÈME DE DESSIN LISSÉ ===');
+                console.log('✏️ Le nouveau système inclut :');
+                console.log('  - Lissage quadratique pour des courbes plus douces');
+                console.log('  - Pression variable basée sur la vitesse de dessin');
+                console.log('  - Rendu amélioré des annotations sauvegardées');
+                console.log('  - Épaisseur dynamique du trait');
+                console.log('🎯 Pour tester : dessinez lentement puis rapidement et observez la différence d\'épaisseur');
+                console.log('🎨 Essayez différentes vitesses pour voir l\'effet de "pression" simulée');
+            };
+            
+            console.log('🎨 Fonction de test lissage créée: window.testSmoothDrawing()');
+            
             // NOUVEAU: Auto-redessinage périodique pendant les premiers 10 secondes
             let autoRedrawCount = 0;
             const autoRedrawInterval = setInterval(() => {
@@ -2593,7 +2597,6 @@ async function loadPDF(fileId) {
         
         // Mettre à jour l'interface
         updatePageInfo();
-        updateNavigationButtons();
         
         // Générer les miniatures
         await generateThumbnails();
@@ -2731,8 +2734,7 @@ window.pdfDebug = {
             firstPage.scrollIntoView({ behavior: 'auto', block: 'start' });
             currentPageNum = 1;
             updatePageInfo();
-            updateNavigationButtons();
-            updateActiveThumbnail();
+                    updateActiveThumbnail();
             console.log('✅ Navigation forcée vers page 1');
         }
     },
@@ -2865,7 +2867,6 @@ window.pdfDebug = {
         // Force la page à 1
         currentPageNum = 1;
         updatePageInfo();
-        updateNavigationButtons();
         updateActiveThumbnail();
         
         // Force le scroll
@@ -3053,7 +3054,6 @@ window.pdfDebug = {
                             
                             currentPageNum = 1;
                             updatePageInfo();
-                            updateNavigationButtons();
                             updateActiveThumbnail();
                             
                             setTimeout(() => {
@@ -3069,7 +3069,6 @@ window.pdfDebug = {
                     console.log('✅ CORRECTION RÉUSSIE - Page 1 maintenant visible !');
                     currentPageNum = 1;
                     updatePageInfo();
-                    updateNavigationButtons();
                     updateActiveThumbnail();
                 }
             }, 100);
@@ -3483,7 +3482,6 @@ function applyScrollFix() {
             // Forcer la page courante à 1
             currentPageNum = 1;
             updatePageInfo();
-            updateNavigationButtons();
             updateActiveThumbnail();
             
             // Redémarrer l'observer après correction
@@ -3501,7 +3499,6 @@ function applyScrollFix() {
         viewerContainer.scrollTop = 0;
         currentPageNum = 1;
         updatePageInfo();
-        updateNavigationButtons();
         updateActiveThumbnail();
     }
 }
@@ -3747,6 +3744,9 @@ function setupScrollObserver() {
             console.log(`📊 Avant changement - annotations page ${oldPageNum}: ${annotations.length}`);
             console.log(`🔄 Chargement des annotations pour la nouvelle page ${currentPageNum}...`);
             
+            // IMPORTANT: Réinitialiser les variables de dessin lissé lors du changement de page
+            resetSmoothDrawingVariables();
+            
             // Charger les annotations de la nouvelle page
             loadPageAnnotations(currentPageNum);
             
@@ -3764,7 +3764,6 @@ function setupScrollObserver() {
             }, 100);
             
             updatePageInfo();
-            updateNavigationButtons();
             updateActiveThumbnail();
             
             console.log(`🏁 === FIN CHANGEMENT DE PAGE ===`);
@@ -3817,7 +3816,6 @@ function setupScrollObserver() {
                 console.log(`📄 Scroll detection: Page ${currentPageNum} → ${mostVisiblePage}`);
                 currentPageNum = mostVisiblePage;
                 updatePageInfo();
-                updateNavigationButtons();
                 updateActiveThumbnail();
             }
         }, 100);
@@ -3960,10 +3958,7 @@ async function loadImage(fileId) {
         pdfCtx.imageSmoothingQuality = 'high';
         pdfCtx.drawImage(img, 0, 0, width, height);
         
-        // Masquer les contrôles PDF
-        document.getElementById('prevPageBtn').style.display = 'none';
-        document.getElementById('nextPageBtn').style.display = 'none';
-        document.getElementById('pageInfo').style.display = 'none';
+        // Masquer les contrôles PDF (supprimés)
         
     } catch (error) {
         console.error('Erreur lors du chargement de l\'image:', error);
@@ -3974,6 +3969,8 @@ async function loadImage(fileId) {
 // ===== FONCTIONS DE NAVIGATION PDF =====
 
 // Navigation entre pages
+// Fonction previousPage() supprimée - navigation via scroll uniquement
+/*
 function previousPage() {
     if (currentPageNum <= 1 || !pdfDoc) return;
     if (isDrawing) {
@@ -4006,12 +4003,14 @@ function previousPage() {
     }
     
     updatePageInfo();
-    updateNavigationButtons();
     updateActiveThumbnail();
     
     isNavigating = false; // Marquer la fin de la navigation
 }
+*/
 
+// Fonction nextPage() supprimée - navigation via scroll uniquement  
+/*
 function nextPage() {
     if (currentPageNum >= pdfDoc.numPages || !pdfDoc) return;
     if (isDrawing) {
@@ -4044,11 +4043,11 @@ function nextPage() {
     }
     
     updatePageInfo();
-    updateNavigationButtons();
     updateActiveThumbnail();
     
     isNavigating = false; // Marquer la fin de la navigation
 }
+*/
 
 function goToPage(pageNum) {
     console.log(`🔍 DEBUG: goToPage - Aller à la page ${pageNum}`);
@@ -4110,7 +4109,6 @@ function goToPage(pageNum) {
             // Mettre à jour l'état de la page
             currentPageNum = pageNum;
             updatePageInfo();
-            updateNavigationButtons();
             updateActiveThumbnail();
             
             console.log(`✅ Navigation vers page ${pageNum} initiée`);
@@ -4135,7 +4133,6 @@ function goToPage(pageNum) {
     }
     
     updatePageInfo();
-    updateNavigationButtons();
     updateActiveThumbnail();
     
     isNavigating = false; // Marquer la fin de la navigation
@@ -4190,17 +4187,14 @@ function getCanvasCoordinates(e) {
 
 // Mettre à jour les informations de page
 function updatePageInfo() {
+    // Fonction simplifiée - plus d'affichage d'info de page dans l'interface
+    // Les informations de page sont gérées via les miniatures et le scroll
     if (pdfDoc) {
-        document.getElementById('pageInfo').textContent = `Page ${currentPageNum} / ${pdfDoc.numPages}`;
+        console.log(`📄 Page actuelle: ${currentPageNum} / ${pdfDoc.numPages}`);
     }
 }
 
-function updateNavigationButtons() {
-    if (!pdfDoc) return;
-    
-    document.getElementById('prevPageBtn').disabled = currentPageNum <= 1;
-    document.getElementById('nextPageBtn').disabled = currentPageNum >= pdfDoc.numPages;
-}
+// Fonction de navigation supprimée - plus utilisée
 
 // Générer les miniatures
 async function generateThumbnails() {
@@ -4455,6 +4449,9 @@ function setAnnotationTool(tool) {
     currentAnnotationTool = tool;
     currentTool = tool;
     
+    // Réinitialiser les variables de dessin lissé lors du changement d'outil
+    resetSmoothDrawingVariables();
+    
     console.log('🔧 Outil changé vers:', tool);
     
     // Mettre à jour l'interface
@@ -4534,13 +4531,14 @@ function startDrawing(e) {
     console.log('🎨 Début du dessin avec outil:', currentAnnotationTool);
     
     const coords = getCanvasCoordinates(e);
+    coords.timestamp = Date.now(); // Ajouter timestamp pour calculer la vitesse
     currentStroke.push(coords);
     
     if (currentAnnotationTool === 'eraser') {
         eraseAt(coords.x, coords.y);
     } else {
-        // Pour le stylo : commencer un nouveau path
-        drawAt(coords.x, coords.y, true); // true = début de trait
+        // Pour le stylo : commencer un nouveau path avec le nouveau système
+        initializeSmoothDrawing(coords.x, coords.y);
     }
 }
 
@@ -4549,13 +4547,14 @@ function draw(e) {
     if (!isDrawing) return;
     
     const coords = getCanvasCoordinates(e);
+    coords.timestamp = Date.now(); // Ajouter timestamp pour calculer la vitesse
     currentStroke.push(coords);
     
     if (currentAnnotationTool === 'eraser') {
         eraseAt(coords.x, coords.y);
     } else {
-        // Pour le stylo : continuer le trait
-        drawAt(coords.x, coords.y, false); // false = continuation de trait
+        // Pour le stylo : continuer le trait avec lissage
+        continueSmoothDrawing(coords.x, coords.y);
     }
 }
 
@@ -4566,9 +4565,10 @@ function stopDrawing() {
     console.log('🛑 Arrêt du dessin');
     isDrawing = false;
     
-    // Finaliser le dessin (pour restaurer le contexte)
+    // Finaliser le dessin lissé
     if (currentAnnotationTool !== 'eraser') {
-        annotationCtx.restore();
+        finalizeSmoothDrawing();
+        // PAS de restore() pour éviter la perte de contexte
     }
     
     // Sauvegarder l'annotation si ce n'est pas la gomme
@@ -4585,12 +4585,203 @@ function stopDrawing() {
         
         annotations.push(annotation);
         undoHistory.push(annotations.length - 1);
+        console.log('💾 Annotation sauvegardée avec', currentStroke.length, 'points');
     }
     
     currentStroke = [];
+    // Réinitialiser les variables de dessin pour le prochain trait
+    resetSmoothDrawingVariables();
 }
 
 // Fonction de dessin simple - inspirée d'eraseAt qui fonctionne bien
+// === SYSTÈME DE DESSIN LISSÉ (STYLE PROCREATE) ===
+
+// Variables pour le dessin lissé style Procreate
+let lastPoint = null;
+let lastVelocity = 0;
+let strokePressure = 1.0;
+let smoothDrawingInitialized = false;
+let currentPath = null; // Stocke le path en cours
+let drawingPoints = []; // Buffer des points pour le lissage
+let isRealTimeSmoothing = true;
+
+// Fonction pour réinitialiser les variables de dessin lissé
+function resetSmoothDrawingVariables() {
+    lastPoint = null;
+    lastVelocity = 0;
+    strokePressure = 1.0;
+    smoothDrawingInitialized = false;
+    currentPath = null;
+    drawingPoints = [];
+    console.log('🔄 Variables de dessin lissé réinitialisées');
+}
+
+// Initialiser le dessin lissé style Procreate
+function initializeSmoothDrawing(x, y) {
+    // Réinitialiser les variables si c'est un nouveau trait
+    if (!smoothDrawingInitialized) {
+        resetSmoothDrawingVariables();
+    }
+    
+    // Configurer le style pour ce trait - SANS save() pour éviter les problèmes de contexte
+    if (currentAnnotationTool === 'pen') {
+        annotationCtx.globalCompositeOperation = 'source-over';
+        annotationCtx.strokeStyle = currentColor;
+        annotationCtx.lineCap = 'round';
+        annotationCtx.lineJoin = 'round';
+        annotationCtx.globalAlpha = 1.0;
+    } else if (currentAnnotationTool === 'highlighter') {
+        annotationCtx.globalCompositeOperation = 'multiply';
+        annotationCtx.strokeStyle = currentColor;
+        annotationCtx.lineCap = 'round';
+        annotationCtx.lineJoin = 'round';
+        annotationCtx.globalAlpha = 0.3;
+    }
+    
+    // Calculer la largeur initiale
+    const initialWidth = calculateStrokeWidth(0);
+    annotationCtx.lineWidth = initialWidth;
+    
+    // Initialiser les variables de lissage
+    lastPoint = { x: x, y: y, timestamp: Date.now() };
+    lastVelocity = 0;
+    strokePressure = 1.0;
+    smoothDrawingInitialized = true;
+    
+    // Initialiser le buffer de points pour le lissage
+    drawingPoints = [{ x, y, timestamp: Date.now() }];
+    
+    // Commencer un nouveau path continu
+    annotationCtx.beginPath();
+    annotationCtx.moveTo(x, y);
+    
+    console.log('🎨 Dessin lissé Procreate initialisé à', {x, y});
+}
+
+// Continuer le dessin lissé en temps réel (style Procreate)
+function continueSmoothDrawing(x, y) {
+    if (!lastPoint || !smoothDrawingInitialized) {
+        console.warn('⚠️ continueSmoothDrawing appelé sans initialisation');
+        return;
+    }
+    
+    // Vérifier que le contexte est encore valide
+    if (!annotationCtx) {
+        console.error('❌ Context d\'annotation perdu - réinitialisation nécessaire');
+        resetSmoothDrawingVariables();
+        return;
+    }
+    
+    const currentTime = Date.now();
+    
+    // Ajouter le nouveau point au buffer
+    drawingPoints.push({ x, y, timestamp: currentTime });
+    
+    // Garder seulement les 4 derniers points pour le lissage
+    if (drawingPoints.length > 4) {
+        drawingPoints.shift();
+    }
+    
+    // Dessiner en temps réel seulement s'il y a assez de points
+    if (drawingPoints.length >= 2) {
+        drawSmoothSegment();
+    }
+    
+    // Mettre à jour le dernier point
+    lastPoint = { x: x, y: y, timestamp: currentTime };
+}
+
+// Dessiner un segment lissé en temps réel
+function drawSmoothSegment() {
+    if (drawingPoints.length < 2) return;
+    
+    const len = drawingPoints.length;
+    const currentPoint = drawingPoints[len - 1];
+    const previousPoint = drawingPoints[len - 2];
+    
+    // Calculer la vitesse
+    const distance = Math.sqrt(
+        Math.pow(currentPoint.x - previousPoint.x, 2) + 
+        Math.pow(currentPoint.y - previousPoint.y, 2)
+    );
+    const timeDelta = currentPoint.timestamp - previousPoint.timestamp;
+    const velocity = timeDelta > 0 ? distance / Math.max(timeDelta, 1) : 0;
+    
+    // Lisser la vitesse
+    const smoothedVelocity = lastVelocity * 0.6 + velocity * 0.4;
+    lastVelocity = smoothedVelocity;
+    
+    // Calculer la largeur du trait
+    const strokeWidth = calculateStrokeWidth(smoothedVelocity);
+    annotationCtx.lineWidth = strokeWidth;
+    
+    // Dessiner selon le nombre de points disponibles
+    if (len >= 3) {
+        // Utiliser une courbe de Bézier pour un lissage optimal
+        const p0 = drawingPoints[len - 3];
+        const p1 = drawingPoints[len - 2];
+        const p2 = drawingPoints[len - 1];
+        
+        // Calculer les points de contrôle pour une courbe lisse
+        const cp1x = p1.x + (p2.x - p0.x) * 0.2;
+        const cp1y = p1.y + (p2.y - p0.y) * 0.2;
+        
+        // Dessiner la courbe de Bézier quadratique
+        annotationCtx.quadraticCurveTo(cp1x, cp1y, p2.x, p2.y);
+    } else {
+        // Pour les deux premiers points, dessiner une ligne simple
+        annotationCtx.lineTo(currentPoint.x, currentPoint.y);
+    }
+    
+    // Appliquer le stroke en temps réel pour voir le trait se former
+    annotationCtx.stroke();
+    
+    // Continuer le path sans le fermer
+    annotationCtx.beginPath();
+    annotationCtx.moveTo(currentPoint.x, currentPoint.y);
+}
+
+// Calculer la largeur du trait basée sur la vitesse (simulation de pression)
+function calculateStrokeWidth(velocity) {
+    const baseWidth = currentStrokeWidth * (currentScale || 1);
+    const multiplier = currentAnnotationTool === 'highlighter' ? 3 : 1;
+    
+    // Plus la vitesse est élevée, plus le trait est fin (comme avec un vrai stylo)
+    // Normaliser la vitesse (valeurs typiques entre 0 et 20 pixels/ms)
+    const normalizedVelocity = Math.min(velocity / 5, 1);
+    
+    // Calculer la variation de largeur (20% de variation max)
+    const minWidth = baseWidth * 0.8;
+    const maxWidth = baseWidth * 1.2;
+    
+    // Vitesse faible = trait plus épais, vitesse élevée = trait plus fin
+    const dynamicWidth = maxWidth - (normalizedVelocity * (maxWidth - minWidth));
+    
+    return dynamicWidth * multiplier;
+}
+
+// Finaliser le dessin lissé
+function finalizeSmoothDrawing() {
+    if (drawingPoints.length > 0) {
+        // Terminer le path avec une largeur stable
+        const finalWidth = calculateStrokeWidth(0);
+        annotationCtx.lineWidth = finalWidth;
+        
+        // Dessiner les derniers segments s'il y en a
+        if (drawingPoints.length >= 2) {
+            const lastPoint = drawingPoints[drawingPoints.length - 1];
+            annotationCtx.lineTo(lastPoint.x, lastPoint.y);
+            annotationCtx.stroke();
+        }
+    }
+    
+    console.log('🏁 Finalisation du dessin lissé Procreate avec', drawingPoints.length, 'points');
+    // Réinitialiser les variables SANS restore() pour éviter les problèmes
+    resetSmoothDrawingVariables();
+}
+
+// === FIN DU SYSTÈME DE DESSIN LISSÉ ===
+
 function drawAt(x, y, isStart) {
     if (isStart) {
         // Configurer le style pour ce trait
@@ -4756,12 +4947,33 @@ function redrawAnnotations() {
             currentAnnotationCtx.globalAlpha = 0.3;
         }
         
-        // Dessiner le trait
-        for (let i = 1; i < annotation.points.length; i++) {
-            currentAnnotationCtx.lineTo(annotation.points[i].x, annotation.points[i].y);
+        // Dessiner le trait avec lissage quadratique pour un meilleur rendu
+        if (annotation.points.length === 1) {
+            // Point unique - dessiner un petit cercle
+            currentAnnotationCtx.arc(annotation.points[0].x, annotation.points[0].y, currentAnnotationCtx.lineWidth / 2, 0, 2 * Math.PI);
+            currentAnnotationCtx.fill();
+        } else if (annotation.points.length === 2) {
+            // Trait simple entre deux points
+            currentAnnotationCtx.lineTo(annotation.points[1].x, annotation.points[1].y);
+            currentAnnotationCtx.stroke();
+        } else {
+            // Trait complexe - utiliser des courbes quadratiques pour un rendu plus lisse
+            for (let i = 1; i < annotation.points.length - 1; i++) {
+                const currentPoint = annotation.points[i];
+                const nextPoint = annotation.points[i + 1];
+                
+                // Point de contrôle au milieu pour la courbe quadratique
+                const controlX = (currentPoint.x + nextPoint.x) / 2;
+                const controlY = (currentPoint.y + nextPoint.y) / 2;
+                
+                currentAnnotationCtx.quadraticCurveTo(currentPoint.x, currentPoint.y, controlX, controlY);
+            }
+            
+            // Finir jusqu'au dernier point
+            const lastPoint = annotation.points[annotation.points.length - 1];
+            currentAnnotationCtx.lineTo(lastPoint.x, lastPoint.y);
+            currentAnnotationCtx.stroke();
         }
-        
-        currentAnnotationCtx.stroke();
         
         if (annotation.type === 'highlighter') {
             currentAnnotationCtx.globalAlpha = 1.0;
@@ -4867,6 +5079,9 @@ function loadPageAnnotations(pageNum) {
     
     // Tracer qui appelle cette fonction
     console.trace('📍 Trace de l\'appel loadPageAnnotations:');
+    
+    // IMPORTANT: Réinitialiser les variables de dessin lissé lors du chargement d'une nouvelle page
+    resetSmoothDrawingVariables();
     
     // CORRECTION CRITIQUE: Mettre à jour les variables globales pour pointer vers la bonne page
     annotationCanvas = document.getElementById(`annotation-canvas-${pageNum}`);
@@ -6721,15 +6936,7 @@ function adjustSeatingScale() {
     font-weight: 500;
 }
 
-.page-info {
-    font-size: 0.9rem;
-    color: #718096;
-    font-weight: normal;
-    background-color: #edf2f7;
-    padding: 0.25rem 0.75rem;
-    border-radius: 0.375rem;
-    border: 1px solid #e2e8f0;
-}
+/* Styles page-info supprimés */
 
 .viewer-tools {
     display: flex;
