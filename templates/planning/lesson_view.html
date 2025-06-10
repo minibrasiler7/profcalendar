@@ -1090,6 +1090,15 @@ if (typeof pdfjsLib !== 'undefined') {
             <!-- Section plan de classe -->
             {% if seating_plan %}
             <div class="seating-plan-content tracking-content" id="seating-plan-content">
+                <div class="seating-plan-header">
+                    <div class="seating-plan-info">
+                        <h3><i class="fas fa-th"></i> Plan de classe</h3>
+                        <p>Cliquez sur les tables pour ajouter des avertissements : jaune → rouge → noir</p>
+                    </div>
+                    <button id="undo-warning-btn" class="btn btn-primary" onclick="undoLastWarning()" disabled>
+                        <i class="fas fa-undo"></i> Annuler
+                    </button>
+                </div>
                 <div class="seating-plan-container">
                     <div class="seating-plan-viewer" id="seating-plan-viewer">
                         <div class="seating-workspace" id="seating-workspace">
@@ -3924,6 +3933,63 @@ function updateDebugPanel(message) {
     }
 }
 
+// Variables globales pour le système d'avertissements et l'historique
+let warningHistory = []; // Historique des changements pour le bouton "annuler"
+let currentWarnings = {}; // État actuel des avertissements {elementId_slotIndex: warningLevel}
+
+// Fonction pour sauvegarder l'état dans l'historique
+function saveToHistory() {
+    warningHistory.push(JSON.parse(JSON.stringify(currentWarnings)));
+    if (warningHistory.length > 50) { // Limiter l'historique à 50 actions
+        warningHistory.shift();
+    }
+    updateUndoButton();
+}
+
+// Fonction pour annuler le dernier changement
+function undoLastWarning() {
+    if (warningHistory.length > 1) {
+        warningHistory.pop(); // Enlever l'état actuel
+        currentWarnings = JSON.parse(JSON.stringify(warningHistory[warningHistory.length - 1]));
+        applyWarningStates();
+        updateUndoButton();
+    } else if (warningHistory.length === 1) {
+        warningHistory.pop();
+        currentWarnings = {};
+        applyWarningStates();
+        updateUndoButton();
+    }
+}
+
+// Fonction pour appliquer les états d'avertissement visuellement
+function applyWarningStates() {
+    // Réinitialiser tous les slots
+    document.querySelectorAll('.student-slot').forEach(slot => {
+        slot.classList.remove('warning-1', 'warning-2', 'warning-3');
+    });
+    
+    // Appliquer les états actuels
+    Object.keys(currentWarnings).forEach(key => {
+        const [elementId, slotIndex] = key.split('_');
+        const element = document.querySelector(`[data-element-id="${elementId}"]`);
+        if (element) {
+            const slots = element.querySelectorAll('.student-slot');
+            const slot = slots[parseInt(slotIndex)];
+            if (slot && currentWarnings[key] > 0) {
+                slot.classList.add(`warning-${currentWarnings[key]}`);
+            }
+        }
+    });
+}
+
+// Fonction pour mettre à jour l'état du bouton annuler
+function updateUndoButton() {
+    const undoBtn = document.getElementById('undo-warning-btn');
+    if (undoBtn) {
+        undoBtn.disabled = warningHistory.length === 0;
+    }
+}
+
 // Fonction pour charger et afficher le plan de classe
 function loadSeatingPlan() {
     {% if seating_plan %}
@@ -3993,6 +4059,12 @@ function loadSeatingPlan() {
     setTimeout(() => {
         adjustSeatingScale();
     }, 200);
+    
+    // Initialiser l'état du système d'avertissements
+    currentWarnings = {};
+    warningHistory = [];
+    updateUndoButton();
+    
     {% endif %}
 }
 
@@ -4005,14 +4077,36 @@ function createSeatingElement(elementData) {
     
     if (elementData.type === 'desk-single') {
         element.className += ' desk-single';
-        element.style.width = '80px';
+        element.style.minWidth = '80px';
+        element.style.width = 'auto';
         element.style.height = '60px';
         element.innerHTML = '<div class="student-slots"><div class="student-slot"></div></div>';
+        
+        // Ajouter les événements de clic pour les tables d'élèves
+        const slot = element.querySelector('.student-slot');
+        if (slot) {
+            slot.addEventListener('click', function(e) {
+                e.stopPropagation();
+                handleSlotClick(elementData.id, 0);
+            });
+            slot.style.cursor = 'pointer';
+        }
     } else if (elementData.type === 'desk-double') {
         element.className += ' desk-double';
-        element.style.width = '140px';
+        element.style.minWidth = '140px';
+        element.style.width = 'auto';
         element.style.height = '60px';
         element.innerHTML = '<div class="student-slots"><div class="student-slot"></div><div class="student-slot"></div></div>';
+        
+        // Ajouter les événements de clic pour les tables doubles
+        const slots = element.querySelectorAll('.student-slot');
+        slots.forEach((slot, index) => {
+            slot.addEventListener('click', function(e) {
+                e.stopPropagation();
+                handleSlotClick(elementData.id, index);
+            });
+            slot.style.cursor = 'pointer';
+        });
     } else if (elementData.type === 'teacher-desk') {
         element.className += ' teacher-desk';
         element.style.width = '120px';
@@ -4021,6 +4115,29 @@ function createSeatingElement(elementData) {
     }
     
     return element;
+}
+
+// Fonction pour gérer les clics sur les slots d'élèves
+function handleSlotClick(elementId, slotIndex) {
+    const key = `${elementId}_${slotIndex}`;
+    
+    // Cycles d'avertissement : 0 (normal) -> 1 (jaune) -> 2 (rouge) -> 3 (noir) -> 0 (normal)
+    const currentLevel = currentWarnings[key] || 0;
+    const nextLevel = (currentLevel + 1) % 4;
+    
+    if (nextLevel === 0) {
+        delete currentWarnings[key];
+    } else {
+        currentWarnings[key] = nextLevel;
+    }
+    
+    // Sauvegarder l'état actuel dans l'historique APRÈS la modification
+    saveToHistory();
+    
+    // Appliquer visuellement les changements
+    applyWarningStates();
+    
+    console.log(`Slot cliqué: ${elementId}, index: ${slotIndex}, niveau: ${nextLevel}`);
 }
 
 // Fonction pour ajuster l'échelle du plan pour qu'il s'adapte au conteneur
@@ -4501,14 +4618,43 @@ function adjustSeatingScale() {
 }
 
 /* Styles pour le plan de classe dans l'onglet */
+.seating-plan-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    background-color: #f8f9fa;
+}
+
+.seating-plan-info h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.seating-plan-info p {
+    margin: 0.25rem 0 0 0;
+    color: #666;
+    font-size: 0.875rem;
+}
+
+/* Styles supplémentaires pour le bouton d'annulation */
+#undo-warning-btn {
+    font-size: 0.875rem;
+}
+
+#undo-warning-btn i {
+    margin-right: 0.25rem;
+}
+
 .seating-plan-container {
-    height: 100%;
+    height: calc(100% - 80px);
     padding: 1rem;
 }
 
 .seating-plan-viewer {
     background: #f8f9fa;
-    border: 1px solid #dee2e6;
     border-radius: 8px;
     position: relative;
     overflow: hidden;
@@ -4517,12 +4663,23 @@ function adjustSeatingScale() {
 }
 
 .seating-workspace {
-    width: 100%;
-    height: 100%;
-    position: relative;
+    width: 100% !important;
+    height: 100% !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
     background: white;
     background-image: radial-gradient(circle, #e9ecef 1px, transparent 1px);
     background-size: 20px 20px;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    min-width: unset !important;
+    max-width: none !important;
+    min-height: unset !important;
+    max-height: none !important;
 }
 
 /* Éléments du plan */
@@ -4539,22 +4696,26 @@ function adjustSeatingScale() {
 }
 
 .desk-single {
-    background: #e3f2fd;
-    border: 2px solid #2196f3;
-    color: #1976d2;
+    background: white;
+    border: 2px solid black;
+    color: black;
 }
 
 .desk-double {
-    background: #f3e5f5;
-    border: 2px solid #9c27b0;
-    color: #7b1fa2;
+    background: white;
+    border: 2px solid black;
+    color: black;
 }
 
 .teacher-desk {
-    background: #fff3e0;
-    border: 2px solid #ff9800;
-    color: #f57c00;
+    background: #f0f0f0;
+    border: 2px solid #333;
+    color: #333;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
 .student-slots {
@@ -4564,41 +4725,66 @@ function adjustSeatingScale() {
     align-items: center;
     height: 100%;
     padding: 4px;
+    flex-wrap: nowrap;
+    min-width: 100%;
+    width: auto;
 }
 
 .student-slot {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid #ccc;
+    border: 1px solid #666;
     border-radius: 4px;
     background: white;
     height: 80%;
     min-width: 30px;
+    max-width: 120px;
+    width: auto;
     font-size: 0.7rem;
     text-align: center;
-    padding: 2px 4px;
-    overflow: hidden;
-    flex: 1;
+    padding: 2px 6px;
+    overflow: visible;
+    flex: 1 1 auto;
+    white-space: nowrap;
 }
 
 .student-slot.occupied {
-    background: #4caf50;
-    border-color: #388e3c;
-    color: white;
+    background: white;
+    border-color: black;
+    color: black;
+}
+
+/* États d'avertissement pour les slots d'élèves */
+.student-slot.warning-1 {
+    background: #fff3cd !important;
+    border-color: #ffc107 !important;
+    color: #856404 !important;
+}
+
+.student-slot.warning-2 {
+    background: #f8d7da !important;
+    border-color: #dc3545 !important;
+    color: #721c24 !important;
+}
+
+.student-slot.warning-3 {
+    background: rgba(52, 58, 64, 0.7) !important;
+    border-color: rgba(0, 0, 0, 0.8) !important;
+    color: #fff !important;
 }
 
 .student-placed {
-    color: white;
+    color: black;
     font-size: 0.65rem;
     line-height: 1.1;
     text-align: center;
-    font-weight: 600;
-    width: 100%;
-    white-space: normal;
-    word-wrap: break-word;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-weight: 500;
+    width: auto;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: unset;
+    padding: 0 2px;
 }
 
 /* Styles pour le Modal Viewer/Annotateur Amélioré */
