@@ -1275,9 +1275,8 @@ if (typeof pdfjsLib !== 'undefined') {
         
         <!-- Zone d'affichage principal -->
         <div class="viewer-container" id="viewerContainer">
-            <div class="pdf-viewer-container">
-                <canvas id="pdfCanvas" class="pdf-canvas"></canvas>
-                <canvas id="annotationCanvas" class="annotation-canvas"></canvas>
+            <div class="pdf-pages-container" id="pdfPagesContainer">
+                <!-- Les pages PDF seront ajoutées ici dynamiquement -->
             </div>
         </div>
     </div>
@@ -2231,6 +2230,7 @@ window.addEventListener('beforeunload', () => {
 // Variables globales pour l'annotation améliorée
 let currentFileId = null;
 let currentAnnotationTool = 'pen';
+let currentTool = 'pen'; // Variable manquante
 let currentColor = '#000000';
 let currentStrokeWidth = 3;
 let isDrawing = false;
@@ -2313,6 +2313,15 @@ async function openFileViewer(fileId, filename, fileType) {
 
 // Initialiser les canvas
 function initializeCanvases() {
+    // En mode multi-pages, les canvas sont créés dynamiquement
+    // Cette fonction reste pour la compatibilité
+    const pagesContainer = document.getElementById('pdfPagesContainer');
+    if (pagesContainer) {
+        // Mode multi-pages - rien à faire ici
+        return;
+    }
+    
+    // Mode single page (ancien mode)
     pdfCanvas = document.getElementById('pdfCanvas');
     annotationCanvas = document.getElementById('annotationCanvas');
     
@@ -2437,6 +2446,11 @@ function loadPDFJS() {
 async function loadPDF(fileId) {
     const pdfUrl = `/file_manager/serve_file/${fileId}`;
     
+    // Initialiser les variables d'annotation
+    currentTool = 'pen';
+    currentColor = '#000000';
+    currentStrokeWidth = 3;
+    
     // Vérifier que PDF.js est chargé
     if (typeof pdfjsLib === 'undefined') {
         await loadPDFJS();
@@ -2461,8 +2475,8 @@ async function loadPDF(fileId) {
         // Générer les miniatures
         await generateThumbnails();
         
-        // Rendre la première page
-        await renderPage(currentPageNum);
+        // Rendre toutes les pages en mode scroll
+        await renderAllPages();
         
     } catch (error) {
         console.error('Erreur lors du chargement du PDF:', error);
@@ -2470,7 +2484,867 @@ async function loadPDF(fileId) {
     }
 }
 
-// Rendre une page PDF
+// Rendre toutes les pages du PDF en mode scroll
+async function renderAllPages() {
+    console.log('🔍 DEBUG: renderAllPages - Début');
+    const pagesContainer = document.getElementById('pdfPagesContainer');
+    if (!pagesContainer) {
+        console.error('❌ pdfPagesContainer non trouvé!');
+        return;
+    }
+    
+    pagesContainer.innerHTML = ''; // Nettoyer le conteneur
+    console.log(`📄 Nombre de pages à rendre: ${pdfDoc.numPages}`);
+    
+    // Réinitialiser currentPageNum à 1
+    currentPageNum = 1;
+    
+    // Créer les éléments pour chaque page
+    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+        const pageWrapper = document.createElement('div');
+        pageWrapper.className = 'pdf-page-wrapper';
+        pageWrapper.id = `page-wrapper-${pageNum}`;
+        
+        // Ajouter le numéro de page
+        const pageNumber = document.createElement('div');
+        pageNumber.className = 'pdf-page-number';
+        pageNumber.textContent = `Page ${pageNum}`;
+        pageWrapper.appendChild(pageNumber);
+        
+        // Créer les canvas pour le PDF et les annotations
+        const pdfCanvas = document.createElement('canvas');
+        pdfCanvas.className = 'pdf-canvas';
+        pdfCanvas.id = `pdf-canvas-${pageNum}`;
+        
+        const annotationCanvas = document.createElement('canvas');
+        annotationCanvas.className = 'annotation-canvas';
+        annotationCanvas.id = `annotation-canvas-${pageNum}`;
+        
+        pageWrapper.appendChild(pdfCanvas);
+        pageWrapper.appendChild(annotationCanvas);
+        pagesContainer.appendChild(pageWrapper);
+        
+        // Rendre la page
+        await renderSinglePage(pageNum, pdfCanvas, annotationCanvas);
+    }
+    
+    // Configurer les événements d'annotation pour toutes les pages
+    setupMultiPageAnnotations();
+    
+    // Observer le scroll pour mettre à jour la page courante
+    setupScrollObserver();
+    
+    // Appliquer automatiquement la correction du problème de scroll après un petit délai
+    setTimeout(() => {
+        console.log('🔧 Application automatique de la correction de scroll...');
+        applyScrollFix();
+    }, 200);
+    
+    
+    console.log('✅ renderAllPages - Terminé');
+}
+
+// === FONCTIONS DE TEST ET DEBUG ===
+window.pdfDebug = {
+    // Tester la navigation
+    testNavigation: function() {
+        console.log('🧪 Test de navigation');
+        console.log(`Pages disponibles: 1-${pdfDoc ? pdfDoc.numPages : 'PDF non chargé'}`);
+        console.log(`Page actuelle: ${currentPageNum}`);
+        
+        // Tester le scroll vers la page 1
+        const firstPage = document.getElementById('page-wrapper-1');
+        if (firstPage) {
+            console.log('✅ page-wrapper-1 trouvé');
+            firstPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            console.error('❌ page-wrapper-1 non trouvé');
+        }
+    },
+    
+    // Vérifier les canvas
+    checkCanvases: function() {
+        console.log('🧪 Vérification des canvas');
+        const pagesContainer = document.getElementById('pdfPagesContainer');
+        if (!pagesContainer) {
+            console.error('❌ pdfPagesContainer non trouvé');
+            return;
+        }
+        
+        console.log(`📄 Conteneur: ${pagesContainer.children.length} enfants`);
+        console.log('Enfants du conteneur:', Array.from(pagesContainer.children).map(c => c.id));
+        
+        for (let i = 1; i <= (pdfDoc ? pdfDoc.numPages : 10); i++) {
+            const pageWrapper = document.getElementById(`page-wrapper-${i}`);
+            const pdfCanvas = document.getElementById(`pdf-canvas-${i}`);
+            const annotCanvas = document.getElementById(`annotation-canvas-${i}`);
+            
+            console.log(`Page ${i}: Wrapper ${pageWrapper ? '✅' : '❌'}, PDF canvas ${pdfCanvas ? '✅' : '❌'}, Annotation canvas ${annotCanvas ? '✅' : '❌'}`);
+            
+            if (annotCanvas) {
+                const rect = annotCanvas.getBoundingClientRect();
+                console.log(`  - Taille: ${rect.width}x${rect.height}, Position: ${rect.top}`);
+            }
+        }
+    },
+    
+    // Tester le dessin
+    testDrawing: function() {
+        console.log('🧪 Test du système de dessin');
+        console.log(`Outil actuel: ${currentTool}`);
+        console.log(`Couleur: ${currentColor}`);
+        console.log(`Épaisseur: ${currentStrokeWidth}`);
+        console.log(`Mode dessin: ${isDrawing ? 'ACTIF' : 'INACTIF'}`);
+    },
+    
+    // Forcer le scroll vers la première page
+    goToFirst: function() {
+        console.log('🔧 Force scroll vers page 1');
+        const viewerContainer = document.getElementById('viewerContainer');
+        const firstPage = document.getElementById('page-wrapper-1');
+        
+        if (viewerContainer && firstPage) {
+            viewerContainer.scrollTop = 0;
+            firstPage.scrollIntoView({ behavior: 'auto', block: 'start' });
+            currentPageNum = 1;
+            updatePageInfo();
+            updateNavigationButtons();
+            updateActiveThumbnail();
+            console.log('✅ Navigation forcée vers page 1');
+        }
+    },
+    
+    // Aller à une page spécifique
+    goToPage: function(pageNum) {
+        console.log(`🔧 DEBUG Navigation vers page ${pageNum}`);
+        const viewerContainer = document.getElementById('viewerContainer');
+        const targetPage = document.getElementById(`page-wrapper-${pageNum}`);
+        
+        if (viewerContainer && targetPage && pageNum >= 1 && pageNum <= (pdfDoc ? pdfDoc.numPages : 0)) {
+            // Utiliser la fonction principale goToPage
+            goToPage(pageNum);
+        } else {
+            console.error(`❌ Page ${pageNum} non trouvée ou invalide`);
+            console.log('Vérifications:');
+            console.log('- viewerContainer:', !!viewerContainer);
+            console.log('- targetPage:', !!targetPage);
+            console.log('- pageNum range:', pageNum >= 1 && pageNum <= (pdfDoc ? pdfDoc.numPages : 0));
+            console.log('- Total pages:', pdfDoc ? pdfDoc.numPages : 'PDF non chargé');
+        }
+    },
+    
+    // Test de navigation complète
+    testFullNavigation: function() {
+        console.log('🧪 Test de navigation complète');
+        const totalPages = pdfDoc ? pdfDoc.numPages : 0;
+        console.log(`Pages disponibles: 1-${totalPages}`);
+        
+        if (totalPages === 0) {
+            console.error('❌ Aucun PDF chargé');
+            return;
+        }
+        
+        // Test aller à la page 1
+        this.goToPage(1);
+        
+        setTimeout(() => {
+            // Test aller à la dernière page
+            console.log(`🧪 Test navigation vers page ${totalPages}`);
+            this.goToPage(totalPages);
+            
+            setTimeout(() => {
+                // Retour à la page 1
+                console.log('🧪 Retour à la page 1');
+                this.goToPage(1);
+            }, 2000);
+        }, 2000);
+    },
+    
+    // Relancer le rendu si ça a échoué
+    retryRender: async function() {
+        console.log('🔧 Relance du rendu...');
+        if (pdfDoc) {
+            currentTool = 'pen'; // S'assurer que currentTool est défini
+            await renderAllPages();
+        } else {
+            console.error('❌ PDF non chargé');
+        }
+    },
+    
+    // Test spécifique pour le problème de scroll
+    testScrollIssue: function() {
+        console.log('🧪 Test spécifique du problème de scroll');
+        const viewerContainer = document.getElementById('viewerContainer');
+        const firstPage = document.getElementById('page-wrapper-1');
+        
+        if (!viewerContainer || !firstPage) {
+            console.error('❌ Elements non trouvés');
+            return;
+        }
+        
+        console.log('📊 État actuel:');
+        console.log('  - Container scrollTop:', viewerContainer.scrollTop);
+        console.log('  - Container scrollHeight:', viewerContainer.scrollHeight);
+        console.log('  - Container clientHeight:', viewerContainer.clientHeight);
+        console.log('  - Page courante détectée:', currentPageNum);
+        
+        // Position de la page 1
+        const rect = firstPage.getBoundingClientRect();
+        const containerRect = viewerContainer.getBoundingClientRect();
+        console.log('📍 Position de la page 1:');
+        console.log('  - Page offsetTop:', firstPage.offsetTop);
+        console.log('  - Page getBoundingClientRect top:', rect.top);
+        console.log('  - Container getBoundingClientRect top:', containerRect.top);
+        console.log('  - Différence:', rect.top - containerRect.top);
+        
+        // Test du scroll forcé
+        console.log('🔧 Test du scroll forcé à 0...');
+        viewerContainer.scrollTop = 0;
+        
+        setTimeout(() => {
+            console.log('📊 Après scroll forcé:');
+            console.log('  - Container scrollTop:', viewerContainer.scrollTop);
+            
+            const newRect = firstPage.getBoundingClientRect();
+            const newContainerRect = viewerContainer.getBoundingClientRect();
+            console.log('  - Nouvelle position page 1:', newRect.top - newContainerRect.top);
+            
+            // Test si la page 1 est maintenant visible
+            const isVisible = newRect.top >= newContainerRect.top - 50 && newRect.top <= newContainerRect.bottom;
+            console.log('  - Page 1 visible:', isVisible);
+            
+            if (!isVisible) {
+                console.log('🚨 La page 1 n\'est toujours pas visible après scroll = 0');
+                console.log('🔧 Tentative avec scrollTo...');
+                viewerContainer.scrollTo(0, 0);
+                
+                setTimeout(() => {
+                    const finalRect = firstPage.getBoundingClientRect();
+                    const finalContainerRect = viewerContainer.getBoundingClientRect();
+                    console.log('📊 Après scrollTo:');
+                    console.log('  - Container scrollTop:', viewerContainer.scrollTop);
+                    console.log('  - Position page 1:', finalRect.top - finalContainerRect.top);
+                }, 100);
+            }
+        }, 100);
+    },
+    
+    // Forcer la navigation vers page 1 avec debug détaillé
+    forceGoToPage1: function() {
+        console.log('🚨 FORCE navigation vers page 1');
+        
+        // Arrêter l'observer temporairement
+        if (window.currentPageObserver) {
+            window.currentPageObserver.disconnect();
+            console.log('🔧 Observer arrêté');
+        }
+        
+        // Force la page à 1
+        currentPageNum = 1;
+        updatePageInfo();
+        updateNavigationButtons();
+        updateActiveThumbnail();
+        
+        // Force le scroll
+        const viewerContainer = document.getElementById('viewerContainer');
+        const firstPage = document.getElementById('page-wrapper-1');
+        
+        if (viewerContainer && firstPage) {
+            viewerContainer.scrollTop = 0;
+            console.log('🔧 Scroll forcé à 0');
+            
+            // Redémarrer l'observer après un délai
+            setTimeout(() => {
+                setupScrollObserver();
+                console.log('🔧 Observer redémarré');
+            }, 500);
+        }
+    },
+    
+    // Diagnostic CSS complet
+    diagnoseCSSIssue: function() {
+        console.log('🔬 DIAGNOSTIC CSS COMPLET');
+        
+        const viewerContainer = document.getElementById('viewerContainer');
+        const pagesContainer = document.getElementById('pdfPagesContainer');
+        const firstPage = document.getElementById('page-wrapper-1');
+        const page7 = document.getElementById('page-wrapper-7');
+        
+        if (!viewerContainer || !pagesContainer || !firstPage) {
+            console.error('❌ Éléments manquants');
+            return;
+        }
+        
+        console.log('📊 PROPRIÉTÉS DU CONTAINER:');
+        const containerStyle = window.getComputedStyle(viewerContainer);
+        console.log('  - height:', containerStyle.height);
+        console.log('  - max-height:', containerStyle.maxHeight);
+        console.log('  - overflow-y:', containerStyle.overflowY);
+        console.log('  - position:', containerStyle.position);
+        console.log('  - scrollTop actuel:', viewerContainer.scrollTop);
+        console.log('  - scrollHeight total:', viewerContainer.scrollHeight);
+        console.log('  - clientHeight:', viewerContainer.clientHeight);
+        
+        console.log('📊 PROPRIÉTÉS DU PAGES CONTAINER:');
+        const pagesStyle = window.getComputedStyle(pagesContainer);
+        console.log('  - height:', pagesStyle.height);
+        console.log('  - min-height:', pagesStyle.minHeight);
+        console.log('  - padding-top:', pagesStyle.paddingTop);
+        console.log('  - margin-top:', pagesStyle.marginTop);
+        console.log('  - transform:', pagesStyle.transform);
+        console.log('  - offsetTop:', pagesContainer.offsetTop);
+        
+        console.log('📊 POSITIONS DES PAGES:');
+        for (let i = 1; i <= Math.min(8, pdfDoc ? pdfDoc.numPages : 0); i++) {
+            const page = document.getElementById(`page-wrapper-${i}`);
+            if (page) {
+                const rect = page.getBoundingClientRect();
+                const containerRect = viewerContainer.getBoundingClientRect();
+                console.log(`  - Page ${i}: offsetTop=${page.offsetTop}, getBoundingClientRect.top=${Math.round(rect.top - containerRect.top)}`);
+            }
+        }
+        
+        console.log('🔧 TEST DE SCROLL RÉEL:');
+        console.log('  - scrollTop avant test:', viewerContainer.scrollTop);
+        viewerContainer.scrollTop = 0;
+        console.log('  - scrollTop après scrollTop=0:', viewerContainer.scrollTop);
+        
+        // Vérifier si le scroll est bloqué par du CSS
+        setTimeout(() => {
+            console.log('  - scrollTop après 100ms:', viewerContainer.scrollTop);
+            
+            if (viewerContainer.scrollTop !== 0) {
+                console.log('🚨 PROBLÈME DÉTECTÉ: scrollTop ne reste pas à 0 !');
+                console.log('🔧 Tentative de correction CSS...');
+                
+                // Forcer les styles
+                viewerContainer.style.scrollBehavior = 'auto';
+                viewerContainer.style.overflow = 'auto';
+                viewerContainer.scrollTop = 0;
+                
+                // Reset du container des pages
+                pagesContainer.style.paddingTop = '0px';
+                pagesContainer.style.marginTop = '0px';
+                pagesContainer.style.transform = 'none';
+                
+                setTimeout(() => {
+                    console.log('  - scrollTop après correction CSS:', viewerContainer.scrollTop);
+                    
+                    if (viewerContainer.scrollTop !== 0) {
+                        console.log('🚨 ÉCHEC: Le scroll est forcé par autre chose !');
+                        console.log('🔍 Investigation des éléments parents...');
+                        
+                        let element = viewerContainer.parentElement;
+                        while (element && element !== document.body) {
+                            const style = window.getComputedStyle(element);
+                            if (style.overflow !== 'visible' || style.position === 'fixed' || style.position === 'absolute') {
+                                console.log(`🔍 Parent suspect: ${element.className || element.tagName} - overflow:${style.overflow}, position:${style.position}`);
+                            }
+                            element = element.parentElement;
+                        }
+                    }
+                }, 100);
+            } else {
+                console.log('✅ Scroll fonctionne - problème probablement dans la logique JavaScript');
+            }
+        }, 100);
+    },
+    
+    // Correction automatique du problème détecté
+    fixScrollIssue: function() {
+        console.log('🛠️ CORRECTION AUTOMATIQUE DU PROBLÈME DE SCROLL');
+        
+        const viewerContainer = document.getElementById('viewerContainer');
+        const pagesContainer = document.getElementById('pdfPagesContainer');
+        const firstPage = document.getElementById('page-wrapper-1');
+        
+        if (!viewerContainer || !pagesContainer || !firstPage) {
+            console.error('❌ Éléments manquants');
+            return;
+        }
+        
+        console.log('🔧 Étape 1: Reset complet du CSS');
+        
+        // Reset du viewer container
+        viewerContainer.style.scrollBehavior = 'auto';
+        viewerContainer.style.height = '100%';
+        viewerContainer.style.minHeight = '500px'; // Forcer une hauteur minimum
+        viewerContainer.style.maxHeight = 'none';
+        viewerContainer.style.overflow = 'auto';
+        viewerContainer.style.position = 'relative';
+        
+        // Reset du pages container
+        pagesContainer.style.paddingTop = '16px'; // Padding minimum
+        pagesContainer.style.marginTop = '0px';
+        pagesContainer.style.transform = 'none';
+        pagesContainer.style.position = 'relative';
+        pagesContainer.style.top = '0px';
+        pagesContainer.style.left = '0px';
+        
+        console.log('🔧 Étape 2: Repositionnement forcé');
+        
+        // Forcer la restructuration du layout
+        viewerContainer.style.display = 'none';
+        viewerContainer.offsetHeight; // Force reflow
+        viewerContainer.style.display = 'block';
+        
+        setTimeout(() => {
+            console.log('🔧 Étape 3: Test du scroll après correction');
+            viewerContainer.scrollTop = 0;
+            
+            setTimeout(() => {
+                const rect = firstPage.getBoundingClientRect();
+                const containerRect = viewerContainer.getBoundingClientRect();
+                const newPosition = rect.top - containerRect.top;
+                
+                console.log('📊 Après correction:');
+                console.log('  - Container height:', viewerContainer.clientHeight);
+                console.log('  - Container scrollTop:', viewerContainer.scrollTop);
+                console.log('  - Page 1 position:', newPosition);
+                
+                if (newPosition < -100 || newPosition > viewerContainer.clientHeight) {
+                    console.log('🚨 Position toujours incorrecte, tentative manuelle...');
+                    
+                    // Calcul de la position correcte
+                    const targetScrollTop = firstPage.offsetTop - 16; // 16px de padding
+                    console.log(`🔧 Scroll calculé vers: ${targetScrollTop}px`);
+                    
+                    viewerContainer.scrollTop = Math.max(0, targetScrollTop);
+                    
+                    setTimeout(() => {
+                        const finalRect = firstPage.getBoundingClientRect();
+                        const finalContainerRect = viewerContainer.getBoundingClientRect();
+                        const finalPosition = finalRect.top - finalContainerRect.top;
+                        
+                        console.log('📊 Position finale:');
+                        console.log('  - scrollTop final:', viewerContainer.scrollTop);
+                        console.log('  - Position page 1 finale:', finalPosition);
+                        
+                        if (finalPosition >= 0 && finalPosition <= 100) {
+                            console.log('✅ CORRECTION RÉUSSIE !');
+                            
+                            // Reset de l'observer pour qu'il détecte la page 1
+                            if (window.currentPageObserver) {
+                                window.currentPageObserver.disconnect();
+                            }
+                            
+                            currentPageNum = 1;
+                            updatePageInfo();
+                            updateNavigationButtons();
+                            updateActiveThumbnail();
+                            
+                            setTimeout(() => {
+                                setupScrollObserver();
+                                console.log('🔧 Observer redémarré avec page 1 active');
+                            }, 200);
+                            
+                        } else {
+                            console.log('❌ CORRECTION ÉCHEC - Position encore incorrecte');
+                        }
+                    }, 100);
+                } else {
+                    console.log('✅ CORRECTION RÉUSSIE - Page 1 maintenant visible !');
+                    currentPageNum = 1;
+                    updatePageInfo();
+                    updateNavigationButtons();
+                    updateActiveThumbnail();
+                }
+            }, 100);
+        }, 100);
+    }
+};
+
+console.log('🔧 Fonctions de debug disponibles: window.pdfDebug');
+console.log('   - testNavigation() : Tester la navigation');
+console.log('   - checkCanvases() : Vérifier les canvas');  
+console.log('   - testDrawing() : Tester le dessin');
+console.log('   - goToFirst() : Aller à la page 1');
+console.log('   - goToPage(n) : Aller à la page n');
+console.log('   - testFullNavigation() : Test navigation complète');
+console.log('   - testScrollIssue() : Test diagnostic du scroll');
+console.log('   - diagnoseCSSIssue() : Diagnostic CSS complet');
+console.log('   - fixScrollIssue() : NOUVEAU - Correction automatique du problème');
+console.log('   - forceGoToPage1() : Force page 1 avec reset observer');
+console.log('   - retryRender() : Relancer le rendu si échec');
+
+// Fonction de correction automatique du scroll (appliquée à chaque chargement de PDF)
+function applyScrollFix() {
+    console.log('🛠️ Application automatique de la correction de scroll...');
+    
+    const viewerContainer = document.getElementById('viewerContainer');
+    const pagesContainer = document.getElementById('pdfPagesContainer');
+    const firstPage = document.getElementById('page-wrapper-1');
+    
+    if (!viewerContainer || !pagesContainer || !firstPage) {
+        console.warn('⚠️ Éléments non trouvés pour la correction - retry dans 100ms');
+        setTimeout(applyScrollFix, 100);
+        return;
+    }
+    
+    // Vérifier si la correction est nécessaire
+    const rect = firstPage.getBoundingClientRect();
+    const containerRect = viewerContainer.getBoundingClientRect();
+    const pagePosition = rect.top - containerRect.top;
+    
+    console.log(`📊 Position actuelle de la page 1: ${Math.round(pagePosition)}px`);
+    
+    // Si la page 1 est très mal positionnée, appliquer la correction
+    if (pagePosition < -100 || pagePosition > viewerContainer.clientHeight) {
+        console.log('🚨 Correction nécessaire - page 1 mal positionnée');
+        
+        // Appliquer les corrections CSS
+        viewerContainer.style.scrollBehavior = 'auto';
+        viewerContainer.style.height = '100%';
+        viewerContainer.style.minHeight = '500px';
+        viewerContainer.style.maxHeight = 'none';
+        viewerContainer.style.overflow = 'auto';
+        viewerContainer.style.position = 'relative';
+        
+        // Reset du pages container
+        pagesContainer.style.paddingTop = '16px';
+        pagesContainer.style.marginTop = '0px';
+        pagesContainer.style.transform = 'none';
+        pagesContainer.style.position = 'relative';
+        pagesContainer.style.top = '0px';
+        pagesContainer.style.left = '0px';
+        
+        // Forcer le reflow
+        viewerContainer.style.display = 'none';
+        viewerContainer.offsetHeight; // Force reflow
+        viewerContainer.style.display = 'block';
+        
+        setTimeout(() => {
+            // Vérifier et ajuster le scroll
+            const newRect = firstPage.getBoundingClientRect();
+            const newContainerRect = viewerContainer.getBoundingClientRect();
+            const newPosition = newRect.top - newContainerRect.top;
+            
+            console.log(`📊 Position après correction CSS: ${Math.round(newPosition)}px`);
+            
+            if (newPosition < -50 || newPosition > 100) {
+                // Correction manuelle du scroll
+                const targetScrollTop = firstPage.offsetTop - 16;
+                viewerContainer.scrollTop = Math.max(0, targetScrollTop);
+                console.log(`🔧 Scroll manuel appliqué: ${viewerContainer.scrollTop}px`);
+            }
+            
+            // Forcer la page courante à 1
+            currentPageNum = 1;
+            updatePageInfo();
+            updateNavigationButtons();
+            updateActiveThumbnail();
+            
+            // Redémarrer l'observer après correction
+            if (window.currentPageObserver) {
+                window.currentPageObserver.disconnect();
+                setTimeout(() => {
+                    setupScrollObserver();
+                    console.log('✅ Correction automatique terminée - Page 1 active');
+                }, 100);
+            }
+        }, 50);
+    } else {
+        console.log('✅ Position correcte - aucune correction nécessaire');
+        // Juste s'assurer qu'on est à la page 1
+        viewerContainer.scrollTop = 0;
+        currentPageNum = 1;
+        updatePageInfo();
+        updateNavigationButtons();
+        updateActiveThumbnail();
+    }
+}
+
+// Rendre une page individuelle dans le mode multi-pages
+async function renderSinglePage(pageNum, pdfCanvas, annotationCanvas) {
+    try {
+        const page = await pdfDoc.getPage(pageNum);
+        const defaultScale = 1.5;
+        const viewport = page.getViewport({ scale: defaultScale * currentScale });
+        
+        // Ajuster les dimensions du canvas
+        pdfCanvas.width = viewport.width;
+        pdfCanvas.height = viewport.height;
+        annotationCanvas.width = viewport.width;
+        annotationCanvas.height = viewport.height;
+        
+        // Ajuster les styles
+        pdfCanvas.style.width = viewport.width + 'px';
+        pdfCanvas.style.height = viewport.height + 'px';
+        annotationCanvas.style.width = viewport.width + 'px';
+        annotationCanvas.style.height = viewport.height + 'px';
+        annotationCanvas.style.position = 'absolute';
+        annotationCanvas.style.top = '0';
+        annotationCanvas.style.left = '0';
+        
+        const ctx = pdfCanvas.getContext('2d');
+        
+        // Rendre la page PDF
+        const renderContext = {
+            canvasContext: ctx,
+            viewport: viewport,
+            renderTextLayer: false,
+            renderAnnotationLayer: false
+        };
+        
+        await page.render(renderContext).promise;
+        
+        // Dessiner les annotations existantes pour cette page
+        const annotCtx = annotationCanvas.getContext('2d');
+        if (annotationsByPage[pageNum]) {
+            redrawAnnotations(annotCtx, annotationsByPage[pageNum]);
+        }
+        
+    } catch (error) {
+        console.error(`Erreur lors du rendu de la page ${pageNum}:`, error);
+    }
+}
+
+// Configurer les événements d'annotation pour le mode multi-pages
+function setupMultiPageAnnotations() {
+    console.log('🔍 DEBUG: setupMultiPageAnnotations - Début');
+    const pagesContainer = document.getElementById('pdfPagesContainer');
+    if (!pagesContainer) {
+        console.error('❌ pdfPagesContainer non trouvé dans setupMultiPageAnnotations');
+        return;
+    }
+    
+    let canvasCount = 0;
+    
+    // Ajouter les événements à chaque canvas d'annotation
+    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+        const annotationCanvas = document.getElementById(`annotation-canvas-${pageNum}`);
+        if (annotationCanvas) {
+            canvasCount++;
+            // Ajouter les attributs de page
+            annotationCanvas.dataset.pageNum = pageNum;
+            
+            // S'assurer que le canvas est bien positionné
+            annotationCanvas.style.pointerEvents = 'auto';
+            annotationCanvas.style.cursor = currentTool === 'eraser' ? 'crosshair' : 'default';
+            
+            // Événements souris
+            annotationCanvas.addEventListener('mousedown', (e) => startDrawingMultiPage(e, pageNum));
+            annotationCanvas.addEventListener('mousemove', (e) => drawMultiPage(e, pageNum));
+            annotationCanvas.addEventListener('mouseup', (e) => stopDrawingMultiPage(e, pageNum));
+            annotationCanvas.addEventListener('mouseleave', (e) => stopDrawingMultiPage(e, pageNum));
+            
+            // Événements tactiles
+            annotationCanvas.addEventListener('touchstart', (e) => handleTouchMultiPage(e, pageNum), { passive: false });
+            annotationCanvas.addEventListener('touchmove', (e) => handleTouchMultiPage(e, pageNum), { passive: false });
+            annotationCanvas.addEventListener('touchend', (e) => handleTouchMultiPage(e, pageNum), { passive: false });
+        } else {
+            console.warn(`⚠️ Canvas d'annotation non trouvé pour la page ${pageNum}`);
+        }
+    }
+    
+    console.log(`✅ setupMultiPageAnnotations - ${canvasCount} canvas configurés sur ${pdfDoc.numPages} pages`);
+}
+
+// Gérer le début du dessin en mode multi-pages
+function startDrawingMultiPage(e, pageNum) {
+    console.log(`🖊️ DEBUG: startDrawingMultiPage - Page ${pageNum}, Tool: ${currentTool}`);
+    const rect = e.target.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    isDrawing = true;
+    currentPageNum = pageNum;
+    annotationCanvas = e.target;
+    annotationCtx = annotationCanvas.getContext('2d');
+    
+    // Configurer le contexte d'annotation
+    annotationCtx.lineCap = 'round';
+    annotationCtx.lineJoin = 'round';
+    annotationCtx.globalCompositeOperation = currentTool === 'eraser' ? 'destination-out' : 'source-over';
+    annotationCtx.lineWidth = currentStrokeWidth;
+    annotationCtx.strokeStyle = currentColor;
+    
+    if (currentTool === 'eraser') {
+        console.log('🔍 Mode gomme activé');
+        eraseAt(x, y);
+    } else {
+        console.log('✏️ Mode dessin activé - Début du trait');
+        // Commencer un nouveau trait
+        currentAnnotation = {
+            type: currentTool,
+            color: currentColor,
+            strokeWidth: currentStrokeWidth,
+            points: [{ x, y }],
+            page: pageNum
+        };
+        
+        annotationCtx.beginPath();
+        annotationCtx.moveTo(x, y);
+    }
+}
+
+// Gérer le dessin en mode multi-pages
+function drawMultiPage(e, pageNum) {
+    if (!isDrawing || pageNum !== currentPageNum) return;
+    
+    const rect = e.target.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    if (currentTool === 'eraser') {
+        eraseAt(x, y);
+    } else {
+        // Continuer le trait
+        if (currentAnnotation) {
+            currentAnnotation.points.push({ x, y });
+            annotationCtx.lineTo(x, y);
+            annotationCtx.stroke();
+        }
+    }
+}
+
+// Arrêter le dessin en mode multi-pages
+function stopDrawingMultiPage(e, pageNum) {
+    if (!isDrawing) return;
+    
+    isDrawing = false;
+    
+    // Sauvegarder l'annotation pour cette page
+    if (currentAnnotation && currentAnnotation.points.length > 0) {
+        currentAnnotation.page = pageNum;
+        
+        if (!annotationsByPage[pageNum]) {
+            annotationsByPage[pageNum] = [];
+        }
+        annotationsByPage[pageNum].push(currentAnnotation);
+        
+        // Ajouter à la liste globale
+        annotations.push(currentAnnotation);
+    }
+    
+    currentAnnotation = null;
+    
+    // Programmer la sauvegarde automatique
+    if (typeof scheduleAutoSave === 'function') {
+        scheduleAutoSave();
+    } else {
+        // Sauvegarde immédiate si la fonction n'existe pas
+        setTimeout(() => {
+            saveAnnotations();
+        }, 1000);
+    }
+}
+
+// Gérer les événements tactiles en mode multi-pages
+function handleTouchMultiPage(e, pageNum) {
+    e.preventDefault();
+    
+    if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent(
+            e.type === 'touchstart' ? 'mousedown' : 
+            e.type === 'touchmove' ? 'mousemove' : 'mouseup', 
+            {
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                bubbles: true
+            }
+        );
+        
+        if (e.type === 'touchstart') {
+            startDrawingMultiPage(mouseEvent, pageNum);
+        } else if (e.type === 'touchmove') {
+            drawMultiPage(mouseEvent, pageNum);
+        } else if (e.type === 'touchend') {
+            stopDrawingMultiPage(mouseEvent, pageNum);
+        }
+    }
+}
+
+// Observer le scroll pour détecter la page visible
+function setupScrollObserver() {
+    const viewerContainer = document.getElementById('viewerContainer');
+    if (!viewerContainer) return;
+    
+    // Configuration plus permissive pour détecter toutes les pages, y compris celles du haut
+    const observerOptions = {
+        root: viewerContainer,
+        rootMargin: '0px 0px 0px 0px', // Pas de marge pour garantir la détection des pages du haut
+        threshold: [0.1, 0.3, 0.5, 0.7, 0.9] // Plus de seuils pour une détection plus précise
+    };
+    
+    const pageObserver = new IntersectionObserver((entries) => {
+        let maxIntersectionRatio = 0;
+        let mostVisiblePage = currentPageNum;
+        
+        entries.forEach(entry => {
+            if (entry.isIntersecting && entry.intersectionRatio > maxIntersectionRatio) {
+                maxIntersectionRatio = entry.intersectionRatio;
+                const pageWrapper = entry.target;
+                const pageNum = parseInt(pageWrapper.id.replace('page-wrapper-', ''));
+                if (pageNum) {
+                    mostVisiblePage = pageNum;
+                }
+            }
+        });
+        
+        // Mettre à jour seulement si la page la plus visible a changé ET si le ratio d'intersection est significatif
+        if (mostVisiblePage !== currentPageNum && maxIntersectionRatio > 0.3) {
+            console.log(`📄 Page visible changée: ${currentPageNum} → ${mostVisiblePage} (ratio: ${maxIntersectionRatio.toFixed(2)})`);
+            currentPageNum = mostVisiblePage;
+            updatePageInfo();
+            updateNavigationButtons();
+            updateActiveThumbnail();
+        }
+    }, observerOptions);
+    
+    // Stocker une référence globale pour pouvoir le réinitialiser
+    window.currentPageObserver = pageObserver;
+    
+    // Observer toutes les pages
+    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+        const pageWrapper = document.getElementById(`page-wrapper-${pageNum}`);
+        if (pageWrapper) {
+            pageObserver.observe(pageWrapper);
+            console.log(`📄 Observing page ${pageNum}`);
+        }
+    }
+    
+    // Ajouter un listener de scroll de secours pour garantir la navigation
+    let scrollTimeout;
+    viewerContainer.addEventListener('scroll', () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            // Détecter manuellement quelle page est la plus visible
+            let mostVisiblePage = 1;
+            let maxVisibleArea = 0;
+            
+            for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                const pageWrapper = document.getElementById(`page-wrapper-${pageNum}`);
+                if (pageWrapper) {
+                    const rect = pageWrapper.getBoundingClientRect();
+                    const containerRect = viewerContainer.getBoundingClientRect();
+                    
+                    // Calculer la surface visible
+                    const visibleTop = Math.max(rect.top, containerRect.top);
+                    const visibleBottom = Math.min(rect.bottom, containerRect.bottom);
+                    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+                    const visibleArea = visibleHeight * rect.width;
+                    
+                    if (visibleArea > maxVisibleArea) {
+                        maxVisibleArea = visibleArea;
+                        mostVisiblePage = pageNum;
+                    }
+                }
+            }
+            
+            if (mostVisiblePage !== currentPageNum) {
+                console.log(`📄 Scroll detection: Page ${currentPageNum} → ${mostVisiblePage}`);
+                currentPageNum = mostVisiblePage;
+                updatePageInfo();
+                updateNavigationButtons();
+                updateActiveThumbnail();
+            }
+        }, 100);
+    });
+}
+
+// Rendre une page PDF (fonction originale pour compatibilité)
 async function renderPage(pageNum) {
     if (pageIsRendering) {
         pageNumIsPending = pageNum;
@@ -2629,16 +3503,28 @@ function previousPage() {
     
     isNavigating = true; // Marquer le début de la navigation
     
-    // Sauvegarder les annotations de la page actuelle avant de changer
-    console.log(`📄 Changement de page ${currentPageNum} vers ${currentPageNum - 1}`);
-    saveCurrentPageAnnotations();
+    // En mode multi-pages, faire défiler jusqu'à la page
+    const pagesContainer = document.getElementById('pdfPagesContainer');
+    if (pagesContainer) {
+        currentPageNum--;
+        const targetPage = document.getElementById(`page-wrapper-${currentPageNum}`);
+        if (targetPage) {
+            targetPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    } else {
+        // Mode single page - ancien comportement
+        // Sauvegarder les annotations de la page actuelle avant de changer
+        console.log(`📄 Changement de page ${currentPageNum} vers ${currentPageNum - 1}`);
+        saveCurrentPageAnnotations();
+        
+        currentPageNum--;
+        
+        // Charger les annotations de la nouvelle page AVANT de rendre
+        loadPageAnnotations(currentPageNum);
+        
+        renderPage(currentPageNum);
+    }
     
-    currentPageNum--;
-    
-    // Charger les annotations de la nouvelle page AVANT de rendre
-    loadPageAnnotations(currentPageNum);
-    
-    renderPage(currentPageNum);
     updatePageInfo();
     updateNavigationButtons();
     updateActiveThumbnail();
@@ -2655,16 +3541,28 @@ function nextPage() {
     
     isNavigating = true; // Marquer le début de la navigation
     
-    // Sauvegarder les annotations de la page actuelle avant de changer
-    console.log(`📄 Changement de page ${currentPageNum} vers ${currentPageNum + 1}`);
-    saveCurrentPageAnnotations();
+    // En mode multi-pages, faire défiler jusqu'à la page
+    const pagesContainer = document.getElementById('pdfPagesContainer');
+    if (pagesContainer) {
+        currentPageNum++;
+        const targetPage = document.getElementById(`page-wrapper-${currentPageNum}`);
+        if (targetPage) {
+            targetPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    } else {
+        // Mode single page - ancien comportement
+        // Sauvegarder les annotations de la page actuelle avant de changer
+        console.log(`📄 Changement de page ${currentPageNum} vers ${currentPageNum + 1}`);
+        saveCurrentPageAnnotations();
+        
+        currentPageNum++;
+        
+        // Charger les annotations de la nouvelle page AVANT de rendre
+        loadPageAnnotations(currentPageNum);
+        
+        renderPage(currentPageNum);
+    }
     
-    currentPageNum++;
-    
-    // Charger les annotations de la nouvelle page AVANT de rendre
-    loadPageAnnotations(currentPageNum);
-    
-    renderPage(currentPageNum);
     updatePageInfo();
     updateNavigationButtons();
     updateActiveThumbnail();
@@ -2673,21 +3571,89 @@ function nextPage() {
 }
 
 function goToPage(pageNum) {
-    if (pageNum < 1 || pageNum > pdfDoc.numPages) return;
-    if (pageNum === currentPageNum) return; // Déjà sur cette page
+    console.log(`🔍 DEBUG: goToPage - Aller à la page ${pageNum}`);
+    if (pageNum < 1 || pageNum > pdfDoc.numPages) {
+        console.warn(`⚠️ Page ${pageNum} hors limites (1-${pdfDoc.numPages})`);
+        return;
+    }
+    if (pageNum === currentPageNum) {
+        console.log('ℹ️ Déjà sur cette page');
+        return; // Déjà sur cette page
+    }
     
     isNavigating = true; // Marquer le début de la navigation
     
-    // Sauvegarder les annotations de la page actuelle avant de changer
-    console.log(`📄 Navigation directe de la page ${currentPageNum} vers ${pageNum}`);
-    saveCurrentPageAnnotations();
+    // En mode multi-pages, faire défiler jusqu'à la page
+    const pagesContainer = document.getElementById('pdfPagesContainer');
+    const viewerContainer = document.getElementById('viewerContainer');
     
-    currentPageNum = pageNum;
+    if (pagesContainer && pagesContainer.children.length > 0 && viewerContainer) {
+        console.log('📄 Mode multi-pages - Navigation vers la page', pageNum);
+        const targetPage = document.getElementById(`page-wrapper-${pageNum}`);
+        
+        if (targetPage) {
+            // Méthode 1: ScrollIntoView avec behavior instant pour éviter les blocages
+            console.log('🎯 ScrollIntoView instant');
+            targetPage.scrollIntoView({ behavior: 'instant', block: 'start' });
+            
+            // Méthode 2: Calcul manuel de la position si scrollIntoView échoue
+            setTimeout(() => {
+                const targetRect = targetPage.getBoundingClientRect();
+                const containerRect = viewerContainer.getBoundingClientRect();
+                
+                // Si la page n'est pas visible après scrollIntoView, utiliser offsetTop
+                if (targetRect.top < containerRect.top - 50 || targetRect.top > containerRect.bottom + 50) {
+                    console.log('🚨 ScrollIntoView échoué, calcul manuel de la position');
+                    const targetOffset = targetPage.offsetTop;
+                    const containerPadding = 16; // padding du container
+                    const scrollPosition = Math.max(0, targetOffset - containerPadding);
+                    
+                    console.log(`📊 Target offset: ${targetOffset}, scroll to: ${scrollPosition}`);
+                    viewerContainer.scrollTop = scrollPosition;
+                    
+                    // Vérification finale
+                    setTimeout(() => {
+                        const finalRect = targetPage.getBoundingClientRect();
+                        const finalContainerRect = viewerContainer.getBoundingClientRect();
+                        const isVisible = finalRect.top >= finalContainerRect.top && finalRect.top <= finalContainerRect.bottom;
+                        console.log(`✅ Page ${pageNum} ${isVisible ? 'visible' : 'TOUJOURS INVISIBLE'} après navigation manuelle`);
+                        
+                        if (!isVisible) {
+                            // Dernière tentative: scroll avec scrollTo
+                            viewerContainer.scrollTo(0, scrollPosition);
+                            console.log('🔧 Tentative scrollTo finale');
+                        }
+                    }, 50);
+                }
+            }, 50);
+            
+            // Mettre à jour l'état de la page
+            currentPageNum = pageNum;
+            updatePageInfo();
+            updateNavigationButtons();
+            updateActiveThumbnail();
+            
+            console.log(`✅ Navigation vers page ${pageNum} initiée`);
+        } else {
+            console.error(`❌ page-wrapper-${pageNum} non trouvé`);
+            console.log('Pages disponibles:', Array.from(pagesContainer.children).map(c => c.id));
+        }
+    } else {
+        // Mode single page - ancien comportement
+        console.log('📄 Mode single page - Render page');
+        console.log('pagesContainer trouvé:', !!pagesContainer, 'Enfants:', pagesContainer ? pagesContainer.children.length : 0);
+        
+        // Sauvegarder les annotations de la page actuelle avant de changer
+        saveCurrentPageAnnotations();
+        
+        currentPageNum = pageNum;
+        
+        // Charger les annotations de la nouvelle page AVANT de rendre
+        loadPageAnnotations(currentPageNum);
+        
+        renderPage(currentPageNum);
+    }
     
-    // Charger les annotations de la nouvelle page AVANT de rendre
-    loadPageAnnotations(currentPageNum);
-    
-    renderPage(currentPageNum);
     updatePageInfo();
     updateNavigationButtons();
     updateActiveThumbnail();
@@ -5377,6 +6343,7 @@ function adjustSeatingScale() {
     display: flex;
     overflow: hidden;
     position: relative;
+    min-height: 0; /* Allow flex children to shrink */
 }
 
 /* Barre latérale des pages - permanente à gauche */
@@ -5478,23 +6445,58 @@ function adjustSeatingScale() {
 /* Zone d'affichage principal */
 .viewer-container {
     flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: 1rem;
     background-color: #f7fafc;
     position: relative;
+    height: 100%;
+    scroll-behavior: auto;
 }
 
-.pdf-viewer-container {
+.pdf-pages-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 0;
+    min-height: 100%;
+    width: 100%;
+}
+
+.pdf-page-wrapper {
     position: relative;
     background: white;
     border-radius: 0.5rem;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
     overflow: hidden;
-    transform-origin: center;
-    transition: transform 0.2s ease;
+    margin-bottom: 1rem;
+}
+
+.pdf-canvas {
+    display: block;
+    border-radius: 0.5rem;
+}
+
+.annotation-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border-radius: 0.5rem;
+    pointer-events: auto;
+    z-index: 2;
+}
+
+.pdf-page-number {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    z-index: 10;
 }
 
 .pdf-canvas {
