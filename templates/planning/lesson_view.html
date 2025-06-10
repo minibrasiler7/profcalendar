@@ -2312,6 +2312,121 @@ async function openFileViewer(fileId, filename, fileType) {
             setupToolEvents();
         }, 100);
         
+        // NOUVEAU: Attendre que le canvas soit prêt avant de redessiner les annotations
+        setTimeout(() => {
+            console.log('🎨 Vérification du canvas pour redessiner les annotations...');
+            if (annotationCtx && annotations.length > 0) {
+                console.log(`🎨 Canvas prêt - redessinage forcé de ${annotations.length} annotations`);
+                redrawAnnotations(true); // Force le redessinage des annotations chargées
+            } else if (!annotationCtx) {
+                console.log('⚠️ Canvas encore non disponible, retry dans 200ms...');
+                setTimeout(() => {
+                    if (annotationCtx && annotations.length > 0) {
+                        console.log(`🎨 Canvas prêt (retry) - redessinage forcé de ${annotations.length} annotations`);
+                        redrawAnnotations(true); // Force le redessinage des annotations chargées
+                    } else {
+                        console.log('❌ Canvas toujours non disponible après retry');
+                    }
+                }, 200);
+            } else {
+                console.log('ℹ️ Canvas prêt mais aucune annotation à dessiner');
+            }
+            
+            // Activer automatiquement la surveillance des annotations
+            if (typeof annotationDebug !== 'undefined') {
+                setTimeout(() => {
+                    console.log('🔍 Activation automatique de la surveillance des annotations...');
+                    annotationDebug.watchAnnotations();
+                }, 500);
+            }
+            
+            // NOUVEAU: Forcer l'affichage des annotations après un délai plus long
+            setTimeout(() => {
+                if (annotationCtx && annotations.length > 0) {
+                    console.log(`🎨 FORCE FINALE - Redessinage de ${annotations.length} annotations après délai`);
+                    isDrawing = false; // Forcer isDrawing à false
+                    redrawAnnotations(true);
+                } else {
+                    console.log('ℹ️ Pas d\'annotations à redessiner lors de la force finale');
+                }
+            }, 1000);
+            
+            // NOUVEAU: Créer une fonction globale simple pour forcer l'affichage
+            window.forceShowAnnotations = function() {
+                console.log('🎨 === AFFICHAGE FORCÉ GLOBAL ===');
+                console.log(`📄 Page: ${currentPageNum}, Annotations: ${annotations.length}`);
+                
+                // Utiliser le même système que redrawAnnotations
+                const currentAnnotationCanvas = document.getElementById(`annotation-canvas-${currentPageNum}`);
+                console.log(`🖼️ Canvas annotation-canvas-${currentPageNum}: ${!!currentAnnotationCanvas}`);
+                
+                if (currentAnnotationCanvas) {
+                    const wasDrawing = isDrawing;
+                    isDrawing = false;
+                    console.log('🔄 Redessinage forcé...');
+                    redrawAnnotations(true);
+                    isDrawing = wasDrawing;
+                    console.log('✅ Terminé');
+                } else {
+                    console.log('❌ Canvas non disponible');
+                }
+            };
+            
+            console.log('🎨 Fonction globale créée: window.forceShowAnnotations()');
+            
+            // NOUVEAU: Fonction de test pour diagnostic
+            window.annotationTest = function() {
+                console.log('🧪 === TEST DIAGNOSTIC ANNOTATIONS ===');
+                console.log(`📄 Page actuelle: ${currentPageNum}`);
+                console.log(`📊 Annotations par page:`, Object.keys(annotationsByPage));
+                console.log(`📊 Annotations page courante: ${annotations.length}`);
+                
+                // Vérifier canvas
+                const testCanvas = document.getElementById(`annotation-canvas-${currentPageNum}`);
+                console.log(`🖼️ Canvas annotation-canvas-${currentPageNum}: ${testCanvas ? 'TROUVÉ' : 'MANQUANT'}`);
+                
+                if (testCanvas) {
+                    const testCtx = testCanvas.getContext('2d');
+                    console.log(`🎨 Contexte: ${testCtx ? 'VALIDE' : 'INVALIDE'}`);
+                    console.log(`📏 Dimensions: ${testCanvas.width}x${testCanvas.height}`);
+                    
+                    // Test de dessin simple
+                    testCtx.save();
+                    testCtx.strokeStyle = '#FF0000';
+                    testCtx.lineWidth = 5;
+                    testCtx.beginPath();
+                    testCtx.arc(50, 50, 20, 0, 2 * Math.PI);
+                    testCtx.stroke();
+                    testCtx.restore();
+                    console.log('🔴 Cercle de test dessiné en (50,50)');
+                }
+                
+                // Forcer redraw des annotations existantes
+                if (annotations.length > 0) {
+                    console.log('🔄 Test de redessinage des annotations...');
+                    redrawAnnotations(true);
+                }
+            };
+            
+            console.log('🧪 Fonction de test créée: window.annotationTest()');
+            
+            // NOUVEAU: Auto-redessinage périodique pendant les premiers 10 secondes
+            let autoRedrawCount = 0;
+            const autoRedrawInterval = setInterval(() => {
+                autoRedrawCount++;
+                if (autoRedrawCount > 10) {
+                    clearInterval(autoRedrawInterval);
+                    console.log('🔄 Auto-redessinage arrêté après 10 tentatives');
+                    return;
+                }
+                
+                if (annotationCtx && annotations.length > 0 && !isDrawing) {
+                    console.log(`🔄 Auto-redessinage ${autoRedrawCount}/10 - ${annotations.length} annotations`);
+                    redrawAnnotations(true);
+                }
+            }, 1000);
+        }, 300);
+        
     } catch (error) {
         console.error('Erreur lors du chargement du fichier:', error);
         showError('Erreur lors du chargement du fichier');
@@ -3128,6 +3243,51 @@ window.annotationDebug = {
         }, 2000);
     },
     
+    // Surveiller en temps réel qui efface les annotations
+    watchAnnotations: function() {
+        console.log('🔍 === SURVEILLANCE DES ANNOTATIONS ACTIVÉE ===');
+        
+        // Intercepter les appels à clearRect (qui efface le canvas)
+        if (annotationCtx) {
+            const originalClearRect = annotationCtx.clearRect;
+            annotationCtx.clearRect = function(...args) {
+                console.log('🧹 CANVAS EFFACÉ ! Par qui ?');
+                console.trace('📍 Trace de l\'effacement:');
+                return originalClearRect.apply(this, args);
+            };
+            console.log('✅ Surveillance clearRect activée');
+        }
+        
+        // Surveiller les changements de la variable annotations
+        let annotationsLength = annotations.length;
+        const checkAnnotations = () => {
+            if (annotations.length !== annotationsLength) {
+                console.log(`📊 CHANGEMENT DÉTECTÉ: annotations.length ${annotationsLength} → ${annotations.length}`);
+                console.trace('📍 Trace du changement:');
+                annotationsLength = annotations.length;
+            }
+            
+            // Surveiller aussi annotationsByPage
+            if (annotationsByPage[currentPageNum]) {
+                const pageAnnotationsLength = annotationsByPage[currentPageNum].length;
+                setTimeout(() => {
+                    if (annotationsByPage[currentPageNum] && annotationsByPage[currentPageNum].length !== pageAnnotationsLength) {
+                        console.log(`📊 CHANGEMENT annotationsByPage[${currentPageNum}]: ${pageAnnotationsLength} → ${annotationsByPage[currentPageNum].length}`);
+                        console.trace('📍 Trace du changement annotationsByPage:');
+                    }
+                }, 10);
+            }
+        };
+        
+        // Vérifier toutes les 100ms
+        const interval = setInterval(checkAnnotations, 100);
+        
+        console.log('✅ Surveillance des variables activée (toutes les 100ms)');
+        console.log('Pour arrêter: clearInterval(' + interval + ')');
+        
+        return interval;
+    },
+    
     // Forcer la réinitialisation des outils
     resetTools: function() {
         console.log('🔄 === RÉINITIALISATION FORCÉE DES OUTILS ===');
@@ -3224,6 +3384,26 @@ window.annotationDebug = {
         }
         
         console.log('✅ Tous les événements reconfigurés');
+    },
+    
+    // Forcer l'affichage des annotations de la page actuelle
+    forceShowAnnotations: function() {
+        console.log('🎨 === AFFICHAGE FORCÉ DES ANNOTATIONS ===');
+        console.log(`📄 Page actuelle: ${currentPageNum}`);
+        console.log(`📊 Annotations disponibles: ${annotations.length}`);
+        console.log(`📊 Canvas disponible: ${!!annotationCtx}`);
+        console.log(`📊 isDrawing: ${isDrawing}`);
+        
+        if (annotationCtx) {
+            const wasDrawing = isDrawing;
+            isDrawing = false; // Forcer isDrawing à false
+            console.log('🔄 Forçage du redessinage...');
+            redrawAnnotations(true);
+            isDrawing = wasDrawing; // Restaurer l'état
+            console.log('✅ Redessinage forcé terminé');
+        } else {
+            console.log('❌ Canvas non disponible');
+        }
     }
 };
 
@@ -3235,7 +3415,9 @@ console.log('   - testSliderEvents() : Tester le slider manuellement');
 console.log('   - checkToolButtons() : Vérifier l\'état des boutons');
 console.log('   - fullTest() : Test complet de tous les outils');
 console.log('   - resetTools() : Réinitialiser tous les outils');
-console.log('   - rebindEvents() : NOUVEAU - Reconfigurer les événements des boutons');
+console.log('   - rebindEvents() : Reconfigurer les événements des boutons');
+console.log('   - watchAnnotations() : Surveiller qui efface les annotations');
+console.log('   - forceShowAnnotations() : NOUVEAU - Forcer l\'affichage des annotations');
 
 // Fonction de correction automatique du scroll (appliquée à chaque chargement de PDF)
 function applyScrollFix() {
@@ -3554,12 +3736,40 @@ function setupScrollObserver() {
         });
         
         // Mettre à jour seulement si la page la plus visible a changé ET si le ratio d'intersection est significatif
-        if (mostVisiblePage !== currentPageNum && maxIntersectionRatio > 0.3) {
+        // ET si on n'est pas en train de charger les annotations initiales
+        if (mostVisiblePage !== currentPageNum && maxIntersectionRatio > 0.3 && !isLoadingInitialAnnotations) {
+            console.log(`🔄 === CHANGEMENT DE PAGE VIA OBSERVER ===`);
             console.log(`📄 Page visible changée: ${currentPageNum} → ${mostVisiblePage} (ratio: ${maxIntersectionRatio.toFixed(2)})`);
+            
+            const oldPageNum = currentPageNum;
             currentPageNum = mostVisiblePage;
+            
+            console.log(`📊 Avant changement - annotations page ${oldPageNum}: ${annotations.length}`);
+            console.log(`🔄 Chargement des annotations pour la nouvelle page ${currentPageNum}...`);
+            
+            // Charger les annotations de la nouvelle page
+            loadPageAnnotations(currentPageNum);
+            
+            // NOUVEAU: Forcer le redessinage après changement de page
+            setTimeout(() => {
+                if (annotationCtx && annotations.length > 0) {
+                    console.log(`🎨 REDESSINAGE POST-CHANGEMENT PAGE - ${annotations.length} annotations pour page ${currentPageNum}`);
+                    const wasDrawing = isDrawing;
+                    isDrawing = false; // Temporairement désactiver isDrawing
+                    redrawAnnotations(true);
+                    isDrawing = wasDrawing; // Restaurer l'état précédent
+                } else {
+                    console.log(`ℹ️ Aucune annotation à redessiner pour la page ${currentPageNum}`);
+                }
+            }, 100);
+            
             updatePageInfo();
             updateNavigationButtons();
             updateActiveThumbnail();
+            
+            console.log(`🏁 === FIN CHANGEMENT DE PAGE ===`);
+        } else if (isLoadingInitialAnnotations) {
+            console.log(`⏸️ Observer en pause - chargement initial des annotations en cours`);
         }
     }, observerOptions);
     
@@ -4464,21 +4674,44 @@ function handleTouch(e) {
 
 // Redessiner les annotations
 function redrawAnnotations() {
-    if (!annotationCtx) {
-        console.warn('⚠️ redrawAnnotations: annotationCtx not available');
-        return;
-    }
-    
     // Ne pas redessiner si on est en train de dessiner pour éviter d'effacer le trait en cours
-    if (isDrawing) {
-        console.log('redrawAnnotations skipped - currently drawing');
+    // SAUF si c'est pour charger les annotations initiales (forceRedraw = true)
+    const forceRedraw = arguments[0] === true;
+    if (isDrawing && !forceRedraw) {
+        console.log('redrawAnnotations skipped - currently drawing (use redrawAnnotations(true) to force)');
         return;
     }
     
-    console.log(`📄 redrawAnnotations called for page ${currentPageNum} with ${annotations.length} annotations:`, annotations);
+    if (forceRedraw) {
+        console.log('🔄 FORCE REDRAW - redessinage forcé même pendant le dessin');
+    }
     
-    // Effacer le canvas
-    annotationCtx.clearRect(0, 0, annotationCanvas.width, annotationCanvas.height);
+    console.log(`🎨 === REDRAW ANNOTATIONS DEBUG ===`);
+    console.log(`📄 Page actuelle: ${currentPageNum}`);
+    console.log(`📊 Variable annotations.length: ${annotations.length}`);
+    console.log(`📊 annotationsByPage[${currentPageNum}]?.length: ${annotationsByPage[currentPageNum]?.length || 0}`);
+    console.log(`📊 Contenu annotations:`, annotations);
+    console.log(`📊 Contenu annotationsByPage[${currentPageNum}]:`, annotationsByPage[currentPageNum]);
+    
+    // CORRECTION CRITIQUE: Toujours utiliser le canvas de la page actuelle
+    const currentAnnotationCanvas = document.getElementById(`annotation-canvas-${currentPageNum}`);
+    if (!currentAnnotationCanvas) {
+        console.error(`❌ redrawAnnotations: Canvas annotation-canvas-${currentPageNum} non trouvé!`);
+        return;
+    }
+    
+    const currentAnnotationCtx = currentAnnotationCanvas.getContext('2d');
+    if (!currentAnnotationCtx) {
+        console.error(`❌ redrawAnnotations: Impossible d'obtenir le contexte du canvas annotation-canvas-${currentPageNum}`);
+        return;
+    }
+    
+    console.log(`🎯 Utilisation du canvas correct: annotation-canvas-${currentPageNum}`);
+    console.log(`📏 Dimensions canvas: ${currentAnnotationCanvas.width}x${currentAnnotationCanvas.height}`);
+    
+    // Effacer le canvas CORRECT
+    console.log('🧹 Effacement du canvas...');
+    currentAnnotationCtx.clearRect(0, 0, currentAnnotationCanvas.width, currentAnnotationCanvas.height);
     
     // Compter les annotations qui seront dessinées
     let drawnCount = 0;
@@ -4503,41 +4736,41 @@ function redrawAnnotations() {
             page: annotation.page
         });
         
-        annotationCtx.beginPath();
-        annotationCtx.moveTo(annotation.points[0].x, annotation.points[0].y);
+        currentAnnotationCtx.beginPath();
+        currentAnnotationCtx.moveTo(annotation.points[0].x, annotation.points[0].y);
         
         // Configurer le style
         if (annotation.type === 'pen') {
-            annotationCtx.globalCompositeOperation = 'source-over';
-            annotationCtx.strokeStyle = annotation.color;
-            annotationCtx.lineWidth = annotation.strokeWidth * (currentScale || 1);
-            annotationCtx.lineCap = 'round';
-            annotationCtx.lineJoin = 'round';
-            annotationCtx.globalAlpha = 1.0;
+            currentAnnotationCtx.globalCompositeOperation = 'source-over';
+            currentAnnotationCtx.strokeStyle = annotation.color;
+            currentAnnotationCtx.lineWidth = annotation.strokeWidth * (currentScale || 1);
+            currentAnnotationCtx.lineCap = 'round';
+            currentAnnotationCtx.lineJoin = 'round';
+            currentAnnotationCtx.globalAlpha = 1.0;
         } else if (annotation.type === 'highlighter') {
-            annotationCtx.globalCompositeOperation = 'multiply';
-            annotationCtx.strokeStyle = annotation.color;
-            annotationCtx.lineWidth = annotation.strokeWidth * 3 * (currentScale || 1);
-            annotationCtx.lineCap = 'round';
-            annotationCtx.lineJoin = 'round';
-            annotationCtx.globalAlpha = 0.3;
+            currentAnnotationCtx.globalCompositeOperation = 'multiply';
+            currentAnnotationCtx.strokeStyle = annotation.color;
+            currentAnnotationCtx.lineWidth = annotation.strokeWidth * 3 * (currentScale || 1);
+            currentAnnotationCtx.lineCap = 'round';
+            currentAnnotationCtx.lineJoin = 'round';
+            currentAnnotationCtx.globalAlpha = 0.3;
         }
         
         // Dessiner le trait
         for (let i = 1; i < annotation.points.length; i++) {
-            annotationCtx.lineTo(annotation.points[i].x, annotation.points[i].y);
+            currentAnnotationCtx.lineTo(annotation.points[i].x, annotation.points[i].y);
         }
         
-        annotationCtx.stroke();
+        currentAnnotationCtx.stroke();
         
         if (annotation.type === 'highlighter') {
-            annotationCtx.globalAlpha = 1.0;
+            currentAnnotationCtx.globalAlpha = 1.0;
         }
         
         drawnCount++;
     });
     
-    console.log(`✅ redrawAnnotations completed: ${drawnCount}/${annotations.length} annotations drawn on page ${currentPageNum}`);
+    console.log(`✅ redrawAnnotations completed: ${drawnCount}/${annotations.length} annotations drawn on canvas annotation-canvas-${currentPageNum}`);
 }
 
 // Charger les annotations
@@ -4560,7 +4793,11 @@ async function loadAnnotations(fileId) {
         console.error('Erreur lors du chargement des annotations:', error);
         loadAllAnnotations({});
     } finally {
-        isLoadingInitialAnnotations = false;
+        // Délai de sécurité pour laisser le temps aux annotations de s'afficher
+        setTimeout(() => {
+            isLoadingInitialAnnotations = false;
+            console.log('🔓 Observer réactivé - chargement initial terminé');
+        }, 500);
     }
 }
 
@@ -4623,8 +4860,24 @@ function saveCurrentPageAnnotations() {
 
 // Charger les annotations d'une page spécifique
 function loadPageAnnotations(pageNum) {
+    console.log(`🔄 === LOAD PAGE ANNOTATIONS APPELÉE ===`);
     console.log(`📄 Chargement des annotations pour la page ${pageNum}`);
     console.log(`📄 Annotations disponibles par page:`, Object.keys(annotationsByPage));
+    console.log(`📄 Variable annotations avant chargement:`, annotations.length, 'éléments');
+    
+    // Tracer qui appelle cette fonction
+    console.trace('📍 Trace de l\'appel loadPageAnnotations:');
+    
+    // CORRECTION CRITIQUE: Mettre à jour les variables globales pour pointer vers la bonne page
+    annotationCanvas = document.getElementById(`annotation-canvas-${pageNum}`);
+    if (annotationCanvas) {
+        annotationCtx = annotationCanvas.getContext('2d');
+        canvas = annotationCanvas; // Variable de compatibilité
+        ctx = annotationCtx; // Variable de compatibilité
+        console.log(`🎯 Variables globales mises à jour pour la page ${pageNum}`);
+    } else {
+        console.error(`❌ Canvas annotation-canvas-${pageNum} introuvable!`);
+    }
     
     // Charger les annotations de cette page
     if (annotationsByPage[pageNum]) {
@@ -4654,12 +4907,30 @@ function loadPageAnnotations(pageNum) {
     }
     
     // Redessiner les annotations sur le canvas (forcé)
-    console.log(`📄 Redessinage forcé des annotations pour la page ${pageNum}`);
+    console.log(`🎨 === REDESSINAGE FORCÉ ===`);
+    console.log(`📄 Page: ${pageNum}, annotations à dessiner: ${annotations.length}`);
+    console.log(`🖼️ Canvas ready: ${!!annotationCtx}`);
+    
     if (annotationCtx) {
+        console.log('🔄 Appel de redrawAnnotations() depuis loadPageAnnotations...');
         redrawAnnotations();
+        console.log('✅ redrawAnnotations() terminé');
     } else {
-        console.warn('⚠️ annotationCtx non disponible pour redessiner');
+        console.warn('⚠️ annotationCtx non disponible pour redessiner - report en attente du canvas');
+        
+        // Reporter le redessinage quand le canvas sera prêt
+        const waitForCanvas = () => {
+            if (annotationCtx) {
+                console.log('🎨 Canvas maintenant disponible - redessinage forcé des annotations chargées');
+                redrawAnnotations(true); // Force le redessinage même si isDrawing = true
+            } else {
+                setTimeout(waitForCanvas, 100);
+            }
+        };
+        waitForCanvas();
     }
+    
+    console.log(`🏁 === FIN LOAD PAGE ANNOTATIONS ===`);
 }
 
 // Obtenir toutes les annotations de toutes les pages pour la sauvegarde
@@ -4682,6 +4953,14 @@ function loadAllAnnotations(savedAnnotations) {
         
         // Charger les annotations de la page actuelle
         loadPageAnnotations(currentPageNum);
+        
+        // Forcer un redessinage immédiat des annotations sur la page courante
+        setTimeout(() => {
+            if (annotations.length > 0) {
+                console.log(`🎨 REDRAW INITIAL - Redessinage des annotations chargées (${annotations.length}) sur page ${currentPageNum}`);
+                redrawAnnotations(true);
+            }
+        }, 100);
     } else if (Array.isArray(savedAnnotations)) {
         // Ancien format (compatibility) - toutes les annotations sur la page 1
         console.log('📄 Format legacy détecté - migration vers format par page');
@@ -4690,6 +4969,14 @@ function loadAllAnnotations(savedAnnotations) {
             annotationsByPage[1] = savedAnnotations;
         }
         loadPageAnnotations(currentPageNum);
+        
+        // Forcer un redessinage immédiat des annotations sur la page courante
+        setTimeout(() => {
+            if (annotations.length > 0) {
+                console.log(`🎨 REDRAW INITIAL (legacy) - Redessinage des annotations chargées (${annotations.length}) sur page ${currentPageNum}`);
+                redrawAnnotations(true);
+            }
+        }, 100);
     } else {
         // Aucune annotation ou format non reconnu
         console.log('📄 Aucune annotation ou format non reconnu - démarrage vierge');
