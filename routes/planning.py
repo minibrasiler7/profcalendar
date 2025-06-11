@@ -15,11 +15,14 @@ planning_bp = Blueprint('planning', __name__, url_prefix='/planning')
 def get_day_plannings(date_str):
     """API endpoint pour récupérer les planifications d'une journée"""
     try:
+        print(f"📅 Requête pour les planifications du {date_str}")
+        
         # Parser la date
         planning_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         
         # Récupérer l'ID de la classe depuis les paramètres de requête
         classroom_id = request.args.get('classroom_id')
+        print(f"🏫 Classe ID: {classroom_id}")
         
         # Construire la requête de base
         query = Planning.query.filter_by(
@@ -28,11 +31,12 @@ def get_day_plannings(date_str):
         )
         
         # Filtrer par classe si spécifié
-        if classroom_id:
-            query = query.filter_by(classroom_id=classroom_id)
+        if classroom_id and classroom_id != '':
+            query = query.filter_by(classroom_id=int(classroom_id))
         
         # Récupérer les planifications
         plannings = query.all()
+        print(f"📊 Nombre de planifications trouvées: {len(plannings)}")
         
         # Récupérer les périodes de l'utilisateur
         periods = calculate_periods(current_user)
@@ -41,23 +45,39 @@ def get_day_plannings(date_str):
         # Construire la réponse
         result = []
         for planning in plannings:
-            period_info = periods_dict.get(planning.period)
+            period_info = periods_dict.get(planning.period_number)
             
-            result.append({
-                'id': planning.id,
-                'period': planning.period,
-                'period_start': period_info['start'].strftime('%H:%M') if period_info else '',
-                'period_end': period_info['end'].strftime('%H:%M') if period_info else '',
-                'classroom_id': planning.classroom_id,
-                'classroom_name': planning.classroom.name if planning.classroom else '',
-                'classroom_subject': planning.classroom.subject if planning.classroom else '',
-                'classroom_color': planning.classroom.color if planning.classroom else '#4F46E5',
-                'title': planning.title,
-                'description': planning.description
-            })
+            try:
+                # Récupérer les informations de classe avec gestion d'erreur
+                classroom_name = ''
+                classroom_subject = ''
+                classroom_color = '#4F46E5'
+                
+                if planning.classroom:
+                    classroom_name = planning.classroom.name or ''
+                    classroom_subject = planning.classroom.subject or ''
+                    classroom_color = planning.classroom.color or '#4F46E5'
+                
+                result.append({
+                    'id': planning.id,
+                    'period': planning.period_number,
+                    'period_start': period_info['start'].strftime('%H:%M') if period_info else '',
+                    'period_end': period_info['end'].strftime('%H:%M') if period_info else '',
+                    'classroom_id': planning.classroom_id,
+                    'classroom_name': classroom_name,
+                    'classroom_subject': classroom_subject,
+                    'classroom_color': classroom_color,
+                    'title': planning.title or '',
+                    'description': planning.description or ''
+                })
+            except Exception as plan_error:
+                print(f"Erreur lors du traitement de la planification {planning.id}: {plan_error}")
+                # Continuer avec les autres planifications
         
         # Trier par période
         result.sort(key=lambda x: x['period'])
+        
+        print(f"✅ Réponse construite avec {len(result)} planifications")
         
         return jsonify({
             'success': True,
@@ -335,6 +355,15 @@ def calendar_view():
     # Sélectionner la première classe par défaut
     selected_classroom_id = request.args.get('classroom', classrooms[0].id if classrooms else None)
 
+    # Créer une version JSON-serializable de schedule_grid
+    schedule_grid_json = {}
+    for key, schedule in schedule_grid.items():
+        schedule_grid_json[key] = {
+            'classroom_id': schedule.classroom_id,
+            'weekday': schedule.weekday,
+            'period_number': schedule.period_number
+        }
+
     return render_template('planning/calendar_view.html',
                          week_dates=week_dates,
                          current_week=current_week,
@@ -343,6 +372,7 @@ def calendar_view():
                          periods=periods,
                          periods_json=periods_json,
                          schedule_grid=schedule_grid,
+                         schedule_grid_json=schedule_grid_json,
                          planning_grid=planning_grid,
                          annual_data=annual_data,
                          holidays_info=holidays_info,
@@ -2013,6 +2043,74 @@ def load_seating_plan(classroom_id):
                 'plan_data': None,
                 'message': 'Aucun plan sauvegardé pour cette classe'
             })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/api/slot/<date_str>/<int:period>')
+@login_required
+def get_slot_data(date_str, period):
+    """API endpoint pour récupérer les données d'un slot de planning"""
+    try:
+        planning_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        weekday = planning_date.weekday()
+        
+        # Récupérer la période pour les horaires
+        periods = calculate_periods(current_user)
+        period_info = next((p for p in periods if p['number'] == period), None)
+        
+        if not period_info:
+            return jsonify({'success': False, 'message': 'Période invalide'}), 400
+        
+        # Chercher un planning existant
+        planning = Planning.query.filter_by(
+            user_id=current_user.id,
+            date=planning_date,
+            period_number=period
+        ).first()
+        
+        # Récupérer l'horaire type par défaut
+        schedule = Schedule.query.filter_by(
+            user_id=current_user.id,
+            weekday=weekday,
+            period_number=period
+        ).first()
+        
+        result = {
+            'period': period,
+            'period_start': period_info['start'].strftime('%H:%M'),
+            'period_end': period_info['end'].strftime('%H:%M'),
+            'has_schedule': schedule is not None,
+            'default_classroom_id': schedule.classroom_id if schedule else None,
+            'has_planning': planning is not None
+        }
+        
+        if planning:
+            result.update({
+                'classroom_id': planning.classroom_id,
+                'title': planning.title or '',
+                'description': planning.description or '',
+                'checklist_states': planning.get_checklist_states()
+            })
+        elif schedule:
+            result.update({
+                'classroom_id': schedule.classroom_id,
+                'title': '',
+                'description': '',
+                'checklist_states': {}
+            })
+        else:
+            result.update({
+                'classroom_id': None,
+                'title': '',
+                'description': '',
+                'checklist_states': {}
+            })
+        
+        return jsonify({
+            'success': True,
+            'slot': result
+        })
         
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500

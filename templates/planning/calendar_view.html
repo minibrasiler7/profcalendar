@@ -898,9 +898,9 @@ if (typeof pdfjsLib !== 'undefined') {
 }
 
 .planning-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #1f2937;
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: white;
 }
 
 .planning-description {
@@ -908,6 +908,179 @@ if (typeof pdfjsLib !== 'undefined') {
     color: #6b7280;
     margin-top: 0.5rem;
     line-height: 1.4;
+}
+
+/* Styles pour les créneaux journaliers éditables */
+.day-schedules-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.day-schedule-slot {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s ease;
+    cursor: pointer;
+}
+
+.day-schedule-slot:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.slot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.slot-period {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 0.875rem;
+}
+
+.slot-time {
+    font-size: 0.75rem;
+    color: #6b7280;
+    background-color: #f3f4f6;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.btn-edit-slot {
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.btn-edit-slot:hover {
+    background-color: #f3f4f6;
+    color: #4f46e5;
+}
+
+.slot-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.slot-class {
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.875rem;
+}
+
+.slot-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.slot-title.placeholder {
+    color: #9ca3af;
+    font-style: italic;
+    font-weight: 400;
+}
+
+.slot-description {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 0.5rem;
+    line-height: 1.4;
+}
+
+.slot-empty {
+    font-size: 0.875rem;
+    color: #9ca3af;
+    font-style: italic;
+    margin-top: 0.25rem;
+}
+
+/* Modal d'édition de créneau */
+.day-edit-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.day-edit-modal.show {
+    opacity: 1;
+}
+
+.day-edit-content {
+    background-color: white;
+    border-radius: 0.5rem;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(-20px);
+    transition: transform 0.3s ease;
+}
+
+.day-edit-modal.show .day-edit-content {
+    transform: translateY(0);
+}
+
+.day-edit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.day-edit-header h4 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #1f2937;
+}
+
+.day-edit-close {
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.day-edit-close:hover {
+    background-color: #f3f4f6;
+    color: #1f2937;
+}
+
+.day-edit-body {
+    padding: 1.5rem;
+}
+
+.day-edit-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    background-color: #f9fafb;
 }
 </style>
 {% endblock %}
@@ -1355,7 +1528,7 @@ if (typeof pdfjsLib !== 'undefined') {
             </div>
 
             <div id="dayPlanningsContainer">
-                <!-- Les planifications de la journée seront chargées ici -->
+                <!-- Les créneaux de la journée seront chargés ici -->
             </div>
         </div>
 
@@ -1495,6 +1668,7 @@ const currentWeek = '{{ current_week.strftime("%Y-%m-%d") }}';
 const selectedClassroomId = {{ selected_classroom_id or 'null' }};
 const periodsData = {{ periods_json | tojson }};
 const classrooms = {{ classrooms_json | tojson }};
+const scheduleGrid = {{ schedule_grid_json | tojson }};
 let currentPlanningCell = null;
 let isExtendedView = false;
 
@@ -2792,48 +2966,132 @@ function openDayPlanningModal(dateStr, classroomId) {
     document.getElementById('dayPlanningModal').classList.add('show');
 }
 
-// Charger les planifications d'une journée
+// Charger les créneaux de la journée avec planifications existantes
 async function loadDayPlannings(dateStr, classroomId) {
     const container = document.getElementById('dayPlanningsContainer');
     container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>';
     
     try {
-        const response = await fetch(`/api/planning/day/${dateStr}?classroom_id=${classroomId || ''}`);
-        const data = await response.json();
+        // Charger les planifications existantes
+        const response = await fetch(`/planning/api/day/${dateStr}?classroom_id=${classroomId || ''}`);
+        console.log('📡 Réponse API status:', response.status);
         
-        if (data.success && data.plannings) {
-            renderDayPlannings(data.plannings);
-        } else {
-            container.innerHTML = '<div class="text-center text-muted">Aucune planification pour cette journée</div>';
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Erreur HTTP:', response.status, errorText);
+            container.innerHTML = '<div class="text-center text-danger">Erreur lors du chargement (HTTP ' + response.status + ')</div>';
+            return;
         }
+        
+        const data = await response.json();
+        console.log('📊 Données reçues:', data);
+        
+        // Créer un objet des planifications par période
+        const planningsByPeriod = {};
+        if (data.success && data.plannings) {
+            data.plannings.forEach(planning => {
+                planningsByPeriod[planning.period] = planning;
+            });
+        }
+        
+        // Charger les créneaux du jour pour cette classe
+        await loadDayScheduleSlots(dateStr, classroomId, planningsByPeriod);
+        
     } catch (error) {
         console.error('Erreur lors du chargement des planifications:', error);
         container.innerHTML = '<div class="text-center text-danger">Erreur lors du chargement</div>';
     }
 }
 
-// Afficher les planifications d'une journée
-function renderDayPlannings(plannings) {
+// Charger les créneaux du jour (horaire type + planifications)
+async function loadDayScheduleSlots(dateStr, classroomId, existingPlannings) {
     const container = document.getElementById('dayPlanningsContainer');
     
-    if (plannings.length === 0) {
-        container.innerHTML = '<div class="text-center text-muted">Aucune planification pour cette journée</div>';
+    if (!classroomId) {
+        container.innerHTML = '<div class="text-center text-muted">Veuillez sélectionner une classe pour voir les créneaux</div>';
         return;
     }
     
-    let html = '<div class="day-plannings-list">';
+    try {
+        // Récupérer l'horaire type pour cette classe
+        const dayOfWeek = new Date(dateStr).getDay();
+        const weekday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convertir dimanche=0 en lundi=0
+        
+        // Utiliser les données déjà disponibles dans la page
+        const periods = periodsData; // Défini globalement dans calendar_view.html
+        
+        // Filtrer les horaires pour cette classe et ce jour
+        const todaySchedules = [];
+        
+        // Parcourir seulement les périodes où cette classe a cours
+        periods.forEach(period => {
+            // Vérifier si cette classe a cours à cette période ce jour
+            const scheduleKey = `${weekday}_${period.number}`;
+            const schedule = scheduleGrid[scheduleKey];
+            
+            // Ne créer un créneau que si cette classe a cours
+            if (schedule && schedule.classroom_id == classroomId) {
+                const existingPlanning = existingPlannings[period.number];
+                
+                todaySchedules.push({
+                    period_number: period.number,
+                    period_start: period.start,
+                    period_end: period.end,
+                    planning: existingPlanning || null
+                });
+            }
+        });
+        
+        renderDayScheduleSlots(todaySchedules, dateStr, classroomId);
+        
+    } catch (error) {
+        console.error('Erreur lors du chargement des créneaux:', error);
+        container.innerHTML = '<div class="text-center text-danger">Erreur lors du chargement des créneaux</div>';
+    }
+}
+
+// Afficher les créneaux de la journée avec possibilité d'édition
+function renderDayScheduleSlots(scheduleSlots, dateStr, classroomId) {
+    const container = document.getElementById('dayPlanningsContainer');
     
-    plannings.forEach(planning => {
+    if (scheduleSlots.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted">Aucun créneau configuré pour cette journée</div>';
+        return;
+    }
+    
+    // Vérifier si la date est passée (plus de 24h)
+    const targetDate = new Date(dateStr);
+    const now = new Date();
+    const isPastDate = (now - targetDate) > (24 * 60 * 60 * 1000);
+    
+    // Récupérer les informations de la classe
+    const classroom = classrooms.find(c => c.id == classroomId);
+    const classroomColor = classroom ? classroom.color : '#4F46E5';
+    const classroomName = classroom ? classroom.name : 'Classe inconnue';
+    const classroomSubject = classroom ? classroom.subject : '';
+    
+    let html = '<div class="day-schedules-list">';
+    
+    scheduleSlots.forEach(slot => {
+        const planning = slot.planning;
+        const hasPlanning = planning !== null;
+        
         html += `
-            <div class="day-planning-item" style="border-left: 4px solid ${planning.classroom_color || '#4F46E5'}">
-                <div class="planning-header">
-                    <div class="planning-period">Période ${planning.period}</div>
-                    <div class="planning-time">${planning.period_start} - ${planning.period_end}</div>
+            <div class="day-schedule-slot" style="border-left: 4px solid ${classroomColor}">
+                <div class="slot-header">
+                    <div class="slot-period">Période ${slot.period_number}</div>
+                    <div class="slot-time">${slot.period_start} - ${slot.period_end}</div>
+                    ${!isPastDate ? `<button class="btn-edit-slot" onclick="editDaySlot(${slot.period_number}, '${dateStr}', ${classroomId})" title="Modifier ce créneau">
+                        <i class="fas fa-edit"></i>
+                    </button>` : ''}
                 </div>
-                <div class="planning-content">
-                    <div class="planning-class">${planning.classroom_name} - ${planning.classroom_subject}</div>
-                    <div class="planning-title">${planning.title || 'Sans titre'}</div>
-                    ${planning.description ? `<div class="planning-description">${planning.description}</div>` : ''}
+                <div class="slot-content">
+                    <div class="slot-class">${classroomName}${classroomSubject ? ' - ' + classroomSubject : ''}</div>
+                    <div class="slot-title ${!hasPlanning ? 'placeholder' : ''}">
+                        ${hasPlanning ? (planning.title || 'Sans titre') : 'Cliquez pour planifier ce créneau'}
+                    </div>
+                    ${hasPlanning && planning.description ? `<div class="slot-description">${planning.description}</div>` : ''}
+                    ${!hasPlanning && !isPastDate ? '<div class="slot-empty">Créneau libre - Cliquez pour ajouter une planification</div>' : ''}
                 </div>
             </div>
         `;
@@ -2841,6 +3099,180 @@ function renderDayPlannings(plannings) {
     
     html += '</div>';
     container.innerHTML = html;
+}
+
+// Variables pour l'édition des créneaux journaliers
+let currentEditingSlot = null;
+
+// Éditer un créneau spécifique
+function editDaySlot(periodNumber, dateStr, classroomId) {
+    console.log(`📝 Édition créneau: Période ${periodNumber}, Date: ${dateStr}, Classe: ${classroomId}`);
+    
+    // Stocker les informations du créneau en cours d'édition
+    currentEditingSlot = {
+        period: periodNumber,
+        date: dateStr,
+        classroomId: classroomId
+    };
+    
+    // Récupérer les données existantes pour ce créneau
+    getDaySlotData(dateStr, periodNumber, classroomId).then(data => {
+        if (data.success && data.planning) {
+            // Pré-remplir avec les données existantes
+            showDaySlotEditModal(data.planning.title || '', data.planning.description || '');
+        } else {
+            // Nouveau créneau vide
+            showDaySlotEditModal('', '');
+        }
+    });
+}
+
+// Récupérer les données d'un créneau spécifique
+async function getDaySlotData(dateStr, periodNumber, classroomId) {
+    try {
+        const response = await fetch(`/planning/api/slot/${dateStr}/${periodNumber}?classroom_id=${classroomId}`);
+        if (response.ok) {
+            return await response.json();
+        }
+        return { success: false };
+    } catch (error) {
+        console.error('Erreur lors de la récupération du créneau:', error);
+        return { success: false };
+    }
+}
+
+// Afficher le modal d'édition de créneau
+function showDaySlotEditModal(title, description) {
+    // Créer un modal d'édition simple
+    const modalHtml = `
+        <div class="day-edit-modal" id="dayEditModal">
+            <div class="day-edit-content">
+                <div class="day-edit-header">
+                    <h4>Planifier le créneau - Période ${currentEditingSlot.period}</h4>
+                    <button class="day-edit-close" onclick="closeDayEditModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="day-edit-body">
+                    <div class="form-group">
+                        <label class="form-label">Titre du cours</label>
+                        <input type="text" id="daySlotTitle" class="form-control" 
+                               value="${title}" placeholder="Ex: Introduction aux fractions">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea id="daySlotDescription" class="form-control" rows="4"
+                                  placeholder="Détails du cours, exercices prévus...">${description}</textarea>
+                    </div>
+                </div>
+                <div class="day-edit-footer">
+                    <button class="btn btn-outline" onclick="closeDayEditModal()">Annuler</button>
+                    <button class="btn btn-primary" onclick="saveDaySlot()">
+                        <i class="fas fa-save"></i> Enregistrer
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Ajouter le modal au DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Attacher la conversion des tirets en checkboxes
+    attachDayDashConversion();
+    
+    // Afficher le modal
+    setTimeout(() => {
+        document.getElementById('dayEditModal').classList.add('show');
+    }, 10);
+}
+
+// Fermer le modal d'édition
+function closeDayEditModal() {
+    const modal = document.getElementById('dayEditModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.remove();
+        }, 300);
+    }
+    currentEditingSlot = null;
+}
+
+// Attacher la conversion des tirets en checkboxes pour le modal journalier
+function attachDayDashConversion() {
+    const textarea = document.getElementById('daySlotDescription');
+    if (!textarea) return;
+
+    textarea.addEventListener('input', function(e) {
+        const cursorPos = textarea.selectionStart;
+        const value = textarea.value;
+
+        // Vérifier si on vient de taper un tiret en début de ligne
+        if (e.inputType === 'insertText' && e.data === '-') {
+            const lines = value.substring(0, cursorPos).split('\n');
+            const currentLine = lines[lines.length - 1];
+
+            // Si le tiret est au début de la ligne (avec éventuellement des espaces avant)
+            if (currentLine.trim() === '-') {
+                e.preventDefault();
+
+                // Remplacer le tiret par [ ]
+                const beforeCursor = value.substring(0, cursorPos - 1);
+                const afterCursor = value.substring(cursorPos);
+                const spaces = currentLine.match(/^\s*/)[0]; // Préserver l'indentation
+
+                textarea.value = beforeCursor + spaces + '[ ] ' + afterCursor;
+
+                // Placer le curseur après [ ]
+                const newCursorPos = cursorPos - 1 + spaces.length + 4;
+                textarea.setSelectionRange(newCursorPos, newCursorPos);
+            }
+        }
+    });
+}
+
+// Sauvegarder les modifications du créneau
+async function saveDaySlot() {
+    if (!currentEditingSlot) return;
+    
+    const title = document.getElementById('daySlotTitle').value;
+    const description = document.getElementById('daySlotDescription').value;
+    
+    try {
+        const response = await fetch('/planning/save_planning', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                date: currentEditingSlot.date,
+                period_number: currentEditingSlot.period,
+                classroom_id: currentEditingSlot.classroomId,
+                title: title,
+                description: description,
+                checklist_states: {} // Pas de checkboxes dans ce modal simple
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('✅ Créneau sauvegardé avec succès');
+            // Sauvegarder les valeurs avant de fermer le modal
+            const dateToReload = currentEditingSlot.date;
+            const classroomToReload = currentEditingSlot.classroomId;
+            closeDayEditModal();
+            // Recharger les créneaux de la journée
+            loadDayPlannings(dateToReload, classroomToReload);
+        } else {
+            console.error('❌ Erreur lors de la sauvegarde:', result.message || 'Erreur inconnue');
+            alert('Erreur lors de la sauvegarde: ' + (result.message || 'Erreur inconnue'));
+        }
+    } catch (error) {
+        console.error('Erreur lors de la sauvegarde:', error);
+        alert('Erreur lors de la sauvegarde: ' + error.message);
+    }
 }
 
 // Fermer le modal journalier

@@ -272,12 +272,12 @@
 }
 
 .planning-title {
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     margin-top: 0.25rem;
     white-space: normal;
     word-wrap: break-word;
     font-style: italic;
-    opacity: 0.9;
+    color: white;
     line-height: 1.2;
 }
 
