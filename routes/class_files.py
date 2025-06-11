@@ -316,24 +316,24 @@ def get_class_files(classroom_id):
         if not classroom:
             return jsonify({'success': False, 'message': 'Classe introuvable'}), 404
         
-        # Récupérer les fichiers sans dossier parent
+        # Récupérer tous les fichiers de la classe
         files = ClassFile.query.filter_by(
             classroom_id=classroom_id
-        ).filter(
-            db.or_(
-                ClassFile.description == None,
-                ClassFile.description == '',
-                ClassFile.description == 'Copié depuis le gestionnaire de fichiers'
-            )
         ).all()
         
         files_data = []
         for file in files:
+            # Extraire le chemin du dossier depuis la description
+            folder_path = ''
+            if file.description and "Copié dans le dossier:" in file.description:
+                folder_path = file.description.split("Copié dans le dossier:")[1].strip()
+            
             files_data.append({
                 'id': file.id,
                 'original_filename': file.original_filename,
                 'file_type': file.file_type,
                 'file_size': file.file_size,
+                'folder_path': folder_path,
                 'thumbnail_path': None  # TODO: implémenter les miniatures
             })
         

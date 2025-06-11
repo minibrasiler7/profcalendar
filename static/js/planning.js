@@ -26,13 +26,19 @@ function openPlanningModal(cell, fromAnnualView = false) {
             if (isPastPeriod && data.planning.description) {
                 displayPastPeriodDescription(data.planning.description, data.planning.checklist_states);
             } else {
-                document.getElementById('modalDescription').value = data.planning.description || '';
+                const modalDesc = document.getElementById('modalDescription');
+                if (modalDesc) {
+                    modalDesc.value = data.planning.description || '';
+                }
             }
         } else {
             // Réinitialiser le formulaire
             document.getElementById('modalClassroom').value = '';
             document.getElementById('modalPlanningTitle').value = '';
-            document.getElementById('modalDescription').value = '';
+            const modalDesc = document.getElementById('modalDescription');
+            if (modalDesc) {
+                modalDesc.value = '';
+            }
         }
 
         // Adapter l'interface selon si la période est passée ou non
@@ -62,7 +68,7 @@ function openPlanningModal(cell, fromAnnualView = false) {
                     </div>
                 `;
                 // Réattacher l'événement de conversion des tirets
-                attachDashConversion();
+                setTimeout(() => attachDashConversion(), 100);
             }
             saveButton.style.display = '';
         }
