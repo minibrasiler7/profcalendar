@@ -593,7 +593,11 @@ if (typeof pdfjsLib !== 'undefined') {
     background-color: #f7fafc;
     position: relative;
     height: 100%;
-    scroll-behavior: auto;
+    scroll-behavior: smooth;
+    /* Assurer un scroll fluide et précis */
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e0 #f1f5f9;
 }
 
 .pdf-pages-container {
@@ -838,6 +842,72 @@ if (typeof pdfjsLib !== 'undefined') {
 
 .annual-checklist-icon {
     font-size: 0.5rem;
+}
+
+/* Styles pour le modal de planification journalière */
+.day-plannings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.day-planning-item {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s ease;
+}
+
+.day-planning-item:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.planning-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.planning-period {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 0.875rem;
+}
+
+.planning-time {
+    font-size: 0.75rem;
+    color: #6b7280;
+    background-color: #f3f4f6;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.planning-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.planning-class {
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.875rem;
+}
+
+.planning-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.planning-description {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 0.5rem;
+    line-height: 1.4;
 }
 </style>
 {% endblock %}
@@ -1249,6 +1319,161 @@ if (typeof pdfjsLib !== 'undefined') {
         </div>
         <div class="viewer-footer">
             <div class="save-status" id="saveStatus">
+                <i class="fas fa-info-circle"></i> Sauvegarde à la fermeture
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal de planification journalière (pour la vue annuelle) -->
+<div class="planning-modal" id="dayPlanningModal">
+    <div class="modal-content" id="dayModalContent">
+        <div class="modal-header">
+            <h3 id="dayModalTitle">Planification de la journée</h3>
+            <div class="modal-header-actions">
+                <button class="btn-icon" onclick="toggleDaySplitView()" title="Afficher/Masquer les fichiers">
+                    <i class="fas fa-folder-open"></i>
+                </button>
+                <button class="modal-close" onclick="closeDayPlanningModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Classe sélectionnée</label>
+                <select id="dayModalClassroom" class="form-control" disabled>
+                    <option value="">-- Classe prédéfinie --</option>
+                    {% for classroom in classrooms %}
+                    <option value="{{ classroom.id }}" data-color="{{ classroom.color }}">
+                        {{ classroom.name }} - {{ classroom.subject }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div id="dayPlanningsContainer">
+                <!-- Les planifications de la journée seront chargées ici -->
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeDayPlanningModal()">Fermer</button>
+        </div>
+    </div>
+
+    <!-- Panneau gestionnaire de fichiers pour la vue journalière -->
+    <div class="file-manager-panel" id="dayFileManagerPanel" style="display: none;">
+        <div class="file-manager-header">
+            <h3><i class="fas fa-folder-open"></i> Fichiers de la classe</h3>
+            <button class="btn-icon" onclick="toggleDaySplitView()" title="Fermer">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="file-manager-content" id="dayFileManagerContent">
+            <!-- Chargement initial -->
+            <div class="file-loading" id="dayFileLoading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Chargement des fichiers...</p>
+            </div>
+
+            <!-- Navigation des dossiers -->
+            <div class="file-navigation" id="dayFileNavigation" style="display: none;">
+                <div class="breadcrumb" id="dayFileBreadcrumb">
+                    <span class="breadcrumb-item active" data-path="" onclick="navigateToDayFileFolder('')">
+                        <i class="fas fa-home"></i> Racine
+                    </span>
+                </div>
+            </div>
+
+            <!-- Arborescence des fichiers -->
+            <div class="file-tree" id="dayFileTree" style="display: none;">
+                <!-- L'arborescence sera chargée ici -->
+            </div>
+
+            <!-- État vide -->
+            <div class="no-files" id="dayNoFiles" style="display: none;">
+                <i class="fas fa-folder-open"></i>
+                <p>Aucun fichier dans cette classe</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal PDF Viewer pour la vue journalière -->
+    <div class="file-viewer-modal" id="dayFileViewerModal">
+        <div class="viewer-header">
+            <div class="viewer-tools">
+                
+                <!-- Outils de dessin -->
+                <div class="tool-group">
+                    <button class="tool-btn active" id="dayPenTool" title="Stylo" data-tool="pen">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <button class="tool-btn" id="dayHighlighterTool" title="Surligneur" data-tool="highlighter">
+                        <i class="fas fa-highlighter"></i>
+                    </button>
+                    <button class="tool-btn" id="dayEraserTool" title="Gomme" data-tool="eraser">
+                        <i class="fas fa-eraser"></i>
+                    </button>
+                </div>
+                
+                <!-- Couleurs -->
+                <div class="color-picker-container">
+                    <div class="preset-colors">
+                        <button class="color-btn active" data-color="#000000" style="background-color: #000000" title="Noir"></button>
+                        <button class="color-btn" data-color="#EF4444" style="background-color: #EF4444" title="Rouge"></button>
+                        <button class="color-btn" data-color="#F59E0B" style="background-color: #F59E0B" title="Orange"></button>
+                        <button class="color-btn" data-color="#EAB308" style="background-color: #EAB308" title="Jaune"></button>
+                        <button class="color-btn" data-color="#22C55E" style="background-color: #22C55E" title="Vert"></button>
+                        <button class="color-btn" data-color="#3B82F6" style="background-color: #3B82F6" title="Bleu"></button>
+                    </div>
+                    <input type="color" id="dayAnnotationColor" value="#000000" title="Couleur personnalisée">
+                </div>
+                
+                <div class="stroke-width-container">
+                    <input type="range" id="dayStrokeWidth" min="1" max="20" value="3" title="Épaisseur">
+                    <span id="dayStrokeWidthValue">3</span>
+                </div>
+                
+                <!-- Actions -->
+                <div class="tool-group">
+                    <button class="tool-btn" id="daySaveBtn" title="Sauvegarder maintenant" onclick="saveDayAnnotations()">
+                        <i class="fas fa-save"></i>
+                    </button>
+                    <button class="tool-btn" id="dayUndoBtn" title="Annuler">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button class="tool-btn" id="dayClearAllBtn" title="Tout effacer">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <button class="close-viewer" onclick="closeDayFileViewer()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="viewer-content">
+            <!-- Barre latérale des pages - permanente à gauche -->
+            <div class="page-sidebar show" id="dayPageSidebar">
+                <div class="sidebar-header">
+                    <h6><i class="fas fa-copy"></i> Pages</h6>
+                </div>
+                <div class="page-thumbnails scrollable" id="dayPageThumbnails">
+                    <!-- Les miniatures seront générées ici -->
+                </div>
+            </div>
+            
+            <!-- Zone d'affichage principal -->
+            <div class="viewer-container" id="dayViewerContainer">
+                <div class="pdf-pages-container" id="dayPdfPagesContainer">
+                    <!-- Les pages PDF seront ajoutées ici dynamiquement -->
+                </div>
+            </div>
+        </div>
+        <div class="viewer-footer">
+            <div class="save-status" id="daySaveStatus">
                 <i class="fas fa-info-circle"></i> Sauvegarde à la fermeture
             </div>
         </div>
@@ -1816,6 +2041,18 @@ async function loadPDF(fileId) {
             await createThumbnail(pageNum);
         }
         
+        // Configurer l'observer pour détecter les pages visibles
+        setupPageVisibilityObserver();
+        
+        // Configurer la gestion du scroll
+        setupScrollHandling();
+        
+        // Appliquer automatiquement la correction du problème de scroll après un petit délai
+        setTimeout(() => {
+            console.log('🔧 Application automatique de la correction de scroll...');
+            applyScrollFixToViewer();
+        }, 300);
+        
         console.log('📄 Toutes les pages créées avec succès');
         
     } catch (error) {
@@ -1917,18 +2154,176 @@ async function createThumbnail(pageNum) {
 function scrollToPage(pageNum) {
     const pageWrapper = document.getElementById(`page-wrapper-${pageNum}`);
     if (pageWrapper) {
-        pageWrapper.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
+        // Utiliser scrollIntoView avec des options plus précises
+        const viewerContainer = document.getElementById('viewerContainer');
+        const containerRect = viewerContainer.getBoundingClientRect();
+        const pageRect = pageWrapper.getBoundingClientRect();
+        
+        // Calculer la position de scroll nécessaire
+        const scrollTop = viewerContainer.scrollTop + pageRect.top - containerRect.top - 20;
+        
+        // Faire le scroll avec une animation fluide
+        viewerContainer.scrollTo({
+            top: scrollTop,
+            behavior: 'smooth'
         });
         
         // Mettre à jour la miniature active
-        document.querySelectorAll('.thumbnail-item').forEach(item => {
-            item.classList.remove('active');
-        });
-        document.getElementById(`thumbnail-${pageNum}`)?.classList.add('active');
+        updateActiveThumbnail(pageNum);
         
         currentPageNum = pageNum;
+    }
+}
+
+// Mettre à jour la miniature active
+function updateActiveThumbnail(pageNum) {
+    document.querySelectorAll('.thumbnail-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.getElementById(`thumbnail-${pageNum}`)?.classList.add('active');
+}
+
+// Configurer l'observer pour détecter automatiquement les pages visibles
+function setupPageVisibilityObserver() {
+    const viewerContainer = document.getElementById('viewerContainer');
+    if (!viewerContainer) return;
+    
+    // Créer l'intersection observer
+    const observer = new IntersectionObserver((entries) => {
+        let mostVisiblePage = null;
+        let maxVisibilityRatio = 0;
+        
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const pageId = entry.target.id;
+                const pageNum = parseInt(pageId.split('-').pop());
+                
+                // Trouver la page la plus visible
+                if (entry.intersectionRatio > maxVisibilityRatio) {
+                    maxVisibilityRatio = entry.intersectionRatio;
+                    mostVisiblePage = pageNum;
+                }
+            }
+        });
+        
+        // Mettre à jour la page active si on a trouvé une page visible
+        if (mostVisiblePage && mostVisiblePage !== currentPageNum) {
+            currentPageNum = mostVisiblePage;
+            updateActiveThumbnail(mostVisiblePage);
+        }
+    }, {
+        root: viewerContainer,
+        rootMargin: '-50px 0px -50px 0px',
+        threshold: [0.1, 0.5, 0.9]
+    });
+    
+    // Observer toutes les pages
+    for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
+        const pageWrapper = document.getElementById(`page-wrapper-${pageNum}`);
+        if (pageWrapper) {
+            observer.observe(pageWrapper);
+        }
+    }
+    
+    // Stocker l'observer pour pouvoir le nettoyer plus tard
+    window.pdfPageObserver = observer;
+}
+
+// Améliorer la gestion du scroll dans le conteneur
+function setupScrollHandling() {
+    const viewerContainer = document.getElementById('viewerContainer');
+    if (!viewerContainer) return;
+    
+    // Gérer le scroll avec throttling pour les performances
+    let scrollTimeout;
+    viewerContainer.addEventListener('scroll', () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            // Le scroll sera géré par l'intersection observer
+        }, 100);
+    });
+}
+
+// Fonction de correction automatique du scroll (adaptée de lesson_view.html)
+function applyScrollFixToViewer() {
+    console.log('🛠️ Application automatique de la correction de scroll...');
+    
+    const viewerContainer = document.getElementById('viewerContainer');
+    const pagesContainer = document.getElementById('pdfPagesContainer');
+    const firstPage = document.getElementById('page-wrapper-1');
+    
+    if (!viewerContainer || !pagesContainer || !firstPage) {
+        console.warn('⚠️ Éléments non trouvés pour la correction - retry dans 100ms');
+        setTimeout(applyScrollFixToViewer, 100);
+        return;
+    }
+    
+    // Vérifier si la correction est nécessaire
+    const rect = firstPage.getBoundingClientRect();
+    const containerRect = viewerContainer.getBoundingClientRect();
+    const pagePosition = rect.top - containerRect.top;
+    
+    console.log(`📊 Position actuelle de la page 1: ${Math.round(pagePosition)}px`);
+    
+    // Si la page 1 est très mal positionnée, appliquer la correction
+    if (pagePosition < -100 || pagePosition > viewerContainer.clientHeight) {
+        console.log('🚨 Correction nécessaire - page 1 mal positionnée');
+        
+        // Appliquer les corrections CSS
+        viewerContainer.style.scrollBehavior = 'auto';
+        viewerContainer.style.height = '100%';
+        viewerContainer.style.minHeight = '500px';
+        viewerContainer.style.maxHeight = 'none';
+        viewerContainer.style.overflow = 'auto';
+        viewerContainer.style.position = 'relative';
+        
+        // Reset du pages container
+        pagesContainer.style.paddingTop = '16px';
+        pagesContainer.style.marginTop = '0px';
+        pagesContainer.style.transform = 'none';
+        pagesContainer.style.position = 'relative';
+        pagesContainer.style.top = '0px';
+        pagesContainer.style.left = '0px';
+        
+        // Forcer le reflow
+        viewerContainer.style.display = 'none';
+        viewerContainer.offsetHeight; // Force reflow
+        viewerContainer.style.display = 'block';
+        
+        setTimeout(() => {
+            // Vérifier et ajuster le scroll
+            const newRect = firstPage.getBoundingClientRect();
+            const newContainerRect = viewerContainer.getBoundingClientRect();
+            const newPosition = newRect.top - newContainerRect.top;
+            
+            console.log(`📊 Position après correction CSS: ${Math.round(newPosition)}px`);
+            
+            if (newPosition < -50 || newPosition > 100) {
+                // Correction manuelle du scroll
+                const targetScrollTop = firstPage.offsetTop - 16;
+                viewerContainer.scrollTop = Math.max(0, targetScrollTop);
+                console.log(`🔧 Scroll manuel appliqué: ${viewerContainer.scrollTop}px`);
+            }
+            
+            // Forcer la page courante à 1
+            currentPageNum = 1;
+            updateActiveThumbnail(1);
+            
+            // Redémarrer l'observer après correction
+            if (window.pdfPageObserver) {
+                window.pdfPageObserver.disconnect();
+                setTimeout(() => {
+                    setupPageVisibilityObserver();
+                    console.log('✅ Correction automatique terminée - Page 1 active');
+                }, 100);
+            }
+        }, 50);
+    } else {
+        console.log('✅ Position correcte - aucune correction nécessaire');
+        // Juste s'assurer qu'on est à la page 1
+        viewerContainer.scrollTop = 0;
+        currentPageNum = 1;
+        updateActiveThumbnail(1);
     }
 }
 
@@ -2041,6 +2436,12 @@ function closeFileViewer() {
     // Sauvegarder les annotations avant fermeture
     if (annotations.length > 0) {
         saveAnnotations();
+    }
+    
+    // Nettoyer l'observer
+    if (window.pdfPageObserver) {
+        window.pdfPageObserver.disconnect();
+        window.pdfPageObserver = null;
     }
     
     // Réinitialiser les variables
@@ -2334,9 +2735,1053 @@ document.addEventListener('DOMContentLoaded', function() {
     if (overlay) {
         overlay.addEventListener('click', function() {
             closePlanningModal();
+            closeDayPlanningModal();
         });
     }
 });
+
+// ============================================
+// FONCTIONS POUR LE MODAL DE VUE JOURNALIÈRE
+// ============================================
+
+// Variables pour le modal journalier
+let isDaySplitViewOpen = false;
+let currentDayFilePath = '';
+let allDayClassFiles = [];
+
+// Variables pour le lecteur PDF journalier
+let dayCurrentFileId = null;
+let dayCurrentPageNum = 1;
+let dayCurrentScale = 1.0;
+let dayPdfDocument = null;
+let dayAnnotations = [];
+let dayCurrentTool = 'pen';
+let dayCurrentColor = '#000000';
+let dayCurrentLineWidth = 3;
+
+// Ouvrir le modal de planification journalière
+function openDayPlanningModal(dateStr, classroomId) {
+    console.log('📅 Ouverture du modal journalier pour:', dateStr, 'classe:', classroomId);
+    
+    // Afficher l'overlay
+    const overlay = document.getElementById('modalOverlay');
+    if (overlay) {
+        overlay.style.display = 'block';
+    }
+    
+    // Mettre à jour le titre
+    const dateObj = new Date(dateStr);
+    const dateStrFormatted = dateObj.toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+    document.getElementById('dayModalTitle').textContent = `Planification - ${dateStrFormatted}`;
+    
+    // Sélectionner la classe dans le dropdown
+    const classroomSelect = document.getElementById('dayModalClassroom');
+    if (classroomId) {
+        classroomSelect.value = classroomId;
+    }
+    
+    // Charger les planifications de la journée
+    loadDayPlannings(dateStr, classroomId);
+    
+    // Afficher le modal
+    document.getElementById('dayPlanningModal').classList.add('show');
+}
+
+// Charger les planifications d'une journée
+async function loadDayPlannings(dateStr, classroomId) {
+    const container = document.getElementById('dayPlanningsContainer');
+    container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>';
+    
+    try {
+        const response = await fetch(`/api/planning/day/${dateStr}?classroom_id=${classroomId || ''}`);
+        const data = await response.json();
+        
+        if (data.success && data.plannings) {
+            renderDayPlannings(data.plannings);
+        } else {
+            container.innerHTML = '<div class="text-center text-muted">Aucune planification pour cette journée</div>';
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des planifications:', error);
+        container.innerHTML = '<div class="text-center text-danger">Erreur lors du chargement</div>';
+    }
+}
+
+// Afficher les planifications d'une journée
+function renderDayPlannings(plannings) {
+    const container = document.getElementById('dayPlanningsContainer');
+    
+    if (plannings.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted">Aucune planification pour cette journée</div>';
+        return;
+    }
+    
+    let html = '<div class="day-plannings-list">';
+    
+    plannings.forEach(planning => {
+        html += `
+            <div class="day-planning-item" style="border-left: 4px solid ${planning.classroom_color || '#4F46E5'}">
+                <div class="planning-header">
+                    <div class="planning-period">Période ${planning.period}</div>
+                    <div class="planning-time">${planning.period_start} - ${planning.period_end}</div>
+                </div>
+                <div class="planning-content">
+                    <div class="planning-class">${planning.classroom_name} - ${planning.classroom_subject}</div>
+                    <div class="planning-title">${planning.title || 'Sans titre'}</div>
+                    ${planning.description ? `<div class="planning-description">${planning.description}</div>` : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// Fermer le modal journalier
+function closeDayPlanningModal() {
+    // Fermer le lecteur PDF s'il est ouvert
+    const dayFileViewerModal = document.getElementById('dayFileViewerModal');
+    if (dayFileViewerModal && dayFileViewerModal.classList.contains('show')) {
+        closeDayFileViewer();
+    }
+    
+    // Fermer le split view si ouvert
+    if (isDaySplitViewOpen) {
+        toggleDaySplitView();
+    }
+    
+    // Masquer l'overlay
+    document.getElementById('modalOverlay').style.display = 'none';
+    
+    // Fermer le modal
+    document.getElementById('dayPlanningModal').classList.remove('show');
+}
+
+// Basculer l'affichage du gestionnaire de fichiers pour la vue journalière
+function toggleDaySplitView() {
+    const modal = document.getElementById('dayPlanningModal');
+    const fileManagerPanel = document.getElementById('dayFileManagerPanel');
+    
+    isDaySplitViewOpen = !isDaySplitViewOpen;
+    
+    if (isDaySplitViewOpen) {
+        modal.classList.add('split-view');
+        fileManagerPanel.style.display = 'flex';
+        
+        // Charger les fichiers de la classe sélectionnée
+        const classroomId = document.getElementById('dayModalClassroom').value;
+        if (classroomId) {
+            loadDayClassFiles(classroomId);
+        } else {
+            // Si aucune classe n'est sélectionnée, afficher un message
+            document.getElementById('dayFileLoading').style.display = 'none';
+            document.getElementById('dayFileNavigation').style.display = 'none';
+            document.getElementById('dayFileTree').style.display = 'none';
+            document.getElementById('dayNoFiles').style.display = 'block';
+            document.getElementById('dayNoFiles').innerHTML = `
+                <i class="fas fa-exclamation-circle"></i>
+                <p>Veuillez sélectionner une classe</p>
+            `;
+        }
+    } else {
+        modal.classList.remove('split-view');
+        fileManagerPanel.style.display = 'none';
+    }
+}
+
+// Charger les fichiers d'une classe pour la vue journalière
+async function loadDayClassFiles(classroomId) {
+    const fileLoading = document.getElementById('dayFileLoading');
+    const fileNavigation = document.getElementById('dayFileNavigation');
+    const fileTree = document.getElementById('dayFileTree');
+    const noFiles = document.getElementById('dayNoFiles');
+    
+    console.log('Chargement des fichiers pour la classe:', classroomId);
+    
+    // Afficher le chargement
+    fileLoading.style.display = 'block';
+    fileNavigation.style.display = 'none';
+    fileTree.style.display = 'none';
+    noFiles.style.display = 'none';
+    
+    try {
+        const response = await fetch(`/api/class-files/${classroomId}`);
+        console.log('Réponse API:', response);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Données reçues:', data);
+        
+        fileLoading.style.display = 'none';
+        
+        if (data.success && data.files && data.files.length > 0) {
+            allDayClassFiles = data.files;
+            fileNavigation.style.display = 'block';
+            fileTree.style.display = 'block';
+            renderDayFileTree(data.files, currentDayFilePath);
+        } else {
+            console.log('Aucun fichier trouvé ou erreur dans la réponse');
+            noFiles.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des fichiers:', error);
+        fileLoading.style.display = 'none';
+        noFiles.style.display = 'block';
+    }
+}
+
+// Afficher l'arborescence des fichiers pour la vue journalière
+function renderDayFileTree(files, currentPath = '') {
+    const fileTree = document.getElementById('dayFileTree');
+    fileTree.innerHTML = '';
+    
+    // Organiser les fichiers par dossier (même logique que l'original)
+    const folders = {};
+    const currentLevelFiles = [];
+    const allFolders = new Set();
+    
+    files.forEach(file => {
+        if (file.folder_path) {
+            // Extraire tous les dossiers du chemin
+            const pathParts = file.folder_path.split('/').filter(p => p);
+            let accumulatedPath = '';
+            
+            pathParts.forEach((part, index) => {
+                const parentPath = accumulatedPath;
+                accumulatedPath = accumulatedPath ? `${accumulatedPath}/${part}` : part;
+                
+                allFolders.add(accumulatedPath);
+                
+                if (!folders[accumulatedPath]) {
+                    folders[accumulatedPath] = {
+                        name: part,
+                        path: accumulatedPath,
+                        parent: parentPath,
+                        files: [],
+                        subfolders: new Set()
+                    };
+                }
+                
+                if (parentPath && folders[parentPath]) {
+                    folders[parentPath].subfolders.add(accumulatedPath);
+                }
+                
+                if (index === pathParts.length - 1) {
+                    folders[accumulatedPath].files.push(file);
+                }
+            });
+            
+            if (currentPath && file.folder_path.startsWith(currentPath)) {
+                const relativePath = file.folder_path.substring(currentPath.length).replace(/^\//, '');
+                const relativePathParts = relativePath.split('/').filter(p => p);
+                
+                if (relativePathParts.length === 0 || (relativePathParts.length === 1 && relativePathParts[0] === '')) {
+                    currentLevelFiles.push(file);
+                }
+            }
+        } else if (!currentPath) {
+            currentLevelFiles.push(file);
+        }
+    });
+    
+    // Si on navigue dans un dossier, ajouter un bouton retour
+    if (currentPath) {
+        const backItem = document.createElement('div');
+        backItem.className = 'file-item';
+        backItem.innerHTML = `
+            <i class="fas fa-arrow-left file-icon"></i>
+            <span class="file-name">..</span>
+        `;
+        backItem.onclick = () => {
+            const parentPath = currentPath.includes('/') ? 
+                currentPath.substring(0, currentPath.lastIndexOf('/')) : '';
+            navigateToDayFileFolder(parentPath);
+        };
+        fileTree.appendChild(backItem);
+    }
+    
+    // Afficher les dossiers du niveau actuel
+    Object.values(folders).forEach(folder => {
+        const shouldShow = currentPath ? 
+            folder.parent === currentPath : 
+            !folder.parent;
+        
+        if (shouldShow) {
+            const folderItem = document.createElement('div');
+            folderItem.className = 'file-item folder';
+            folderItem.innerHTML = `
+                <i class="fas fa-folder file-icon"></i>
+                <span class="file-name">${folder.name}</span>
+            `;
+            folderItem.onclick = () => navigateToDayFileFolder(folder.path);
+            fileTree.appendChild(folderItem);
+        }
+    });
+    
+    // Afficher les fichiers du niveau actuel
+    currentLevelFiles.forEach(file => {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        
+        const icon = getFileIconByType(file.file_type);
+        
+        fileItem.innerHTML = `
+            <i class="${icon} file-icon"></i>
+            <span class="file-name">${file.original_filename}</span>
+        `;
+        
+        if (file.file_type === 'pdf') {
+            fileItem.onclick = () => openDayPdfInViewer(file.id, file.original_filename);
+        }
+        
+        fileTree.appendChild(fileItem);
+    });
+    
+    // Mettre à jour le fil d'Ariane
+    updateDayBreadcrumb(currentPath);
+}
+
+// Naviguer dans un dossier pour la vue journalière
+function navigateToDayFileFolder(folderPath) {
+    currentDayFilePath = folderPath;
+    console.log('Navigation vers le dossier:', folderPath);
+    
+    renderDayFileTree(allDayClassFiles, folderPath);
+}
+
+// Mettre à jour le fil d'Ariane pour la vue journalière
+function updateDayBreadcrumb(path) {
+    const breadcrumb = document.getElementById('dayFileBreadcrumb');
+    breadcrumb.innerHTML = '';
+    
+    // Racine
+    const rootItem = document.createElement('span');
+    rootItem.className = 'breadcrumb-item';
+    rootItem.innerHTML = '<i class="fas fa-home"></i> Racine';
+    rootItem.onclick = () => navigateToDayFileFolder('');
+    breadcrumb.appendChild(rootItem);
+    
+    // Ajouter les parties du chemin
+    if (path) {
+        const parts = path.split('/').filter(p => p);
+        let accumulatedPath = '';
+        
+        parts.forEach((part, index) => {
+            // Ajouter le séparateur
+            const separator = document.createElement('i');
+            separator.className = 'fas fa-chevron-right';
+            separator.style.cssText = 'margin: 0 0.5rem; font-size: 0.75rem; color: #9ca3af;';
+            breadcrumb.appendChild(separator);
+            
+            // Construire le chemin accumulé
+            accumulatedPath = accumulatedPath ? `${accumulatedPath}/${part}` : part;
+            
+            // Créer l'élément du fil d'Ariane
+            const partItem = document.createElement('span');
+            partItem.className = index === parts.length - 1 ? 'breadcrumb-item active' : 'breadcrumb-item';
+            partItem.textContent = part;
+            
+            if (index < parts.length - 1) {
+                const pathToNavigate = accumulatedPath;
+                partItem.onclick = () => navigateToDayFileFolder(pathToNavigate);
+            }
+            
+            breadcrumb.appendChild(partItem);
+        });
+    }
+}
+
+// Ouvrir un PDF dans le lecteur intégré en mode split pour la vue journalière
+async function openDayPdfInViewer(fileId, fileName) {
+    console.log('📄 Ouverture du PDF en mode split journalier:', fileName);
+    
+    dayCurrentFileId = fileId;
+    dayCurrentPageNum = 1;
+    dayCurrentScale = 0.8;
+    dayAnnotations = [];
+    
+    const modal = document.getElementById('dayFileViewerModal');
+    modal.classList.add('show', 'embedded');
+    
+    try {
+        // Charger le PDF et les annotations
+        await loadDayPDF(fileId);
+        await loadDayAnnotations(fileId);
+        setupDayAnnotationTools();
+        setupDayToolEvents();
+        
+        console.log('✅ PDF chargé avec succès en mode split journalier');
+    } catch (error) {
+        console.error('❌ Erreur lors du chargement du PDF:', error);
+    }
+}
+
+// Charger un document PDF pour la vue journalière
+async function loadDayPDF(fileId) {
+    try {
+        const url = `/api/class-files/preview/${fileId}`;
+        console.log('📄 Chargement du PDF depuis:', url);
+        
+        const loadingTask = pdfjsLib.getDocument(url);
+        dayPdfDocument = await loadingTask.promise;
+        
+        console.log(`📄 PDF chargé avec ${dayPdfDocument.numPages} pages`);
+        
+        // Effacer le conteneur et les miniatures
+        const pagesContainer = document.getElementById('dayPdfPagesContainer');
+        const thumbnailContainer = document.getElementById('dayPageThumbnails');
+        
+        pagesContainer.innerHTML = '';
+        thumbnailContainer.innerHTML = '';
+        
+        // Créer toutes les pages
+        for (let pageNum = 1; pageNum <= dayPdfDocument.numPages; pageNum++) {
+            await createDayPDFPageWithCanvas(pageNum);
+            await createDayThumbnail(pageNum);
+        }
+        
+        // Configurer l'observer pour détecter les pages visibles (version journalière)
+        setupDayPageVisibilityObserver();
+        
+        // Appliquer automatiquement la correction du problème de scroll après un petit délai
+        setTimeout(() => {
+            console.log('🔧 Application automatique de la correction de scroll journalier...');
+            applyDayScrollFixToViewer();
+        }, 300);
+        
+        console.log('📄 Toutes les pages créées avec succès');
+        
+    } catch (error) {
+        console.error('❌ Erreur lors du chargement du PDF:', error);
+        showDayError('Erreur lors du chargement du PDF');
+    }
+}
+
+// Créer une page PDF avec canvas d'annotation pour la vue journalière
+async function createDayPDFPageWithCanvas(pageNum) {
+    try {
+        const page = await dayPdfDocument.getPage(pageNum);
+        const viewport = page.getViewport({ scale: dayCurrentScale });
+        
+        // Créer le wrapper de la page
+        const pageWrapper = document.createElement('div');
+        pageWrapper.className = 'pdf-page-wrapper';
+        pageWrapper.id = `day-page-wrapper-${pageNum}`;
+        
+        // Canvas pour le PDF
+        const pdfCanvas = document.createElement('canvas');
+        pdfCanvas.className = 'pdf-canvas';
+        pdfCanvas.id = `day-pdf-canvas-${pageNum}`;
+        pdfCanvas.width = viewport.width;
+        pdfCanvas.height = viewport.height;
+        
+        // Canvas pour les annotations
+        const annotationCanvas = document.createElement('canvas');
+        annotationCanvas.className = 'annotation-canvas';
+        annotationCanvas.id = `day-annotation-canvas-${pageNum}`;
+        annotationCanvas.width = viewport.width;
+        annotationCanvas.height = viewport.height;
+        
+        // Numéro de page
+        const pageNumber = document.createElement('div');
+        pageNumber.className = 'pdf-page-number';
+        pageNumber.textContent = `Page ${pageNum}`;
+        
+        // Assembler la page
+        pageWrapper.appendChild(pdfCanvas);
+        pageWrapper.appendChild(annotationCanvas);
+        pageWrapper.appendChild(pageNumber);
+        
+        // Ajouter au conteneur
+        document.getElementById('dayPdfPagesContainer').appendChild(pageWrapper);
+        
+        // Rendre le PDF
+        const ctx = pdfCanvas.getContext('2d');
+        await page.render({
+            canvasContext: ctx,
+            viewport: viewport
+        }).promise;
+        
+        // Configurer les événements d'annotation
+        setupDayAnnotationEvents(annotationCanvas, pageNum);
+        
+        console.log(`📄 Page journalière ${pageNum} créée avec succès`);
+        
+    } catch (error) {
+        console.error(`❌ Erreur lors de la création de la page journalière ${pageNum}:`, error);
+    }
+}
+
+// Créer une miniature pour la vue journalière
+async function createDayThumbnail(pageNum) {
+    try {
+        const page = await dayPdfDocument.getPage(pageNum);
+        const thumbnailScale = 0.25;
+        const viewport = page.getViewport({ scale: thumbnailScale });
+        
+        const thumbnailCanvas = document.createElement('canvas');
+        thumbnailCanvas.className = 'thumbnail-canvas';
+        thumbnailCanvas.width = viewport.width;
+        thumbnailCanvas.height = viewport.height;
+        
+        const ctx = thumbnailCanvas.getContext('2d');
+        await page.render({
+            canvasContext: ctx,
+            viewport: viewport
+        }).promise;
+        
+        // Wrapper pour la miniature
+        const thumbnailItem = document.createElement('div');
+        thumbnailItem.className = 'thumbnail-item';
+        thumbnailItem.id = `day-thumbnail-${pageNum}`;
+        thumbnailItem.appendChild(thumbnailCanvas);
+        
+        // Événement de clic pour navigation
+        thumbnailItem.addEventListener('click', () => scrollToDayPage(pageNum));
+        
+        document.getElementById('dayPageThumbnails').appendChild(thumbnailItem);
+        
+    } catch (error) {
+        console.error(`❌ Erreur lors de la création de la miniature journalière ${pageNum}:`, error);
+    }
+}
+
+// Faire défiler vers une page spécifique pour la vue journalière
+function scrollToDayPage(pageNum) {
+    const pageWrapper = document.getElementById(`day-page-wrapper-${pageNum}`);
+    if (pageWrapper) {
+        // Utiliser scrollIntoView avec des options plus précises
+        const viewerContainer = document.getElementById('dayViewerContainer');
+        const containerRect = viewerContainer.getBoundingClientRect();
+        const pageRect = pageWrapper.getBoundingClientRect();
+        
+        // Calculer la position de scroll nécessaire
+        const scrollTop = viewerContainer.scrollTop + pageRect.top - containerRect.top - 20;
+        
+        // Faire le scroll avec une animation fluide
+        viewerContainer.scrollTo({
+            top: scrollTop,
+            behavior: 'smooth'
+        });
+        
+        // Mettre à jour la miniature active
+        updateDayActiveThumbnail(pageNum);
+        
+        dayCurrentPageNum = pageNum;
+    }
+}
+
+// Mettre à jour la miniature active pour la vue journalière
+function updateDayActiveThumbnail(pageNum) {
+    document.querySelectorAll('#dayPageThumbnails .thumbnail-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.getElementById(`day-thumbnail-${pageNum}`)?.classList.add('active');
+}
+
+// Configurer l'observer pour détecter automatiquement les pages visibles (version journalière)
+function setupDayPageVisibilityObserver() {
+    const viewerContainer = document.getElementById('dayViewerContainer');
+    if (!viewerContainer) return;
+    
+    // Créer l'intersection observer
+    const observer = new IntersectionObserver((entries) => {
+        let mostVisiblePage = null;
+        let maxVisibilityRatio = 0;
+        
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const pageId = entry.target.id;
+                const pageNum = parseInt(pageId.split('-').pop());
+                
+                // Trouver la page la plus visible
+                if (entry.intersectionRatio > maxVisibilityRatio) {
+                    maxVisibilityRatio = entry.intersectionRatio;
+                    mostVisiblePage = pageNum;
+                }
+            }
+        });
+        
+        // Mettre à jour la page active si on a trouvé une page visible
+        if (mostVisiblePage && mostVisiblePage !== dayCurrentPageNum) {
+            dayCurrentPageNum = mostVisiblePage;
+            updateDayActiveThumbnail(mostVisiblePage);
+        }
+    }, {
+        root: viewerContainer,
+        rootMargin: '-50px 0px -50px 0px',
+        threshold: [0.1, 0.5, 0.9]
+    });
+    
+    // Observer toutes les pages
+    for (let pageNum = 1; pageNum <= dayPdfDocument.numPages; pageNum++) {
+        const pageWrapper = document.getElementById(`day-page-wrapper-${pageNum}`);
+        if (pageWrapper) {
+            observer.observe(pageWrapper);
+        }
+    }
+    
+    // Stocker l'observer pour pouvoir le nettoyer plus tard
+    window.dayPdfPageObserver = observer;
+}
+
+// Fonction de correction automatique du scroll pour la vue journalière (adaptée de lesson_view.html)
+function applyDayScrollFixToViewer() {
+    console.log('🛠️ Application automatique de la correction de scroll journalier...');
+    
+    const viewerContainer = document.getElementById('dayViewerContainer');
+    const pagesContainer = document.getElementById('dayPdfPagesContainer');
+    const firstPage = document.getElementById('day-page-wrapper-1');
+    
+    if (!viewerContainer || !pagesContainer || !firstPage) {
+        console.warn('⚠️ Éléments journaliers non trouvés pour la correction - retry dans 100ms');
+        setTimeout(applyDayScrollFixToViewer, 100);
+        return;
+    }
+    
+    // Vérifier si la correction est nécessaire
+    const rect = firstPage.getBoundingClientRect();
+    const containerRect = viewerContainer.getBoundingClientRect();
+    const pagePosition = rect.top - containerRect.top;
+    
+    console.log(`📊 Position actuelle de la page 1 journalière: ${Math.round(pagePosition)}px`);
+    
+    // Si la page 1 est très mal positionnée, appliquer la correction
+    if (pagePosition < -100 || pagePosition > viewerContainer.clientHeight) {
+        console.log('🚨 Correction nécessaire - page 1 journalière mal positionnée');
+        
+        // Appliquer les corrections CSS
+        viewerContainer.style.scrollBehavior = 'auto';
+        viewerContainer.style.height = '100%';
+        viewerContainer.style.minHeight = '500px';
+        viewerContainer.style.maxHeight = 'none';
+        viewerContainer.style.overflow = 'auto';
+        viewerContainer.style.position = 'relative';
+        
+        // Reset du pages container
+        pagesContainer.style.paddingTop = '16px';
+        pagesContainer.style.marginTop = '0px';
+        pagesContainer.style.transform = 'none';
+        pagesContainer.style.position = 'relative';
+        pagesContainer.style.top = '0px';
+        pagesContainer.style.left = '0px';
+        
+        // Forcer le reflow
+        viewerContainer.style.display = 'none';
+        viewerContainer.offsetHeight; // Force reflow
+        viewerContainer.style.display = 'block';
+        
+        setTimeout(() => {
+            // Vérifier et ajuster le scroll
+            const newRect = firstPage.getBoundingClientRect();
+            const newContainerRect = viewerContainer.getBoundingClientRect();
+            const newPosition = newRect.top - newContainerRect.top;
+            
+            console.log(`📊 Position après correction CSS journalière: ${Math.round(newPosition)}px`);
+            
+            if (newPosition < -50 || newPosition > 100) {
+                // Correction manuelle du scroll
+                const targetScrollTop = firstPage.offsetTop - 16;
+                viewerContainer.scrollTop = Math.max(0, targetScrollTop);
+                console.log(`🔧 Scroll manuel journalier appliqué: ${viewerContainer.scrollTop}px`);
+            }
+            
+            // Forcer la page courante à 1
+            dayCurrentPageNum = 1;
+            updateDayActiveThumbnail(1);
+            
+            // Redémarrer l'observer après correction
+            if (window.dayPdfPageObserver) {
+                window.dayPdfPageObserver.disconnect();
+                setTimeout(() => {
+                    setupDayPageVisibilityObserver();
+                    console.log('✅ Correction automatique journalière terminée - Page 1 active');
+                }, 100);
+            }
+        }, 50);
+    } else {
+        console.log('✅ Position journalière correcte - aucune correction nécessaire');
+        // Juste s'assurer qu'on est à la page 1
+        viewerContainer.scrollTop = 0;
+        dayCurrentPageNum = 1;
+        updateDayActiveThumbnail(1);
+    }
+}
+
+// Configurer les événements d'annotation pour un canvas journalier
+function setupDayAnnotationEvents(canvas, pageNum) {
+    let isPageDrawing = false;
+    let currentStroke = [];
+    
+    // Fonctions de dessin
+    function startDrawing(e) {
+        e.preventDefault();
+        isPageDrawing = true;
+        dayCurrentPageNum = pageNum;
+        
+        const coords = getCanvasCoordinates(e, canvas);
+        currentStroke = [coords];
+        
+        // Configurer le contexte
+        const ctx = canvas.getContext('2d');
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalCompositeOperation = dayCurrentTool === 'eraser' ? 'destination-out' : 'source-over';
+        ctx.lineWidth = dayCurrentLineWidth;
+        ctx.strokeStyle = dayCurrentColor;
+        
+        if (dayCurrentTool === 'highlighter') {
+            ctx.globalAlpha = 0.3;
+        } else {
+            ctx.globalAlpha = 1.0;
+        }
+        
+        ctx.beginPath();
+        ctx.moveTo(coords.x, coords.y);
+    }
+    
+    function continueDrawing(e) {
+        if (!isPageDrawing) return;
+        e.preventDefault();
+        
+        const coords = getCanvasCoordinates(e, canvas);
+        currentStroke.push(coords);
+        
+        const ctx = canvas.getContext('2d');
+        ctx.lineTo(coords.x, coords.y);
+        ctx.stroke();
+    }
+    
+    function stopDrawing(e) {
+        if (!isPageDrawing) return;
+        e.preventDefault();
+        
+        isPageDrawing = false;
+        
+        // Sauvegarder l'annotation
+        if (currentStroke.length > 1) {
+            const annotation = {
+                page: pageNum,
+                tool: dayCurrentTool,
+                color: dayCurrentColor,
+                lineWidth: dayCurrentLineWidth,
+                points: [...currentStroke]
+            };
+            
+            dayAnnotations.push(annotation);
+            console.log(`📝 Annotation journalière sauvegardée sur page ${pageNum}`);
+        }
+        
+        currentStroke = [];
+    }
+    
+    // Événements de souris
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', continueDrawing);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseleave', stopDrawing);
+    
+    // Événements tactiles
+    canvas.addEventListener('touchstart', startDrawing);
+    canvas.addEventListener('touchmove', continueDrawing);
+    canvas.addEventListener('touchend', stopDrawing);
+}
+
+// Configurer les outils d'annotation pour la vue journalière
+function setupDayAnnotationTools() {
+    console.log('🔧 Configuration des outils d\'annotation journaliers...');
+    
+    // Outils de dessin
+    document.querySelectorAll('#dayFileViewerModal [data-tool]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            dayCurrentTool = btn.dataset.tool;
+            document.querySelectorAll('#dayFileViewerModal [data-tool]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            console.log('🔧 Outil journalier sélectionné:', dayCurrentTool);
+        });
+    });
+
+    // Couleurs
+    document.querySelectorAll('#dayFileViewerModal [data-color]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            dayCurrentColor = btn.dataset.color;
+            document.querySelectorAll('#dayFileViewerModal [data-color]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            console.log('🎨 Couleur journalière sélectionnée:', dayCurrentColor);
+        });
+    });
+
+    // Couleur personnalisée
+    const colorPicker = document.getElementById('dayAnnotationColor');
+    if (colorPicker) {
+        colorPicker.addEventListener('change', (e) => {
+            dayCurrentColor = e.target.value;
+            document.querySelectorAll('#dayFileViewerModal [data-color]').forEach(b => b.classList.remove('active'));
+            console.log('🎨 Couleur journalière personnalisée:', dayCurrentColor);
+        });
+    }
+
+    // Épaisseur du trait
+    const strokeWidth = document.getElementById('dayStrokeWidth');
+    const strokeWidthValue = document.getElementById('dayStrokeWidthValue');
+    if (strokeWidth && strokeWidthValue) {
+        strokeWidth.addEventListener('input', (e) => {
+            dayCurrentLineWidth = parseInt(e.target.value);
+            strokeWidthValue.textContent = dayCurrentLineWidth;
+            console.log('📏 Épaisseur journalière:', dayCurrentLineWidth);
+        });
+    }
+}
+
+// Configurer les événements des outils pour la vue journalière
+function setupDayToolEvents() {
+    console.log('🔧 Configuration des événements d\'outils journaliers...');
+    
+    // Bouton d'annulation
+    const undoBtn = document.getElementById('dayUndoBtn');
+    if (undoBtn) {
+        undoBtn.addEventListener('click', undoDayLastAnnotation);
+    }
+
+    // Bouton de suppression
+    const clearAllBtn = document.getElementById('dayClearAllBtn');
+    if (clearAllBtn) {
+        clearAllBtn.addEventListener('click', clearDayAllAnnotations);
+    }
+}
+
+// Annuler la dernière annotation journalière
+function undoDayLastAnnotation() {
+    if (dayAnnotations.length > 0) {
+        const lastAnnotation = dayAnnotations.pop();
+        redrawDayAllAnnotations();
+        console.log('↶ Annotation journalière annulée');
+    }
+}
+
+// Effacer toutes les annotations journalières
+function clearDayAllAnnotations() {
+    if (confirm('Voulez-vous vraiment effacer toutes les annotations ?')) {
+        dayAnnotations = [];
+        redrawDayAllAnnotations();
+        console.log('🗑️ Toutes les annotations journalières effacées');
+    }
+}
+
+// Redessiner toutes les annotations journalières
+function redrawDayAllAnnotations() {
+    if (!dayPdfDocument) return;
+    
+    // Effacer tous les canvas d'annotation
+    for (let pageNum = 1; pageNum <= dayPdfDocument.numPages; pageNum++) {
+        const canvas = document.getElementById(`day-annotation-canvas-${pageNum}`);
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+    
+    // Redessiner toutes les annotations
+    dayAnnotations.forEach(annotation => {
+        const canvas = document.getElementById(`day-annotation-canvas-${annotation.page}`);
+        if (canvas) {
+            drawAnnotationOnCanvas(canvas.getContext('2d'), annotation);
+        }
+    });
+}
+
+// Charger les annotations depuis le serveur pour la vue journalière
+async function loadDayAnnotations(fileId) {
+    try {
+        const response = await fetch(`/file-manager/api/annotations/${fileId}`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.annotations) {
+                dayAnnotations = data.annotations;
+                console.log(`📝 ${dayAnnotations.length} annotations journalières chargées`);
+                // Redessiner les annotations
+                setTimeout(() => redrawDayAllAnnotations(), 500);
+            }
+        }
+    } catch (error) {
+        console.log('ℹ️ Aucune annotation journalière existante:', error);
+        dayAnnotations = [];
+    }
+}
+
+// Sauvegarder les annotations journalières
+async function saveDayAnnotations() {
+    if (!dayCurrentFileId || dayAnnotations.length === 0) {
+        console.log('💾 Aucune annotation journalière à sauvegarder');
+        return;
+    }
+
+    try {
+        const response = await fetch('/file-manager/api/save-annotations', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                file_id: dayCurrentFileId,
+                annotations: dayAnnotations
+            })
+        });
+
+        if (response.ok) {
+            console.log('💾 Annotations journalières sauvegardées avec succès');
+            updateDaySaveStatus('Sauvegardé', 'success');
+        } else {
+            throw new Error('Erreur de sauvegarde');
+        }
+    } catch (error) {
+        console.error('❌ Erreur lors de la sauvegarde journalière:', error);
+        updateDaySaveStatus('Erreur de sauvegarde', 'error');
+    }
+}
+
+// Mettre à jour le statut de sauvegarde journalière
+function updateDaySaveStatus(message, type = 'info') {
+    const saveStatus = document.getElementById('daySaveStatus');
+    if (saveStatus) {
+        const icon = type === 'success' ? 'check-circle' : 'info-circle';
+        saveStatus.innerHTML = `<i class="fas fa-${icon}"></i> ${message}`;
+        
+        if (type === 'success') {
+            setTimeout(() => {
+                saveStatus.innerHTML = '<i class="fas fa-info-circle"></i> Sauvegarde à la fermeture';
+            }, 3000);
+        }
+    }
+}
+
+// Fermer le lecteur de fichier journalier
+function closeDayFileViewer() {
+    const modal = document.getElementById('dayFileViewerModal');
+    modal.classList.remove('show', 'embedded');
+    
+    // Sauvegarder les annotations avant fermeture
+    if (dayAnnotations.length > 0) {
+        saveDayAnnotations();
+    }
+    
+    // Nettoyer l'observer journalier
+    if (window.dayPdfPageObserver) {
+        window.dayPdfPageObserver.disconnect();
+        window.dayPdfPageObserver = null;
+    }
+    
+    // Réinitialiser les variables
+    dayCurrentFileId = null;
+    dayCurrentPageNum = 1;
+    dayCurrentScale = 1.0;
+    dayPdfDocument = null;
+    dayAnnotations = [];
+}
+
+// Afficher une erreur journalière
+function showDayError(message) {
+    const container = document.getElementById('dayPdfPagesContainer');
+    container.innerHTML = `<div class="error-message">${message}</div>`;
+}
+
+// === FONCTIONS DE DEBUG POUR LE LECTEUR PDF DU CALENDRIER ===
+window.calendarPdfDebug = {
+    // Diagnostiquer le problème de scroll
+    testScrollIssue: function() {
+        console.log('🧪 Diagnostic du problème de scroll du calendrier');
+        const viewerContainer = document.getElementById('viewerContainer');
+        const firstPage = document.getElementById('page-wrapper-1');
+        
+        if (!viewerContainer || !firstPage) {
+            console.error('❌ Éléments non trouvés');
+            return;
+        }
+        
+        const rect = firstPage.getBoundingClientRect();
+        const containerRect = viewerContainer.getBoundingClientRect();
+        const pagePosition = rect.top - containerRect.top;
+        
+        console.log(`📊 Position de la page 1: ${Math.round(pagePosition)}px`);
+        console.log(`📊 Scroll actuel: ${viewerContainer.scrollTop}px`);
+        console.log(`📊 Page actuelle: ${currentPageNum}`);
+        console.log(`📊 Nombre total de pages: ${pdfDocument ? pdfDocument.numPages : 'PDF non chargé'}`);
+        
+        if (pagePosition < -100 || pagePosition > viewerContainer.clientHeight) {
+            console.warn('⚠️ La page 1 est mal positionnée - correction recommandée');
+        } else {
+            console.log('✅ Position normale');
+        }
+    },
+    
+    // Forcer le retour à la page 1
+    goToFirst: function() {
+        console.log('🔧 Force le retour à la page 1...');
+        applyScrollFixToViewer();
+    },
+    
+    // Correction automatique
+    fixScrollIssue: function() {
+        console.log('🛠️ Application de la correction automatique...');
+        applyScrollFixToViewer();
+    },
+    
+    // Version journalière - diagnostiquer
+    testDayScrollIssue: function() {
+        console.log('🧪 Diagnostic du problème de scroll journalier');
+        const viewerContainer = document.getElementById('dayViewerContainer');
+        const firstPage = document.getElementById('day-page-wrapper-1');
+        
+        if (!viewerContainer || !firstPage) {
+            console.error('❌ Éléments journaliers non trouvés');
+            return;
+        }
+        
+        const rect = firstPage.getBoundingClientRect();
+        const containerRect = viewerContainer.getBoundingClientRect();
+        const pagePosition = rect.top - containerRect.top;
+        
+        console.log(`📊 Position de la page 1 journalière: ${Math.round(pagePosition)}px`);
+        console.log(`📊 Scroll actuel journalier: ${viewerContainer.scrollTop}px`);
+        console.log(`📊 Page actuelle journalière: ${dayCurrentPageNum}`);
+        console.log(`📊 Nombre total de pages journalières: ${dayPdfDocument ? dayPdfDocument.numPages : 'PDF non chargé'}`);
+        
+        if (pagePosition < -100 || pagePosition > viewerContainer.clientHeight) {
+            console.warn('⚠️ La page 1 journalière est mal positionnée - correction recommandée');
+        } else {
+            console.log('✅ Position journalière normale');
+        }
+    },
+    
+    // Forcer le retour à la page 1 journalière
+    goToDayFirst: function() {
+        console.log('🔧 Force le retour à la page 1 journalière...');
+        applyDayScrollFixToViewer();
+    },
+    
+    // Correction automatique journalière
+    fixDayScrollIssue: function() {
+        console.log('🛠️ Application de la correction automatique journalière...');
+        applyDayScrollFixToViewer();
+    }
+};
+
+console.log('🎨 Fonctions de debug PDF du calendrier disponibles: window.calendarPdfDebug');
+console.log('   - testScrollIssue() : Diagnostiquer le problème de scroll');
+console.log('   - goToFirst() : Forcer le retour à la page 1');
+console.log('   - fixScrollIssue() : Correction automatique');
+console.log('   - testDayScrollIssue() : Diagnostiquer le problème de scroll journalier');
+console.log('   - goToDayFirst() : Forcer le retour à la page 1 journalière');
+console.log('   - fixDayScrollIssue() : Correction automatique journalière');
 
 </script>
 {% endblock %}

@@ -10,6 +10,71 @@ import calendar
 
 planning_bp = Blueprint('planning', __name__, url_prefix='/planning')
 
+@planning_bp.route('/api/day/<date_str>')
+@login_required
+def get_day_plannings(date_str):
+    """API endpoint pour récupérer les planifications d'une journée"""
+    try:
+        # Parser la date
+        planning_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Récupérer l'ID de la classe depuis les paramètres de requête
+        classroom_id = request.args.get('classroom_id')
+        
+        # Construire la requête de base
+        query = Planning.query.filter_by(
+            user_id=current_user.id,
+            date=planning_date
+        )
+        
+        # Filtrer par classe si spécifié
+        if classroom_id:
+            query = query.filter_by(classroom_id=classroom_id)
+        
+        # Récupérer les planifications
+        plannings = query.all()
+        
+        # Récupérer les périodes de l'utilisateur
+        periods = calculate_periods(current_user)
+        periods_dict = {p['number']: p for p in periods}
+        
+        # Construire la réponse
+        result = []
+        for planning in plannings:
+            period_info = periods_dict.get(planning.period)
+            
+            result.append({
+                'id': planning.id,
+                'period': planning.period,
+                'period_start': period_info['start'].strftime('%H:%M') if period_info else '',
+                'period_end': period_info['end'].strftime('%H:%M') if period_info else '',
+                'classroom_id': planning.classroom_id,
+                'classroom_name': planning.classroom.name if planning.classroom else '',
+                'classroom_subject': planning.classroom.subject if planning.classroom else '',
+                'classroom_color': planning.classroom.color if planning.classroom else '#4F46E5',
+                'title': planning.title,
+                'description': planning.description
+            })
+        
+        # Trier par période
+        result.sort(key=lambda x: x['period'])
+        
+        return jsonify({
+            'success': True,
+            'plannings': result
+        })
+        
+    except ValueError:
+        return jsonify({
+            'success': False,
+            'error': 'Format de date invalide'
+        }), 400
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 def get_week_dates(week_date):
     """Retourne les dates du lundi au vendredi de la semaine contenant la date donnée"""
     # Trouver le lundi de la semaine
