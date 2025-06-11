@@ -1175,6 +1175,11 @@ if (typeof pdfjsLib !== 'undefined') {
                                                 {{ planning.title }}
                                             </div>
                                             {% endif %}
+                                            {% if planning.group %}
+                                            <div class="group-name" style="font-size: 0.65rem; color: white; font-style: italic; margin-top: 2px;">
+                                                {{ planning.group.name }}
+                                            </div>
+                                            {% endif %}
                                             {% if planning.checklist_summary %}
                                             <div class="checklist-summary">
                                                 {% if planning.checklist_summary.all_checked %}
@@ -1351,7 +1356,7 @@ if (typeof pdfjsLib !== 'undefined') {
         <div class="modal-body">
             <div class="form-group">
                 <label class="form-label">Classe</label>
-                <select id="modalClassroom" class="form-control">
+                <select id="modalClassroom" class="form-control" onchange="loadGroupsForClass(this.value)">
                     <option value="">-- Sélectionner une classe --</option>
                     {% for classroom in classrooms %}
                     <option value="{{ classroom.id }}" data-color="{{ classroom.color }}">
@@ -1359,6 +1364,33 @@ if (typeof pdfjsLib !== 'undefined') {
                     </option>
                     {% endfor %}
                 </select>
+            </div>
+
+            <div class="form-group" id="groupSelectionDiv" style="display: none;">
+                <label class="form-label">Groupe</label>
+                <select id="modalGroup" class="form-control" onchange="toggleGroupRepeatOptions()">
+                    <option value="">Classe entière</option>
+                </select>
+                <small class="form-text text-muted">Sélectionnez un groupe ou laissez "Classe entière" pour tous les élèves</small>
+                
+                <!-- Options de répétition des groupes -->
+                <div id="groupRepeatOptions" style="display: none; margin-top: 10px; padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 8px; display: block;">Application automatique :</label>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="groupRepeat" value="same" style="margin-right: 8px;">
+                            <span>Répéter le même groupe chaque semaine jusqu'à la fin de l'année</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="groupRepeat" value="alternate" style="margin-right: 8px;">
+                            <span>Alterner entre tous les groupes de la classe chaque semaine</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="groupRepeat" value="none" checked style="margin-right: 8px;">
+                            <span>Appliquer seulement pour cette date</span>
+                        </label>
+                    </div>
+                </div>
             </div>
 
             <div class="form-group">
@@ -3154,6 +3186,32 @@ function showDaySlotEditModal(title, description) {
                     </button>
                 </div>
                 <div class="day-edit-body">
+                    <div class="form-group" id="dayGroupSelectionDiv" style="display: none;">
+                        <label class="form-label">Groupe</label>
+                        <select id="dayModalGroup" class="form-control" onchange="toggleDayGroupRepeatOptions()">
+                            <option value="">Classe entière</option>
+                        </select>
+                        <small class="form-text text-muted">Sélectionnez un groupe ou laissez "Classe entière" pour tous les élèves</small>
+                        
+                        <!-- Options de répétition des groupes pour le modal jour -->
+                        <div id="dayGroupRepeatOptions" style="display: none; margin-top: 10px; padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
+                            <label class="form-label" style="font-weight: 600; margin-bottom: 8px; display: block;">Application automatique :</label>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="radio" name="dayGroupRepeat" value="same" style="margin-right: 8px;">
+                                    <span>Répéter le même groupe chaque semaine jusqu'à la fin de l'année</span>
+                                </label>
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="radio" name="dayGroupRepeat" value="alternate" style="margin-right: 8px;">
+                                    <span>Alterner entre tous les groupes de la classe chaque semaine</span>
+                                </label>
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="radio" name="dayGroupRepeat" value="none" checked style="margin-right: 8px;">
+                                    <span>Appliquer seulement pour cette date</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                     <div class="form-group">
                         <label class="form-label">Titre du cours</label>
                         <input type="text" id="daySlotTitle" class="form-control" 
@@ -3180,6 +3238,9 @@ function showDaySlotEditModal(title, description) {
     
     // Attacher la conversion des tirets en checkboxes
     attachDayDashConversion();
+    
+    // Charger les groupes pour cette classe
+    loadGroupsForDayModal(currentEditingSlot.classroomId);
     
     // Afficher le modal
     setTimeout(() => {
@@ -3238,8 +3299,14 @@ async function saveDaySlot() {
     
     const title = document.getElementById('daySlotTitle').value;
     const description = document.getElementById('daySlotDescription').value;
+    const groupId = document.getElementById('dayModalGroup').value || null;
+    
+    // Vérifier les options de répétition des groupes
+    const groupRepeatOption = document.querySelector('input[name="dayGroupRepeat"]:checked');
+    const shouldApplyPattern = groupRepeatOption && groupRepeatOption.value !== 'none' && groupId;
     
     try {
+        // Sauvegarder d'abord la planification actuelle
         const response = await fetch('/planning/save_planning', {
             method: 'POST',
             headers: {
@@ -3251,7 +3318,8 @@ async function saveDaySlot() {
                 classroom_id: currentEditingSlot.classroomId,
                 title: title,
                 description: description,
-                checklist_states: {} // Pas de checkboxes dans ce modal simple
+                checklist_states: {}, // Pas de checkboxes dans ce modal simple
+                group_id: groupId
             })
         });
         
@@ -3259,6 +3327,35 @@ async function saveDaySlot() {
         
         if (result.success) {
             console.log('✅ Créneau sauvegardé avec succès');
+            
+            // Si une option de répétition est sélectionnée, appliquer le pattern
+            if (shouldApplyPattern) {
+                const patternResponse = await fetch('/planning/apply-group-pattern', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        start_date: currentEditingSlot.date,
+                        period_number: currentEditingSlot.period,
+                        classroom_id: currentEditingSlot.classroomId,
+                        title: title,
+                        description: description,
+                        checklist_states: {},
+                        pattern_type: groupRepeatOption.value,
+                        group_id: parseInt(groupId)
+                    })
+                });
+
+                const patternResult = await patternResponse.json();
+                
+                if (patternResult.success) {
+                    console.log(`✅ Pattern appliqué: ${patternResult.message}`);
+                } else {
+                    console.log(`⚠️ Erreur lors de l'application du pattern: ${patternResult.message}`);
+                }
+            }
+            
             // Sauvegarder les valeurs avant de fermer le modal
             const dateToReload = currentEditingSlot.date;
             const classroomToReload = currentEditingSlot.classroomId;
@@ -3272,6 +3369,80 @@ async function saveDaySlot() {
     } catch (error) {
         console.error('Erreur lors de la sauvegarde:', error);
         alert('Erreur lors de la sauvegarde: ' + error.message);
+    }
+}
+
+// Charger les groupes pour une classe (modal principal)
+async function loadGroupsForClass(classroomId) {
+    const groupDiv = document.getElementById('groupSelectionDiv');
+    const groupSelect = document.getElementById('modalGroup');
+    
+    if (!classroomId) {
+        groupDiv.style.display = 'none';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/planning/get-groups/${classroomId}`);
+        const data = await response.json();
+        
+        if (data.success && data.groups.length > 0) {
+            // Réinitialiser les options
+            groupSelect.innerHTML = '<option value="">Classe entière</option>';
+            
+            // Ajouter les groupes
+            data.groups.forEach(group => {
+                const option = document.createElement('option');
+                option.value = group.id;
+                option.textContent = group.name;
+                option.style.color = group.color;
+                groupSelect.appendChild(option);
+            });
+            
+            groupDiv.style.display = 'block';
+        } else {
+            groupDiv.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des groupes:', error);
+        groupDiv.style.display = 'none';
+    }
+}
+
+// Charger les groupes pour le modal journalier
+async function loadGroupsForDayModal(classroomId) {
+    const groupDiv = document.getElementById('dayGroupSelectionDiv');
+    const groupSelect = document.getElementById('dayModalGroup');
+    
+    if (!classroomId) {
+        groupDiv.style.display = 'none';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/planning/get-groups/${classroomId}`);
+        const data = await response.json();
+        
+        if (data.success && data.groups.length > 0) {
+            // Réinitialiser les options
+            groupSelect.innerHTML = '<option value="">Classe entière</option>';
+            
+            // Ajouter les groupes
+            data.groups.forEach(group => {
+                const option = document.createElement('option');
+                option.value = group.id;
+                option.textContent = group.name;
+                option.style.color = group.color;
+                groupSelect.appendChild(option);
+            });
+            
+            groupDiv.style.display = 'block';
+        } else {
+            groupDiv.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des groupes:', error);
+        groupDiv.style.display = 'none';
     }
 }
 
@@ -4214,6 +4385,44 @@ console.log('   - fixScrollIssue() : Correction automatique');
 console.log('   - testDayScrollIssue() : Diagnostiquer le problème de scroll journalier');
 console.log('   - goToDayFirst() : Forcer le retour à la page 1 journalière');
 console.log('   - fixDayScrollIssue() : Correction automatique journalière');
+
+// Fonction pour afficher/masquer les options de répétition des groupes (modal principal)
+function toggleGroupRepeatOptions() {
+    const groupSelect = document.getElementById('modalGroup');
+    const repeatOptions = document.getElementById('groupRepeatOptions');
+    
+    if (groupSelect && repeatOptions) {
+        const hasGroupSelected = groupSelect.value && groupSelect.value !== '';
+        repeatOptions.style.display = hasGroupSelected ? 'block' : 'none';
+        
+        // Réinitialiser les boutons radio quand on cache les options
+        if (!hasGroupSelected) {
+            const noneOption = document.querySelector('input[name="groupRepeat"][value="none"]');
+            if (noneOption) {
+                noneOption.checked = true;
+            }
+        }
+    }
+}
+
+// Fonction pour afficher/masquer les options de répétition des groupes (modal jour)
+function toggleDayGroupRepeatOptions() {
+    const groupSelect = document.getElementById('dayModalGroup');
+    const repeatOptions = document.getElementById('dayGroupRepeatOptions');
+    
+    if (groupSelect && repeatOptions) {
+        const hasGroupSelected = groupSelect.value && groupSelect.value !== '';
+        repeatOptions.style.display = hasGroupSelected ? 'block' : 'none';
+        
+        // Réinitialiser les boutons radio quand on cache les options
+        if (!hasGroupSelected) {
+            const noneOption = document.querySelector('input[name="dayGroupRepeat"][value="none"]');
+            if (noneOption) {
+                noneOption.checked = true;
+            }
+        }
+    }
+}
 
 </script>
 {% endblock %}

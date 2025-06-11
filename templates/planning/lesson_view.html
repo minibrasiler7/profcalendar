@@ -433,6 +433,28 @@ if (typeof pdfjsLib !== 'undefined') {
     font-weight: 500;
 }
 
+.student-name-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.student-accommodations {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.accommodation-emoji {
+    font-size: 0.875rem;
+}
+
+.accommodation-name {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
 .student-attendance.absent .student-name {
     color: var(--danger-color);
     text-decoration: line-through;
@@ -1010,6 +1032,30 @@ if (typeof pdfjsLib !== 'undefined') {
                 </div>
 
                 <!-- Liste des élèves -->
+                {% if current_group %}
+                <div style="margin-bottom: 1rem; padding: 0.5rem; background-color: #f8f9fa; border-radius: 0.375rem; border-left: 4px solid {{ current_group.color }};">
+                    <h4 style="margin: 0; font-size: 0.875rem; color: #374151; display: flex; align-items: center;">
+                        <i class="fas fa-users" style="margin-right: 0.5rem; color: {{ current_group.color }};"></i>
+                        Groupe : {{ current_group.name }}
+                        {% if current_group.description %}
+                        <span style="font-weight: normal; color: #6b7280; margin-left: 0.5rem;">({{ current_group.description }})</span>
+                        {% endif %}
+                    </h4>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.75rem; color: #6b7280;">
+                        {{ students|length }} élève(s) dans ce groupe
+                    </p>
+                </div>
+                {% else %}
+                <div style="margin-bottom: 1rem; padding: 0.5rem; background-color: #f8f9fa; border-radius: 0.375rem;">
+                    <h4 style="margin: 0; font-size: 0.875rem; color: #374151; display: flex; align-items: center;">
+                        <i class="fas fa-users" style="margin-right: 0.5rem; color: #6b7280;"></i>
+                        Classe entière
+                    </h4>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.75rem; color: #6b7280;">
+                        {{ students|length }} élève(s) dans la classe
+                    </p>
+                </div>
+                {% endif %}
                 <div class="students-list">
                     {% for student in students %}
                     {% set attendance = attendance_records.get(student.id, {}) %}
@@ -1025,7 +1071,20 @@ if (typeof pdfjsLib !== 'undefined') {
                             <div class="student-avatar">
                                 {{ student.first_name[0] }}{{ student.last_name[0] if student.last_name else '' }}
                             </div>
-                            <span class="student-name">{{ student.full_name }}</span>
+                            <div class="student-name-container">
+                                <span class="student-name">{{ student.full_name }}</span>
+                                {% if accommodation_display != 'none' and student_accommodations.get(student.id) %}
+                                <div class="student-accommodations">
+                                    {% for accommodation in student_accommodations[student.id] %}
+                                        {% if accommodation_display == 'emoji' %}
+                                            <span class="accommodation-emoji" title="{{ accommodation.name }}">{{ accommodation.emoji }}</span>
+                                        {% elif accommodation_display == 'name' %}
+                                            <span class="accommodation-name">{{ accommodation.emoji }} {{ accommodation.name }}</span>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
                         </div>
 
                         <div class="late-controls">

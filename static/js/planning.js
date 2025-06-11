@@ -22,6 +22,17 @@ function openPlanningModal(cell, fromAnnualView = false) {
             document.getElementById('modalClassroom').value = data.planning.classroom_id || '';
             document.getElementById('modalPlanningTitle').value = data.planning.title || '';
 
+            // Charger les groupes pour la classe sélectionnée, puis définir le groupe
+            if (data.planning.classroom_id) {
+                loadGroupsForClass(data.planning.classroom_id).then(() => {
+                    // Une fois les groupes chargés, définir la valeur du groupe
+                    const groupSelect = document.getElementById('modalGroup');
+                    if (groupSelect) {
+                        groupSelect.value = data.planning.group_id || '';
+                    }
+                });
+            }
+
             // Si la période est passée, afficher la description avec les indicateurs
             if (isPastPeriod && data.planning.description) {
                 displayPastPeriodDescription(data.planning.description, data.planning.checklist_states);
@@ -38,6 +49,12 @@ function openPlanningModal(cell, fromAnnualView = false) {
             const modalDesc = document.getElementById('modalDescription');
             if (modalDesc) {
                 modalDesc.value = '';
+            }
+            
+            // Réinitialiser le groupe
+            const groupSelect = document.getElementById('modalGroup');
+            if (groupSelect) {
+                groupSelect.value = '';
             }
         }
 
@@ -601,11 +618,17 @@ async function savePlanning() {
     const classroomId = document.getElementById('modalClassroom').value;
     const title = document.getElementById('modalPlanningTitle').value;
     const description = document.getElementById('modalDescription').value;
+    const groupId = document.getElementById('modalGroup') ? document.getElementById('modalGroup').value : null;
 
     // Calculer les états des checkboxes
     const checklistStates = calculateChecklistStates(description);
 
+    // Vérifier les options de répétition des groupes
+    const groupRepeatOption = document.querySelector('input[name="groupRepeat"]:checked');
+    const shouldApplyPattern = groupRepeatOption && groupRepeatOption.value !== 'none' && groupId;
+
     try {
+        // Sauvegarder d'abord la planification actuelle
         const response = await fetch('/planning/save_planning', {
             method: 'POST',
             headers: {
@@ -618,13 +641,43 @@ async function savePlanning() {
                 classroom_id: classroomId ? parseInt(classroomId) : null,
                 title: title,
                 description: description,
-                checklist_states: checklistStates
+                checklist_states: checklistStates,
+                group_id: groupId && groupId !== '' ? parseInt(groupId) : null
             })
         });
 
         const result = await response.json();
 
         if (result.success) {
+            // Si une option de répétition est sélectionnée, appliquer le pattern
+            if (shouldApplyPattern) {
+                const patternResponse = await fetch('/planning/apply-group-pattern', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        start_date: date,
+                        period_number: parseInt(period),
+                        classroom_id: parseInt(classroomId),
+                        title: title,
+                        description: description,
+                        checklist_states: checklistStates,
+                        pattern_type: groupRepeatOption.value,
+                        group_id: parseInt(groupId)
+                    })
+                });
+
+                const patternResult = await patternResponse.json();
+                
+                if (patternResult.success) {
+                    showNotification('success', `Planification enregistrée! ${patternResult.message}`);
+                } else {
+                    showNotification('warning', `Planification enregistrée, mais erreur lors de l'application du pattern: ${patternResult.message}`);
+                }
+            }
+            
             // Recharger la page pour afficher les changements
             location.reload();
         } else {

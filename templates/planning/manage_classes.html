@@ -1675,6 +1675,286 @@
     color: #9ca3af;
     padding: 2rem;
 }
+
+/* Ajustements spécifiques pour le modal de groupes */
+#groupModal .modal-dialog {
+    max-width: 1200px; /* Augmentation de 200% par rapport à la largeur standard (~600px) */
+    width: 90%;
+}
+
+#groupModal .modal-content {
+    width: 100%;
+}
+
+/* Élargir la zone de description */
+#groupDescription {
+    min-height: 100px;
+    width: 100%;
+}
+
+/* Élargir la zone de sélection des élèves */
+.students-selection {
+    max-height: 400px; /* Augmenté pour plus de confort */
+    overflow-y: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 1rem; /* Augmenté le padding */
+}
+
+.students-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Colonnes plus étroites pour plus d'éléments */
+    gap: 0.75rem; /* Espacement légèrement augmenté */
+}
+
+.student-checkbox {
+    padding: 0.75rem; /* Padding augmenté pour plus de confort */
+}
+
+/* Styles pour les aménagements */
+.accommodations-section {
+    padding: 1rem;
+}
+
+.student-accommodations-card {
+    transition: box-shadow 0.2s ease;
+}
+
+.student-accommodations-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.accommodation-item {
+    transition: all 0.2s ease;
+}
+
+.accommodation-item:hover {
+    background-color: #f3f4f6 !important;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s ease;
+}
+
+.radio-option:hover {
+    background-color: #f9fafb;
+}
+
+.radio-option input[type="radio"] {
+    margin-right: 0.5rem;
+}
+
+.checkbox-option {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s ease;
+}
+
+.checkbox-option:hover {
+    background-color: #f9fafb;
+}
+
+.checkbox-option input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+.form-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: end;
+}
+
+/* Student Report Styles */
+.student-report-section {
+    background-color: var(--white);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+}
+
+.student-selector-container {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: var(--border-radius);
+}
+
+.student-report-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.report-section {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--primary-color);
+}
+
+.report-section-title {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.report-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.info-item label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+}
+
+.info-item span {
+    color: #111827;
+    font-size: 1rem;
+}
+
+.accommodations-list, .grades-list, .sanctions-list, .attendance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.accommodation-item, .grade-item, .sanction-item, .attendance-item {
+    padding: 0.75rem;
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    border: 1px solid #e5e7eb;
+}
+
+.accommodation-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.grade-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.additional-info-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.student-files-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.file-upload-area {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 1rem;
+    border: 2px dashed #d1d5db;
+    border-radius: var(--border-radius);
+    background-color: var(--white);
+}
+
+.files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    border: 1px solid #e5e7eb;
+}
+
+.file-item .file-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.file-item .file-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.info-history-container {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 1rem;
+}
+
+.info-history-title {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.info-history-item {
+    padding: 0.75rem;
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    border: 1px solid #e5e7eb;
+    border-left: 3px solid var(--primary-color);
+}
+
+.info-history-item .info-date {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.info-history-item .info-content {
+    color: #111827;
+    white-space: pre-wrap;
+    line-height: 1.4;
+}
+
 </style>
 {% endblock %}
 
@@ -1704,6 +1984,9 @@
                 <button class="tab-button active" onclick="showTab('students')">
                     <i class="fas fa-user-graduate"></i> Élèves
                 </button>
+                <button class="tab-button" onclick="showTab('student-report')">
+                    <i class="fas fa-file-alt"></i> Rapport élève
+                </button>
                 <button class="tab-button" onclick="showTab('grades')">
                     <i class="fas fa-clipboard-check"></i> Notes
                 </button>
@@ -1721,6 +2004,9 @@
                 </button>
                 <button class="tab-button" onclick="showTab('groups')">
                     <i class="fas fa-users"></i> Groupes
+                </button>
+                <button class="tab-button" onclick="showTab('accommodations')">
+                    <i class="fas fa-universal-access"></i> Aménagements
                 </button>
             </div>
         </div>
@@ -1805,6 +2091,136 @@
                 </button>
             </div>
             {% endif %}
+        </div>
+    </div>
+
+    <!-- Onglet Rapport élève -->
+    <div id="student-report-tab" class="tab-content">
+        <div class="student-report-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-file-alt"></i> Rapport d'élève
+                </h2>
+            </div>
+
+            <!-- Sélection d'élève -->
+            <div class="student-selector-container">
+                <div class="form-group">
+                    <label for="report-student-select">Sélectionner un élève :</label>
+                    <select id="report-student-select" class="form-control" onchange="loadStudentReport()">
+                        <option value="">-- Choisir un élève --</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Rapport de l'élève -->
+            <div id="student-report-content" class="student-report-content" style="display: none;">
+                <!-- Informations générales -->
+                <div class="report-section">
+                    <h3 class="report-section-title">
+                        <i class="fas fa-user"></i> Informations générales
+                    </h3>
+                    <div class="report-info-grid">
+                        <div class="info-item">
+                            <label>Prénom :</label>
+                            <span id="report-first-name"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Nom :</label>
+                            <span id="report-last-name"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Email :</label>
+                            <span id="report-email"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Groupes :</label>
+                            <span id="report-groups"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aménagements -->
+                <div class="report-section">
+                    <h3 class="report-section-title">
+                        <i class="fas fa-universal-access"></i> Aménagements
+                    </h3>
+                    <div id="report-accommodations" class="accommodations-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="report-section">
+                    <h3 class="report-section-title">
+                        <i class="fas fa-clipboard-check"></i> Notes
+                    </h3>
+                    <div id="report-grades" class="grades-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Coches/Sanctions -->
+                <div class="report-section">
+                    <h3 class="report-section-title">
+                        <i class="fas fa-exclamation-triangle"></i> Coches
+                    </h3>
+                    <div id="report-sanctions" class="sanctions-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Absences -->
+                <div class="report-section">
+                    <h3 class="report-section-title">
+                        <i class="fas fa-calendar-check"></i> Absences
+                    </h3>
+                    <div id="report-attendance" class="attendance-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Informations supplémentaires -->
+                <div class="report-section">
+                    <h3 class="report-section-title">
+                        <i class="fas fa-sticky-note"></i> Informations supplémentaires
+                    </h3>
+                    <div class="additional-info-container">
+                        <textarea id="student-additional-info" class="form-control" rows="4" placeholder="Ajouter des informations sur cet élève..."></textarea>
+                        <button class="btn btn-primary mt-2" onclick="saveAdditionalInfo()">
+                            <i class="fas fa-save"></i> Enregistrer
+                        </button>
+                    </div>
+                    
+                    <!-- Historique des informations -->
+                    <div class="info-history-container mt-3">
+                        <h4 class="info-history-title">
+                            <i class="fas fa-history"></i> Historique des informations
+                        </h4>
+                        <div id="student-info-history" class="info-history-list">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fichiers associés -->
+                <div class="report-section">
+                    <h3 class="report-section-title">
+                        <i class="fas fa-folder-open"></i> Fichiers associés
+                    </h3>
+                    <div class="student-files-container">
+                        <div class="file-upload-area">
+                            <input type="file" id="student-file-input" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                            <button class="btn btn-secondary" onclick="uploadStudentFile()">
+                                <i class="fas fa-upload"></i> Ajouter un fichier
+                            </button>
+                        </div>
+                        <div id="student-files-list" class="files-list">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -2284,6 +2700,127 @@
                     <i class="fas fa-save"></i> Enregistrer
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Onglet Aménagements -->
+<div id="accommodations-tab" class="tab-content">
+    <div class="accommodations-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-universal-access"></i> Gestion des aménagements
+            </h2>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="showAddAccommodationModal()">
+                    <i class="fas fa-plus"></i> Ajouter un aménagement
+                </button>
+            </div>
+        </div>
+
+        <!-- Liste des élèves avec leurs aménagements -->
+        <div class="accommodations-container">
+            <div class="students-accommodations-list" id="studentsAccommodationsList">
+                <!-- Les élèves avec leurs aménagements seront chargés ici -->
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-universal-access fa-2x mb-2"></i>
+                    <p>Aucun aménagement défini pour cette classe</p>
+                    <p class="small">Cliquez sur "Ajouter un aménagement" pour commencer</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour ajouter/modifier un aménagement -->
+<div id="accommodationModal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3 id="accommodationModalTitle">Ajouter un aménagement</h3>
+            <button type="button" class="modal-close" onclick="closeAccommodationModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Sélection de l'élève -->
+            <div class="form-group">
+                <label class="form-label">Élève</label>
+                <select id="accommodationStudentSelect" class="form-control">
+                    <option value="">-- Sélectionner un élève --</option>
+                </select>
+            </div>
+
+            <!-- Type d'aménagement -->
+            <div class="form-group">
+                <label class="form-label">Type d'aménagement</label>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="accommodationType" value="template" checked onchange="toggleAccommodationType()">
+                        <span>Choisir dans la liste prédéfinie</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="accommodationType" value="custom" onchange="toggleAccommodationType()">
+                        <span>Créer un aménagement personnalisé</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Aménagement prédéfini -->
+            <div id="templateAccommodationDiv" class="form-group">
+                <label class="form-label">Aménagement prédéfini</label>
+                <select id="accommodationTemplateSelect" class="form-control" onchange="updateTemplatePreview()">
+                    <option value="">-- Sélectionner un aménagement --</option>
+                </select>
+                <div id="templatePreview" style="display: none; margin-top: 10px; padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
+                    <div id="templatePreviewContent"></div>
+                </div>
+            </div>
+
+            <!-- Aménagement personnalisé -->
+            <div id="customAccommodationDiv" class="form-group" style="display: none;">
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Nom de l'aménagement</label>
+                        <input type="text" id="customAccommodationName" class="form-control" placeholder="Ex: Calculatrice autorisée">
+                    </div>
+                    <div class="form-group" style="flex: 0 0 80px; margin-left: 10px;">
+                        <label class="form-label">Emoji</label>
+                        <input type="text" id="customAccommodationEmoji" class="form-control text-center" placeholder="🧮" maxlength="2">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea id="customAccommodationDescription" class="form-control" rows="2" placeholder="Description détaillée de l'aménagement"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="customIsTimeExtension" onchange="toggleTimeMultiplier()">
+                        <span>Cet aménagement concerne une extension de temps</span>
+                    </label>
+                </div>
+                <div id="timeMultiplierDiv" class="form-group" style="display: none;">
+                    <label class="form-label">Multiplicateur de temps</label>
+                    <select id="customTimeMultiplier" class="form-control">
+                        <option value="1.25">+25% (1/4 de temps en plus)</option>
+                        <option value="1.33">+33% (1/3 de temps en plus)</option>
+                        <option value="1.5">+50% (1/2 de temps en plus)</option>
+                        <option value="1.75">+75% (3/4 de temps en plus)</option>
+                        <option value="2">+100% (temps doublé)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Notes spécifiques -->
+            <div class="form-group">
+                <label class="form-label">Notes spécifiques pour cet élève (optionnel)</label>
+                <textarea id="accommodationNotes" class="form-control" rows="2" placeholder="Notes particulières ou adaptations spécifiques..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeAccommodationModal()">Annuler</button>
+            <button type="button" class="btn btn-primary" onclick="saveAccommodation()">
+                <i class="fas fa-save"></i> Enregistrer
+            </button>
         </div>
     </div>
 </div>
@@ -3499,6 +4036,262 @@ function printSeatingPlan() {
         }, 500);
     }
 }
+
+// ===== SYSTÈME D'AMÉNAGEMENTS =====
+
+// Variables globales pour les aménagements
+let accommodationTemplates = [];
+let currentStudentsAccommodations = [];
+
+// Charger les aménagements lors du changement de classe
+function loadAccommodations() {
+    const classroomId = document.getElementById('classSelect').value;
+    if (!classroomId) {
+        document.getElementById('studentsAccommodationsList').innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-universal-access fa-2x mb-2"></i>
+                <p>Sélectionnez une classe pour voir les aménagements</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Charger les modèles d'aménagements et les aménagements des élèves
+    Promise.all([
+        fetch('/planning/get-accommodation-templates').then(r => r.json()),
+        fetch(`/planning/get-student-accommodations/${classroomId}`).then(r => r.json())
+    ]).then(([templatesResult, studentsResult]) => {
+        if (templatesResult.success) {
+            accommodationTemplates = templatesResult.templates;
+        }
+        
+        if (studentsResult.success) {
+            currentStudentsAccommodations = studentsResult.students;
+            displayStudentsAccommodations();
+        }
+    }).catch(error => {
+        console.error('Erreur lors du chargement des aménagements:', error);
+    });
+}
+
+// Afficher la liste des élèves avec leurs aménagements
+function displayStudentsAccommodations() {
+    const container = document.getElementById('studentsAccommodationsList');
+    
+    if (currentStudentsAccommodations.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-universal-access fa-2x mb-2"></i>
+                <p>Aucun élève dans cette classe</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    for (const student of currentStudentsAccommodations) {
+        html += `
+            <div class="student-accommodations-card" style="border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 0.5rem;">
+                    <h4 style="margin: 0; color: #374151;">${student.full_name}</h4>
+                    <button class="btn btn-sm btn-primary" onclick="showAddAccommodationModal(${student.id})" style="margin-left: auto;">
+                        <i class="fas fa-plus"></i> Ajouter
+                    </button>
+                </div>
+                <div class="accommodations-list">
+                    ${student.accommodations.length > 0 ? student.accommodations.map(acc => `
+                        <div class="accommodation-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background-color: #f8f9fa; border-radius: 0.25rem; margin-bottom: 0.5rem;">
+                            <span style="font-size: 1.2rem;">${acc.emoji}</span>
+                            <div style="flex: 1;">
+                                <strong>${acc.name}</strong>
+                                ${acc.description ? `<div style="font-size: 0.875rem; color: #6b7280;">${acc.description}</div>` : ''}
+                                ${acc.is_time_extension ? `<div style="font-size: 0.75rem; color: #059669; font-weight: 600;">⏰ +${Math.round((acc.time_multiplier - 1) * 100)}% de temps</div>` : ''}
+                                ${acc.notes ? `<div style="font-size: 0.75rem; color: #7c3aed; font-style: italic;">📝 ${acc.notes}</div>` : ''}
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteAccommodation(${acc.id})" title="Supprimer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `).join('') : '<p style="color: #6b7280; font-style: italic; margin: 0;">Aucun aménagement</p>'}
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+// Afficher le modal pour ajouter un aménagement
+function showAddAccommodationModal(studentId = null) {
+    const modal = document.getElementById('accommodationModal');
+    const studentSelect = document.getElementById('accommodationStudentSelect');
+    const templateSelect = document.getElementById('accommodationTemplateSelect');
+    
+    // Remplir la liste des élèves
+    studentSelect.innerHTML = '<option value="">-- Sélectionner un élève --</option>';
+    for (const student of currentStudentsAccommodations) {
+        const selected = studentId && student.id === studentId ? 'selected' : '';
+        studentSelect.innerHTML += `<option value="${student.id}" ${selected}>${student.full_name}</option>`;
+    }
+    
+    // Remplir la liste des modèles d'aménagements
+    templateSelect.innerHTML = '<option value="">-- Sélectionner un aménagement --</option>';
+    let currentCategory = '';
+    for (const template of accommodationTemplates) {
+        if (template.category !== currentCategory) {
+            if (currentCategory !== '') templateSelect.innerHTML += '</optgroup>';
+            currentCategory = template.category;
+            templateSelect.innerHTML += `<optgroup label="${template.category}">`;
+        }
+        templateSelect.innerHTML += `<option value="${template.id}">${template.emoji} ${template.name}</option>`;
+    }
+    if (currentCategory !== '') templateSelect.innerHTML += '</optgroup>';
+    
+    // Réinitialiser le formulaire
+    document.querySelector('input[name="accommodationType"][value="template"]').checked = true;
+    toggleAccommodationType();
+    document.getElementById('accommodationNotes').value = '';
+    
+    modal.style.display = 'flex';
+}
+
+// Fermer le modal d'aménagement
+function closeAccommodationModal() {
+    document.getElementById('accommodationModal').style.display = 'none';
+}
+
+// Basculer entre aménagement prédéfini et personnalisé
+function toggleAccommodationType() {
+    const isTemplate = document.querySelector('input[name="accommodationType"]:checked').value === 'template';
+    document.getElementById('templateAccommodationDiv').style.display = isTemplate ? 'block' : 'none';
+    document.getElementById('customAccommodationDiv').style.display = isTemplate ? 'none' : 'block';
+}
+
+// Afficher l'aperçu du modèle sélectionné
+function updateTemplatePreview() {
+    const templateId = document.getElementById('accommodationTemplateSelect').value;
+    const preview = document.getElementById('templatePreview');
+    const content = document.getElementById('templatePreviewContent');
+    
+    if (!templateId) {
+        preview.style.display = 'none';
+        return;
+    }
+    
+    const template = accommodationTemplates.find(t => t.id == templateId);
+    if (template) {
+        content.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="font-size: 1.5rem;">${template.emoji}</span>
+                <strong>${template.name}</strong>
+            </div>
+            ${template.description ? `<p style="margin: 0.5rem 0; color: #6b7280;">${template.description}</p>` : ''}
+            ${template.is_time_extension ? `<div style="font-size: 0.875rem; color: #059669; font-weight: 600;">⏰ Extension de temps: +${Math.round((template.time_multiplier - 1) * 100)}%</div>` : ''}
+        `;
+        preview.style.display = 'block';
+    }
+}
+
+// Basculer l'affichage du multiplicateur de temps
+function toggleTimeMultiplier() {
+    const isTimeExtension = document.getElementById('customIsTimeExtension').checked;
+    document.getElementById('timeMultiplierDiv').style.display = isTimeExtension ? 'block' : 'none';
+}
+
+// Sauvegarder un aménagement
+async function saveAccommodation() {
+    const studentId = document.getElementById('accommodationStudentSelect').value;
+    const accommodationType = document.querySelector('input[name="accommodationType"]:checked').value;
+    const notes = document.getElementById('accommodationNotes').value;
+    
+    if (!studentId) {
+        alert('Veuillez sélectionner un élève');
+        return;
+    }
+    
+    const data = {
+        student_id: parseInt(studentId),
+        accommodation_type: accommodationType,
+        notes: notes
+    };
+    
+    if (accommodationType === 'template') {
+        const templateId = document.getElementById('accommodationTemplateSelect').value;
+        if (!templateId) {
+            alert('Veuillez sélectionner un aménagement prédéfini');
+            return;
+        }
+        data.template_id = parseInt(templateId);
+    } else {
+        const name = document.getElementById('customAccommodationName').value.trim();
+        const description = document.getElementById('customAccommodationDescription').value.trim();
+        const emoji = document.getElementById('customAccommodationEmoji').value.trim() || '🔧';
+        const isTimeExtension = document.getElementById('customIsTimeExtension').checked;
+        const timeMultiplier = document.getElementById('customTimeMultiplier').value;
+        
+        if (!name) {
+            alert('Veuillez entrer un nom pour l\'aménagement personnalisé');
+            return;
+        }
+        
+        data.custom_name = name;
+        data.custom_description = description;
+        data.custom_emoji = emoji;
+        data.custom_is_time_extension = isTimeExtension;
+        if (isTimeExtension && timeMultiplier) {
+            data.custom_time_multiplier = timeMultiplier;
+        }
+    }
+    
+    try {
+        const response = await fetch('/planning/add-student-accommodation', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            closeAccommodationModal();
+            loadAccommodations(); // Recharger la liste
+            showNotification('success', result.message);
+        } else {
+            alert('Erreur: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la sauvegarde');
+    }
+}
+
+// Supprimer un aménagement
+async function deleteAccommodation(accommodationId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet aménagement ?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/planning/delete-student-accommodation/${accommodationId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            loadAccommodations(); // Recharger la liste
+            showNotification('success', result.message);
+        } else {
+            alert('Erreur: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la suppression');
+    }
+}
+
 </script>
 
 <!-- Modal nouveau dossier pour les fichiers de classe -->
@@ -4098,6 +4891,16 @@ function showTab(tabName) {
         loadGroups();
     }
     
+    // Charger les aménagements si on est sur l'onglet aménagements
+    if (tabName === 'accommodations') {
+        loadAccommodations();
+    }
+    
+    // Charger la liste des élèves si on est sur l'onglet rapport élève
+    if (tabName === 'student-report') {
+        loadStudentsForReport();
+    }
+    
     // Charger le plan de classe si on est sur l'onglet plan de classe
     if (tabName === 'seating') {
         // Attendre un délai pour s'assurer que l'onglet est visible
@@ -4123,7 +4926,22 @@ function showTab(tabName) {
 
 // Changer de classe
 function changeClass(classroomId) {
-    window.location.href = `{{ url_for('planning.manage_classes') }}?classroom=${classroomId}`;
+    // Mémoriser l'onglet actuel
+    const activeTab = document.querySelector('.tab-button.active');
+    let currentTab = 'students'; // onglet par défaut
+    
+    if (activeTab) {
+        // Extraire le nom de l'onglet depuis l'onclick
+        const onclickAttr = activeTab.getAttribute('onclick');
+        if (onclickAttr) {
+            const match = onclickAttr.match(/showTab\('([^']+)'\)/);
+            if (match) {
+                currentTab = match[1];
+            }
+        }
+    }
+    
+    window.location.href = `{{ url_for('planning.manage_classes') }}?classroom=${classroomId}&tab=${currentTab}`;
 }
 
 // Afficher/masquer le formulaire d'ajout d'élève
@@ -6349,7 +7167,7 @@ let currentEditingGroupId = null;
 
 // Charger les groupes de la classe
 function loadGroups() {
-    const classroomId = document.getElementById('classroomSelect').value;
+    const classroomId = document.getElementById('classSelect').value;
     if (!classroomId) return;
 
     fetch(`/planning/get-groups/${classroomId}`)
@@ -6429,7 +7247,7 @@ function editGroup(groupId) {
     currentEditingGroupId = groupId;
     document.getElementById('groupModalTitle').textContent = 'Modifier le groupe';
     
-    const classroomId = document.getElementById('classroomSelect').value;
+    const classroomId = document.getElementById('classSelect').value;
     fetch(`/planning/get-group/${groupId}`)
         .then(response => response.json())
         .then(data => {
@@ -6450,7 +7268,8 @@ function editGroup(groupId) {
 function loadStudentsForSelection(selectedStudentIds = []) {
     const studentsGrid = document.getElementById('studentsGrid');
     
-    studentsGrid.innerHTML = studentsJson.map(student => `
+    const students = {{ students_json|tojson|safe }};
+    studentsGrid.innerHTML = students.map(student => `
         <label class="student-checkbox">
             <input type="checkbox" value="${student.id}" ${selectedStudentIds.includes(student.id) ? 'checked' : ''}>
             <span>${student.first_name} ${student.last_name || ''}</span>
@@ -6463,7 +7282,7 @@ function saveGroup() {
     const name = document.getElementById('groupName').value.trim();
     const description = document.getElementById('groupDescription').value.trim();
     const color = document.getElementById('groupColor').value;
-    const classroomId = document.getElementById('classroomSelect').value;
+    const classroomId = document.getElementById('classSelect').value;
     
     if (!name) {
         alert('Le nom du groupe est obligatoire');
@@ -6537,6 +7356,408 @@ function closeGroupModal() {
     document.getElementById('groupModal').classList.remove('show');
     currentEditingGroupId = null;
 }
+
+// ===== SYSTÈME DE RAPPORT ÉLÈVE =====
+
+let currentSelectedStudentId = null;
+
+// Fonction helper pour récupérer l'ID de la classe actuelle
+function getCurrentClassroomId() {
+    return {{ selected_classroom_id }};
+}
+
+// Charger la liste des élèves pour le sélecteur de rapport
+function loadStudentsForReport() {
+    const classroomId = getCurrentClassroomId();
+    if (!classroomId) return;
+    
+    fetch(`/planning/students/${classroomId}`)
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('report-student-select');
+            select.innerHTML = '<option value="">-- Choisir un élève --</option>';
+            
+            data.students.forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.id;
+                option.textContent = `${student.first_name} ${student.last_name}`;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des élèves:', error);
+        });
+}
+
+// Charger le rapport complet d'un élève
+function loadStudentReport() {
+    const studentId = document.getElementById('report-student-select').value;
+    const reportContent = document.getElementById('student-report-content');
+    
+    if (!studentId) {
+        reportContent.style.display = 'none';
+        return;
+    }
+    
+    currentSelectedStudentId = studentId;
+    reportContent.style.display = 'block';
+    
+    // Charger toutes les données de l'élève
+    loadStudentInfo(studentId);
+    loadStudentAccommodations(studentId);
+    loadStudentGrades(studentId);
+    loadStudentSanctions(studentId);
+    loadStudentAttendance(studentId);
+    loadStudentAdditionalInfo(studentId);
+    loadStudentInfoHistory(studentId);
+    loadStudentFiles(studentId);
+}
+
+// Charger les informations de base de l'élève
+function loadStudentInfo(studentId) {
+    fetch(`/planning/student/${studentId}`)
+        .then(response => response.json())
+        .then(data => {
+            const student = data.student;
+            document.getElementById('report-first-name').textContent = student.first_name || '-';
+            document.getElementById('report-last-name').textContent = student.last_name || '-';
+            document.getElementById('report-email').textContent = student.email || '-';
+            
+            // Charger les groupes de l'élève
+            const groups = data.groups || [];
+            const groupsText = groups.length > 0 ? groups.map(g => g.name).join(', ') : 'Aucun groupe';
+            document.getElementById('report-groups').textContent = groupsText;
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des infos élève:', error);
+        });
+}
+
+// Charger les aménagements de l'élève
+function loadStudentAccommodations(studentId) {
+    fetch(`/planning/student/${studentId}/accommodations`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('report-accommodations');
+            
+            if (data.accommodations.length === 0) {
+                container.innerHTML = '<p class="text-muted">Aucun aménagement</p>';
+                return;
+            }
+            
+            container.innerHTML = data.accommodations.map(acc => `
+                <div class="accommodation-item">
+                    <span class="accommodation-emoji">${acc.emoji}</span>
+                    <span class="accommodation-name">${acc.name}</span>
+                    ${acc.time_multiplier ? `<span class="time-multiplier">(x${acc.time_multiplier})</span>` : ''}
+                </div>
+            `).join('');
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des aménagements:', error);
+        });
+}
+
+// Charger les notes de l'élève
+function loadStudentGrades(studentId) {
+    fetch(`/planning/student/${studentId}/grades`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('report-grades');
+            
+            if (data.grades.length === 0) {
+                container.innerHTML = '<p class="text-muted">Aucune note enregistrée</p>';
+                return;
+            }
+            
+            container.innerHTML = data.grades.map(grade => `
+                <div class="grade-item">
+                    <div>
+                        <strong>${grade.evaluation_name}</strong>
+                        <br><small class="text-muted">${grade.date}</small>
+                    </div>
+                    <div class="grade-value">
+                        <strong>${grade.score}/${grade.max_score}</strong>
+                    </div>
+                </div>
+            `).join('');
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des notes:', error);
+        });
+}
+
+// Charger les sanctions/coches de l'élève
+function loadStudentSanctions(studentId) {
+    fetch(`/planning/student/${studentId}/sanctions`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('report-sanctions');
+            
+            if (data.sanctions.length === 0) {
+                container.innerHTML = '<p class="text-muted">Aucune coche enregistrée</p>';
+                return;
+            }
+            
+            container.innerHTML = data.sanctions.map(sanction => `
+                <div class="sanction-item">
+                    <div>
+                        <strong>${sanction.name}</strong>
+                        <br><small class="text-muted">${sanction.description || ''}</small>
+                    </div>
+                    <div class="sanction-count">
+                        <strong>${sanction.count} coche(s)</strong>
+                    </div>
+                </div>
+            `).join('');
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des sanctions:', error);
+        });
+}
+
+// Charger les absences de l'élève
+function loadStudentAttendance(studentId) {
+    fetch(`/planning/student/${studentId}/attendance`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('report-attendance');
+            
+            if (data.attendance.length === 0) {
+                container.innerHTML = '<p class="text-muted">Aucune absence enregistrée</p>';
+                return;
+            }
+            
+            container.innerHTML = data.attendance.map(attendance => `
+                <div class="attendance-item attendance-${attendance.status}">
+                    <div>
+                        <strong>${attendance.date}</strong> - Période ${attendance.period_number}
+                        <br><small class="text-muted">${attendance.classroom_name}</small>
+                    </div>
+                    <div class="attendance-status">
+                        <span class="status-${attendance.status}">
+                            ${attendance.status === 'absent' ? 'Absent' : 
+                              attendance.status === 'late' ? `Retard (${attendance.late_minutes}min)` : 'Présent'}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des absences:', error);
+        });
+}
+
+// Charger les informations supplémentaires de l'élève
+function loadStudentAdditionalInfo(studentId) {
+    // Vider le textarea pour les nouvelles informations
+    document.getElementById('student-additional-info').value = '';
+}
+
+// Charger l'historique des informations de l'élève
+function loadStudentInfoHistory(studentId) {
+    fetch(`/planning/student/${studentId}/info-history`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('student-info-history');
+            
+            if (data.history.length === 0) {
+                container.innerHTML = '<p class="text-muted">Aucune information enregistrée</p>';
+                return;
+            }
+            
+            container.innerHTML = data.history.map(info => `
+                <div class="info-history-item">
+                    <div class="info-date">
+                        <i class="fas fa-calendar"></i> ${info.created_at}
+                    </div>
+                    <div class="info-content">${info.content}</div>
+                </div>
+            `).join('');
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement de l\'historique:', error);
+        });
+}
+
+// Sauvegarder les informations supplémentaires
+function saveAdditionalInfo() {
+    if (!currentSelectedStudentId) return;
+    
+    const additionalInfo = document.getElementById('student-additional-info').value.trim();
+    
+    if (!additionalInfo) {
+        alert('Veuillez saisir des informations avant d\'enregistrer');
+        return;
+    }
+    
+    fetch(`/planning/student/${currentSelectedStudentId}/additional-info`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            additional_info: additionalInfo
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('success', 'Informations sauvegardées');
+            // Vider le textarea et recharger l'historique
+            document.getElementById('student-additional-info').value = '';
+            loadStudentInfoHistory(currentSelectedStudentId);
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la sauvegarde');
+    });
+}
+
+// Charger les fichiers de l'élève
+function loadStudentFiles(studentId) {
+    fetch(`/planning/student/${studentId}/files`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('student-files-list');
+            
+            if (data.files.length === 0) {
+                container.innerHTML = '<p class="text-muted">Aucun fichier associé</p>';
+                return;
+            }
+            
+            container.innerHTML = data.files.map(file => `
+                <div class="file-item">
+                    <div class="file-info">
+                        <i class="fas fa-file"></i>
+                        <div>
+                            <span>${file.original_name}</span>
+                            <br><small class="text-muted">
+                                <i class="fas fa-calendar"></i> Ajouté le ${file.upload_date}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-sm btn-primary" onclick="downloadStudentFile('${file.id}')">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteStudentFile('${file.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des fichiers:', error);
+        });
+}
+
+// Upload de fichier pour l'élève
+function uploadStudentFile() {
+    if (!currentSelectedStudentId) return;
+    
+    const fileInput = document.getElementById('student-file-input');
+    const files = fileInput.files;
+    
+    if (files.length === 0) {
+        alert('Veuillez sélectionner au moins un fichier');
+        return;
+    }
+    
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+    }
+    formData.append('student_id', currentSelectedStudentId);
+    
+    fetch('/planning/student/upload-file', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('success', 'Fichier(s) uploadé(s) avec succès');
+            // Recharger immédiatement la liste des fichiers
+            loadStudentFiles(currentSelectedStudentId);
+            fileInput.value = '';
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de l\'upload');
+    });
+}
+
+// Télécharger un fichier d'élève
+function downloadStudentFile(fileId) {
+    window.open(`/planning/student/file/${fileId}/download`, '_blank');
+}
+
+// Supprimer un fichier d'élève
+function deleteStudentFile(fileId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce fichier ?')) return;
+    
+    fetch(`/planning/student/file/${fileId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('success', 'Fichier supprimé');
+            loadStudentFiles(currentSelectedStudentId);
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la suppression');
+    });
+}
+
+// Activer l'onglet correct au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Récupérer l'onglet sélectionné depuis le backend
+    const selectedTab = '{{ selected_tab }}';
+    
+    // Si l'onglet n'est pas le défaut (students), l'activer
+    if (selectedTab && selectedTab !== 'students') {
+        // Simuler un clic sur le bon bouton d'onglet
+        const tabButton = document.querySelector(`[onclick="showTab('${selectedTab}')"]`);
+        if (tabButton) {
+            // Désactiver tous les onglets
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Activer l'onglet voulu
+            tabButton.classList.add('active');
+            const tabContent = document.getElementById(selectedTab + '-tab');
+            if (tabContent) {
+                tabContent.classList.add('active');
+                
+                // Déclencher les actions spécifiques à l'onglet
+                if (selectedTab === 'files') {
+                    loadClassFiles();
+                } else if (selectedTab === 'groups') {
+                    loadGroups();
+                } else if (selectedTab === 'accommodations') {
+                    loadAccommodations();
+                } else if (selectedTab === 'student-report') {
+                    loadStudentsForReport();
+                } else if (selectedTab === 'seating') {
+                    initializeSeatingPlan();
+                }
+            }
+        }
+    }
+});
 
 // Note: La fonction showTab est déjà définie plus haut, on va la modifier directement
 </script>

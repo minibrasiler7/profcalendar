@@ -20,6 +20,9 @@ class Planning(db.Model):
     # Contenu de la planification
     title = db.Column(db.String(200))
     description = db.Column(db.Text)
+    
+    # Groupe spécifique (optionnel, si null = classe entière)
+    group_id = db.Column(db.Integer, db.ForeignKey('student_groups.id'), nullable=True)
 
     # Nouveau champ pour stocker l'état des checkboxes (JSON)
     checklist_states = db.Column(db.Text)  # Stocké comme JSON
@@ -28,8 +31,9 @@ class Planning(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relation avec l'utilisateur (en plus de celle héritée du modèle User)
+    # Relations
     user = db.relationship('User', backref=db.backref('plannings', lazy='dynamic'))
+    group = db.relationship('StudentGroup', backref=db.backref('plannings', lazy='dynamic'))
 
     __table_args__ = (
         db.UniqueConstraint('user_id', 'date', 'period_number', name='_user_date_period_uc'),

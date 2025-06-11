@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from extensions import db
 from models.planning import Planning
@@ -68,7 +68,8 @@ def get_day_plannings(date_str):
                     'classroom_subject': classroom_subject,
                     'classroom_color': classroom_color,
                     'title': planning.title or '',
-                    'description': planning.description or ''
+                    'description': planning.description or '',
+                    'group_id': planning.group_id
                 })
             except Exception as plan_error:
                 print(f"Erreur lors du traitement de la planification {planning.id}: {plan_error}")
@@ -501,6 +502,7 @@ def save_planning():
         title = data.get('title', '')
         description = data.get('description', '')
         checklist_states = data.get('checklist_states', {})  # Récupérer les états des checkboxes
+        group_id = data.get('group_id')  # Récupérer l'ID du groupe
 
         # Convertir la date
         planning_date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -510,6 +512,17 @@ def save_planning():
             classroom = Classroom.query.filter_by(id=classroom_id, user_id=current_user.id).first()
             if not classroom:
                 return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+
+        # Vérifier le groupe si spécifié
+        if group_id:
+            from models.student_group import StudentGroup
+            group = StudentGroup.query.filter_by(
+                id=group_id,
+                classroom_id=classroom_id,
+                user_id=current_user.id
+            ).first()
+            if not group:
+                return jsonify({'success': False, 'message': 'Groupe non trouvé'}), 404
 
         # Chercher un planning existant
         existing = Planning.query.filter_by(
@@ -524,6 +537,7 @@ def save_planning():
                 existing.classroom_id = classroom_id
                 existing.title = title
                 existing.description = description
+                existing.group_id = group_id  # Sauvegarder l'ID du groupe
                 existing.set_checklist_states(checklist_states)  # Sauvegarder les états des checkboxes
             else:
                 # Créer nouveau
@@ -533,7 +547,8 @@ def save_planning():
                     date=planning_date,
                     period_number=period_number,
                     title=title,
-                    description=description
+                    description=description,
+                    group_id=group_id  # Sauvegarder l'ID du groupe
                 )
                 planning.set_checklist_states(checklist_states)  # Sauvegarder les états des checkboxes
                 db.session.add(planning)
@@ -750,10 +765,21 @@ def lesson_view():
         flash('Classe non trouvée ou non autorisée.', 'error')
         return redirect(url_for('planning.dashboard'))
 
-    # Récupérer les élèves de la classe
-    students = Student.query.filter_by(
-        classroom_id=lesson.classroom_id
-    ).order_by(Student.last_name, Student.first_name).all()
+    # Récupérer les élèves selon le groupe de la planification
+    if planning and planning.group_id:
+        # Si un groupe spécifique est assigné à cette planification, récupérer seulement ses élèves
+        from models.student_group import StudentGroupMembership
+        students = Student.query.join(
+            StudentGroupMembership,
+            Student.id == StudentGroupMembership.student_id
+        ).filter(
+            StudentGroupMembership.group_id == planning.group_id
+        ).order_by(Student.last_name, Student.first_name).all()
+    else:
+        # Si aucun groupe spécifique ou pas de planification, récupérer tous les élèves de la classe
+        students = Student.query.filter_by(
+            classroom_id=lesson.classroom_id
+        ).order_by(Student.last_name, Student.first_name).all()
 
     # Récupérer les présences existantes pour ce cours
     attendance_records = {}
@@ -851,6 +877,43 @@ def lesson_view():
         print(f"Erreur plan de classe: {e}")
         seating_plan = None
 
+    # Récupérer les informations du groupe si il y en a un
+    current_group = None
+    if planning and planning.group_id:
+        from models.student_group import StudentGroup
+        current_group = StudentGroup.query.filter_by(
+            id=planning.group_id,
+            user_id=current_user.id
+        ).first()
+
+    # Récupérer les préférences utilisateur pour l'affichage des aménagements
+    from models.user_preferences import UserPreferences
+    preferences = UserPreferences.get_or_create_for_user(current_user.id)
+    
+    # Récupérer les aménagements des élèves si l'affichage est activé
+    student_accommodations = {}
+    if preferences.show_accommodations != 'none':
+        from models.accommodation import StudentAccommodation, AccommodationTemplate
+        
+        for student in students:
+            accommodations = db.session.query(StudentAccommodation, AccommodationTemplate).join(
+                AccommodationTemplate,
+                StudentAccommodation.template_id == AccommodationTemplate.id
+            ).filter(
+                StudentAccommodation.student_id == student.id,
+                StudentAccommodation.is_active == True
+            ).all()
+            
+            if accommodations:
+                student_accommodations[student.id] = [
+                    {
+                        'name': acc_template.name,
+                        'emoji': acc_template.emoji,
+                        'time_multiplier': acc_template.time_multiplier
+                    }
+                    for student_acc, acc_template in accommodations
+                ]
+
     return render_template('planning/lesson_view.html',
                          lesson=lesson,
                          planning=planning,
@@ -862,7 +925,10 @@ def lesson_view():
                          attendance_records=attendance_records,
                          imported_sanctions=imported_sanctions,
                          sanctions_data=sanctions_data,
-                         seating_plan=seating_plan)
+                         seating_plan=seating_plan,
+                         current_group=current_group,
+                         student_accommodations=student_accommodations,
+                         accommodation_display=preferences.show_accommodations)
 
 @planning_bp.route('/get-class-resources/<int:classroom_id>')
 @login_required
@@ -994,6 +1060,7 @@ def manage_classes():
 
     # Récupérer la classe sélectionnée (par défaut la première)
     selected_classroom_id = request.args.get('classroom', type=int)
+    selected_tab = request.args.get('tab', 'students')  # onglet par défaut : students
     classrooms = current_user.classrooms.all()
 
     if not classrooms:
@@ -1060,6 +1127,7 @@ def manage_classes():
                          classrooms=classrooms,
                          selected_classroom=selected_classroom,
                          selected_classroom_id=selected_classroom_id,
+                         selected_tab=selected_tab,
                          students=students,
                          students_json=students_json,
                          recent_grades=recent_grades,
@@ -1610,6 +1678,7 @@ def get_planning(date, period):
                     'classroom_id': planning.classroom_id,
                     'title': planning.title,
                     'description': planning.description,
+                    'group_id': planning.group_id,  # Ajouter l'ID du groupe
                     'checklist_states': planning.get_checklist_states()  # Ajouter les états des checkboxes
                 }
             })
@@ -1629,6 +1698,7 @@ def get_planning(date, period):
                         'classroom_id': schedule.classroom_id,
                         'title': '',
                         'description': '',
+                        'group_id': None,  # Pas de groupe par défaut
                         'checklist_states': {}
                     }
                 })
@@ -2280,6 +2350,320 @@ def delete_group(group_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@planning_bp.route('/apply-group-pattern', methods=['POST'])
+@login_required
+def apply_group_pattern():
+    """Appliquer un pattern de groupes jusqu'à la fin de l'année"""
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+    
+    try:
+        from models.student_group import StudentGroup
+        
+        start_date_str = data.get('start_date')
+        period_number = data.get('period_number')
+        classroom_id = data.get('classroom_id')
+        title = data.get('title', '')
+        description = data.get('description', '')
+        checklist_states = data.get('checklist_states', {})
+        pattern_type = data.get('pattern_type')  # 'same' ou 'alternate'
+        selected_group_id = data.get('group_id')
+        
+        # Convertir la date de début
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        start_weekday = start_date.weekday()
+        
+        # Vérifier la classe
+        classroom = Classroom.query.filter_by(id=classroom_id, user_id=current_user.id).first()
+        if not classroom:
+            return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+        
+        # Vérifier que cette classe a cours à cette période ce jour de la semaine
+        schedule = Schedule.query.filter_by(
+            user_id=current_user.id,
+            classroom_id=classroom_id,
+            weekday=start_weekday,
+            period_number=period_number
+        ).first()
+        
+        if not schedule:
+            return jsonify({'success': False, 'message': 'Aucun cours programmé pour cette classe à cette période'}), 400
+        
+        # Récupérer tous les groupes de la classe pour l'alternance
+        all_groups = []
+        if pattern_type == 'alternate':
+            groups = StudentGroup.query.filter_by(
+                classroom_id=classroom_id,
+                user_id=current_user.id
+            ).order_by(StudentGroup.name).all()
+            all_groups = [group.id for group in groups]
+            
+            if not all_groups:
+                return jsonify({'success': False, 'message': 'Aucun groupe trouvé pour cette classe'}), 400
+        
+        # Calculer toutes les dates jusqu'à la fin de l'année scolaire
+        current_date = start_date
+        created_count = 0
+        group_index = 0  # Pour l'alternance
+        
+        # Si on fait de l'alternance, trouver l'index du groupe sélectionné
+        if pattern_type == 'alternate' and selected_group_id:
+            try:
+                group_index = all_groups.index(int(selected_group_id))
+            except (ValueError, TypeError):
+                group_index = 0
+        
+        while current_date <= current_user.school_year_end:
+            # Vérifier si c'est un jour de vacances
+            if is_holiday(current_date, current_user):
+                current_date += timedelta(days=7)
+                continue
+            
+            # Déterminer le groupe pour cette date
+            if pattern_type == 'same':
+                group_to_assign = selected_group_id
+            elif pattern_type == 'alternate':
+                group_to_assign = all_groups[group_index % len(all_groups)]
+                group_index += 1
+            else:
+                group_to_assign = selected_group_id
+            
+            # Chercher une planification existante
+            existing = Planning.query.filter_by(
+                user_id=current_user.id,
+                date=current_date,
+                period_number=period_number
+            ).first()
+            
+            if existing:
+                # Mettre à jour la planification existante
+                existing.classroom_id = classroom_id
+                existing.title = title
+                existing.description = description
+                existing.group_id = group_to_assign
+                existing.set_checklist_states(checklist_states)
+            else:
+                # Créer une nouvelle planification
+                planning = Planning(
+                    user_id=current_user.id,
+                    classroom_id=classroom_id,
+                    date=current_date,
+                    period_number=period_number,
+                    title=title,
+                    description=description,
+                    group_id=group_to_assign
+                )
+                planning.set_checklist_states(checklist_states)
+                db.session.add(planning)
+            
+            created_count += 1
+            current_date += timedelta(days=7)  # Passer à la semaine suivante
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{created_count} planifications créées/mises à jour avec succès',
+            'created_count': created_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/get-accommodation-templates')
+@login_required
+def get_accommodation_templates():
+    """Récupérer tous les modèles d'aménagements de l'utilisateur"""
+    try:
+        from models.accommodation import AccommodationTemplate
+        
+        templates = AccommodationTemplate.query.filter_by(
+            user_id=current_user.id,
+            is_active=True
+        ).order_by(AccommodationTemplate.category, AccommodationTemplate.name).all()
+        
+        templates_data = []
+        for template in templates:
+            templates_data.append({
+                'id': template.id,
+                'name': template.name,
+                'description': template.description,
+                'emoji': template.emoji,
+                'category': template.category,
+                'is_time_extension': template.is_time_extension,
+                'time_multiplier': template.time_multiplier
+            })
+        
+        return jsonify({
+            'success': True,
+            'templates': templates_data
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/get-student-accommodations/<int:classroom_id>')
+@login_required
+def get_student_accommodations(classroom_id):
+    """Récupérer tous les aménagements des élèves d'une classe"""
+    try:
+        from models.accommodation import StudentAccommodation
+        from models.student import Student
+        
+        # Vérifier que la classe appartient à l'utilisateur
+        classroom = Classroom.query.filter_by(id=classroom_id, user_id=current_user.id).first()
+        if not classroom:
+            return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+        
+        # Récupérer tous les élèves de la classe avec leurs aménagements
+        students = Student.query.filter_by(classroom_id=classroom_id).order_by(Student.last_name, Student.first_name).all()
+        
+        students_data = []
+        for student in students:
+            accommodations = StudentAccommodation.query.filter_by(
+                student_id=student.id,
+                is_active=True
+            ).all()
+            
+            accommodations_data = []
+            for acc in accommodations:
+                accommodations_data.append({
+                    'id': acc.id,
+                    'name': acc.name,
+                    'description': acc.description,
+                    'emoji': acc.emoji,
+                    'is_time_extension': acc.is_time_extension,
+                    'time_multiplier': acc.time_multiplier,
+                    'notes': acc.notes,
+                    'is_template': acc.template_id is not None
+                })
+            
+            students_data.append({
+                'id': student.id,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'full_name': student.full_name,
+                'accommodations': accommodations_data
+            })
+        
+        return jsonify({
+            'success': True,
+            'students': students_data
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/add-student-accommodation', methods=['POST'])
+@login_required
+def add_student_accommodation():
+    """Ajouter un aménagement à un élève"""
+    try:
+        from models.accommodation import StudentAccommodation, AccommodationTemplate
+        from models.student import Student
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+        
+        student_id = data.get('student_id')
+        accommodation_type = data.get('accommodation_type')  # 'template' ou 'custom'
+        notes = data.get('notes', '')
+        
+        # Vérifier que l'élève appartient à une classe de l'utilisateur
+        student = Student.query.join(Classroom).filter(
+            Student.id == student_id,
+            Classroom.user_id == current_user.id
+        ).first()
+        
+        if not student:
+            return jsonify({'success': False, 'message': 'Élève non trouvé'}), 404
+        
+        # Créer l'aménagement selon le type
+        if accommodation_type == 'template':
+            template_id = data.get('template_id')
+            template = AccommodationTemplate.query.filter_by(
+                id=template_id,
+                user_id=current_user.id
+            ).first()
+            
+            if not template:
+                return jsonify({'success': False, 'message': 'Modèle d\'aménagement non trouvé'}), 404
+            
+            accommodation = StudentAccommodation(
+                student_id=student_id,
+                template_id=template_id,
+                notes=notes
+            )
+        else:  # custom
+            name = data.get('custom_name', '').strip()
+            description = data.get('custom_description', '').strip()
+            emoji = data.get('custom_emoji', '🔧').strip()
+            is_time_extension = data.get('custom_is_time_extension', False)
+            time_multiplier = data.get('custom_time_multiplier')
+            
+            if not name:
+                return jsonify({'success': False, 'message': 'Le nom de l\'aménagement est obligatoire'}), 400
+            
+            accommodation = StudentAccommodation(
+                student_id=student_id,
+                custom_name=name,
+                custom_description=description,
+                custom_emoji=emoji,
+                custom_is_time_extension=is_time_extension,
+                custom_time_multiplier=float(time_multiplier) if time_multiplier else None,
+                notes=notes
+            )
+        
+        db.session.add(accommodation)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Aménagement ajouté avec succès',
+            'accommodation_id': accommodation.id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/delete-student-accommodation/<int:accommodation_id>', methods=['DELETE'])
+@login_required
+def delete_student_accommodation(accommodation_id):
+    """Supprimer un aménagement d'élève"""
+    try:
+        from models.accommodation import StudentAccommodation
+        from models.student import Student
+        
+        # Vérifier que l'aménagement appartient à un élève d'une classe de l'utilisateur
+        accommodation = db.session.query(StudentAccommodation).join(
+            Student, StudentAccommodation.student_id == Student.id
+        ).join(
+            Classroom, Student.classroom_id == Classroom.id
+        ).filter(
+            StudentAccommodation.id == accommodation_id,
+            Classroom.user_id == current_user.id
+        ).first()
+        
+        if not accommodation:
+            return jsonify({'success': False, 'message': 'Aménagement non trouvé'}), 404
+        
+        db.session.delete(accommodation)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Aménagement supprimé avec succès'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @planning_bp.route('/api/slot/<date_str>/<int:period>')
 @login_required
 def get_slot_data(date_str, period):
@@ -2323,6 +2707,7 @@ def get_slot_data(date_str, period):
                 'classroom_id': planning.classroom_id,
                 'title': planning.title or '',
                 'description': planning.description or '',
+                'group_id': planning.group_id,
                 'checklist_states': planning.get_checklist_states()
             })
         elif schedule:
@@ -2330,6 +2715,7 @@ def get_slot_data(date_str, period):
                 'classroom_id': schedule.classroom_id,
                 'title': '',
                 'description': '',
+                'group_id': None,
                 'checklist_states': {}
             })
         else:
@@ -2337,6 +2723,7 @@ def get_slot_data(date_str, period):
                 'classroom_id': None,
                 'title': '',
                 'description': '',
+                'group_id': None,
                 'checklist_states': {}
             })
         
@@ -2346,5 +2733,436 @@ def get_slot_data(date_str, period):
         })
         
     except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# ===== ROUTES POUR LE RAPPORT ÉLÈVE =====
+
+@planning_bp.route('/students/<int:classroom_id>')
+@login_required
+def get_classroom_students(classroom_id):
+    """Récupérer la liste des élèves d'une classe"""
+    try:
+        from models.student import Student
+        from models.classroom import Classroom
+        
+        # Vérifier que la classe appartient à l'utilisateur
+        classroom = Classroom.query.filter_by(
+            id=classroom_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not classroom:
+            return jsonify({'success': False, 'message': 'Classe introuvable'}), 404
+        
+        # Récupérer les élèves de la classe
+        students = Student.query.filter_by(
+            classroom_id=classroom_id
+        ).order_by(Student.last_name, Student.first_name).all()
+        
+        return jsonify({
+            'success': True,
+            'students': [
+                {
+                    'id': student.id,
+                    'first_name': student.first_name,
+                    'last_name': student.last_name,
+                    'email': student.email
+                }
+                for student in students
+            ]
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/student/<int:student_id>')
+@login_required
+def get_student_report_info(student_id):
+    """Récupérer les informations de base d'un élève"""
+    try:
+        from models.student import Student
+        from models.student_group import StudentGroup, StudentGroupMembership
+        
+        student = Student.query.filter_by(
+            id=student_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not student:
+            return jsonify({'success': False, 'message': 'Élève introuvable'}), 404
+        
+        # Récupérer les groupes de l'élève
+        groups = db.session.query(StudentGroup).join(
+            StudentGroupMembership,
+            StudentGroup.id == StudentGroupMembership.group_id
+        ).filter(
+            StudentGroupMembership.student_id == student_id,
+            StudentGroup.user_id == current_user.id
+        ).all()
+        
+        return jsonify({
+            'success': True,
+            'student': {
+                'id': student.id,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'email': student.email,
+            },
+            'groups': [{'id': g.id, 'name': g.name} for g in groups]
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/student/<int:student_id>/accommodations')
+@login_required
+def get_student_report_accommodations(student_id):
+    """Récupérer les aménagements d'un élève"""
+    try:
+        from models.accommodation import StudentAccommodation, AccommodationTemplate
+        
+        accommodations = db.session.query(StudentAccommodation, AccommodationTemplate).join(
+            AccommodationTemplate,
+            StudentAccommodation.template_id == AccommodationTemplate.id
+        ).filter(
+            StudentAccommodation.student_id == student_id,
+            StudentAccommodation.is_active == True,
+            AccommodationTemplate.user_id == current_user.id
+        ).all()
+        
+        return jsonify({
+            'success': True,
+            'accommodations': [
+                {
+                    'name': acc_template.name,
+                    'emoji': acc_template.emoji,
+                    'time_multiplier': acc_template.time_multiplier
+                }
+                for student_acc, acc_template in accommodations
+            ]
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/student/<int:student_id>/grades')
+@login_required
+def get_student_report_grades(student_id):
+    """Récupérer les notes d'un élève"""
+    try:
+        from models.evaluation import StudentEvaluation, Evaluation
+        
+        grades = db.session.query(StudentEvaluation, Evaluation).join(
+            Evaluation,
+            StudentEvaluation.evaluation_id == Evaluation.id
+        ).filter(
+            StudentEvaluation.student_id == student_id,
+            Evaluation.user_id == current_user.id
+        ).order_by(Evaluation.date.desc()).all()
+        
+        return jsonify({
+            'success': True,
+            'grades': [
+                {
+                    'evaluation_name': evaluation.name,
+                    'score': student_eval.score,
+                    'max_score': evaluation.max_score,
+                    'date': evaluation.date.strftime('%d/%m/%Y') if evaluation.date else ''
+                }
+                for student_eval, evaluation in grades
+            ]
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/student/<int:student_id>/sanctions')
+@login_required
+def get_student_report_sanctions(student_id):
+    """Récupérer les sanctions/coches d'un élève"""
+    try:
+        from models.sanctions import SanctionTemplate
+        from models.student_sanctions import StudentSanctionCount
+        
+        sanctions = db.session.query(StudentSanctionCount, SanctionTemplate).join(
+            SanctionTemplate,
+            StudentSanctionCount.template_id == SanctionTemplate.id
+        ).filter(
+            StudentSanctionCount.student_id == student_id,
+            SanctionTemplate.user_id == current_user.id,
+            StudentSanctionCount.check_count > 0
+        ).all()
+        
+        return jsonify({
+            'success': True,
+            'sanctions': [
+                {
+                    'name': sanction_template.name,
+                    'description': sanction_template.description,
+                    'count': student_sanction.check_count
+                }
+                for student_sanction, sanction_template in sanctions
+            ]
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/student/<int:student_id>/attendance')
+@login_required
+def get_student_report_attendance(student_id):
+    """Récupérer les absences d'un élève"""
+    try:
+        from models.attendance import Attendance
+        from models.classroom import Classroom
+        
+        attendances = db.session.query(Attendance, Classroom).join(
+            Classroom,
+            Attendance.classroom_id == Classroom.id
+        ).filter(
+            Attendance.student_id == student_id,
+            Classroom.user_id == current_user.id,
+            Attendance.status.in_(['absent', 'late'])
+        ).order_by(Attendance.date.desc()).all()
+        
+        return jsonify({
+            'success': True,
+            'attendance': [
+                {
+                    'date': attendance.date.strftime('%d/%m/%Y'),
+                    'period_number': attendance.period_number,
+                    'status': attendance.status,
+                    'late_minutes': attendance.late_minutes,
+                    'classroom_name': classroom.name
+                }
+                for attendance, classroom in attendances
+            ]
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/student/<int:student_id>/additional-info', methods=['POST'])
+@login_required
+def student_report_additional_info(student_id):
+    """Sauvegarder les informations supplémentaires d'un élève dans l'historique"""
+    try:
+        from models.student import Student
+        from models.student_info_history import StudentInfoHistory
+        
+        student = Student.query.filter_by(
+            id=student_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not student:
+            return jsonify({'success': False, 'message': 'Élève introuvable'}), 404
+        
+        data = request.get_json()
+        additional_info = data.get('additional_info', '').strip()
+        
+        if not additional_info:
+            return jsonify({'success': False, 'message': 'Aucune information fournie'}), 400
+        
+        # Créer un nouvel enregistrement dans l'historique
+        info_history = StudentInfoHistory(
+            student_id=student_id,
+            user_id=current_user.id,
+            content=additional_info
+        )
+        db.session.add(info_history)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Informations sauvegardées'
+        })
+            
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/student/<int:student_id>/info-history')
+@login_required
+def get_student_info_history(student_id):
+    """Récupérer l'historique des informations d'un élève"""
+    try:
+        from models.student import Student
+        from models.student_info_history import StudentInfoHistory
+        
+        student = Student.query.filter_by(
+            id=student_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not student:
+            return jsonify({'success': False, 'message': 'Élève introuvable'}), 404
+        
+        history = StudentInfoHistory.query.filter_by(
+            student_id=student_id,
+            user_id=current_user.id
+        ).order_by(StudentInfoHistory.created_at.desc()).all()
+        
+        return jsonify({
+            'success': True,
+            'history': [
+                {
+                    'id': info.id,
+                    'content': info.content,
+                    'created_at': info.created_at.strftime('%d/%m/%Y à %H:%M')
+                }
+                for info in history
+            ]
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/student/<int:student_id>/files')
+@login_required
+def get_student_report_files(student_id):
+    """Récupérer les fichiers associés à un élève"""
+    try:
+        from models.student import StudentFile
+        
+        files = StudentFile.query.filter_by(
+            student_id=student_id,
+            user_id=current_user.id
+        ).order_by(StudentFile.upload_date.desc()).all()
+        
+        return jsonify({
+            'success': True,
+            'files': [
+                {
+                    'id': f.id,
+                    'original_name': f.original_name,
+                    'upload_date': f.upload_date.strftime('%d/%m/%Y à %H:%M')
+                }
+                for f in files
+            ]
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/student/upload-file', methods=['POST'])
+@login_required
+def upload_student_report_file():
+    """Upload un fichier pour un élève"""
+    try:
+        import os
+        import uuid
+        from werkzeug.utils import secure_filename
+        from models.student import StudentFile
+        
+        student_id = request.form.get('student_id')
+        files = request.files.getlist('files')
+        
+        if not student_id or not files:
+            return jsonify({'success': False, 'message': 'Données manquantes'}), 400
+        
+        # Vérifier que l'élève appartient à l'utilisateur
+        from models.student import Student
+        student = Student.query.filter_by(
+            id=student_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not student:
+            return jsonify({'success': False, 'message': 'Élève introuvable'}), 404
+        
+        uploaded_files = []
+        upload_dir = os.path.join(current_app.root_path, 'uploads', 'student_files', str(student_id))
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        for file in files:
+            if file.filename:
+                # Générer un nom unique
+                file_extension = os.path.splitext(secure_filename(file.filename))[1]
+                unique_filename = str(uuid.uuid4()) + file_extension
+                file_path = os.path.join(upload_dir, unique_filename)
+                
+                # Sauvegarder le fichier
+                file.save(file_path)
+                
+                # Créer l'enregistrement en base
+                student_file = StudentFile(
+                    student_id=student_id,
+                    user_id=current_user.id,
+                    original_name=file.filename,
+                    file_path=file_path,
+                    file_size=os.path.getsize(file_path)
+                )
+                db.session.add(student_file)
+                uploaded_files.append(file.filename)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{len(uploaded_files)} fichier(s) uploadé(s)',
+            'files': uploaded_files
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/student/file/<int:file_id>/download')
+@login_required
+def download_student_report_file(file_id):
+    """Télécharger un fichier d'élève"""
+    try:
+        from models.student import StudentFile
+        from flask import send_file
+        
+        student_file = StudentFile.query.filter_by(
+            id=file_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not student_file:
+            return jsonify({'success': False, 'message': 'Fichier introuvable'}), 404
+        
+        return send_file(
+            student_file.file_path,
+            as_attachment=True,
+            download_name=student_file.original_name
+        )
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/student/file/<int:file_id>', methods=['DELETE'])
+@login_required
+def delete_student_report_file(file_id):
+    """Supprimer un fichier d'élève"""
+    try:
+        import os
+        from models.student import StudentFile
+        
+        student_file = StudentFile.query.filter_by(
+            id=file_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not student_file:
+            return jsonify({'success': False, 'message': 'Fichier introuvable'}), 404
+        
+        # Supprimer le fichier physique
+        if os.path.exists(student_file.file_path):
+            os.remove(student_file.file_path)
+        
+        # Supprimer l'enregistrement en base
+        db.session.delete(student_file)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Fichier supprimé'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 

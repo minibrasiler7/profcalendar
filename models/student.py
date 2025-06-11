@@ -7,14 +7,17 @@ class Student(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     classroom_id = db.Column(db.Integer, db.ForeignKey('classrooms.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120))
     date_of_birth = db.Column(db.Date)
+    additional_info = db.Column(db.Text)  # Informations supplémentaires sur l'élève
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relations
     classroom = db.relationship('Classroom', backref=db.backref('students', lazy='dynamic'))
+    user = db.relationship('User', backref=db.backref('students', lazy='dynamic'))
     grades = db.relationship('Grade', backref='student', lazy='dynamic', cascade='all, delete-orphan')
 
     @property
@@ -122,3 +125,23 @@ class ClassroomChapter(db.Model):
 
     def __repr__(self):
         return f'<ClassroomChapter {self.classroom_id}-{self.chapter_id}>'
+
+
+class StudentFile(db.Model):
+    """Modèle pour les fichiers associés aux élèves"""
+    __tablename__ = 'student_files'
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    original_name = db.Column(db.String(255), nullable=False)
+    file_path = db.Column(db.String(500), nullable=False)
+    file_size = db.Column(db.Integer)
+    upload_date = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relations
+    student = db.relationship('Student', backref=db.backref('files', lazy='dynamic', cascade='all, delete-orphan'))
+    user = db.relationship('User', backref=db.backref('student_files', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<StudentFile {self.original_name}>'
