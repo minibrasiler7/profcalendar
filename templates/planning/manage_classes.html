@@ -1538,6 +1538,143 @@
         justify-content: center !important;
     }
 }
+
+/* ===== STYLES POUR LES GROUPES ===== */
+.groups-container {
+    padding: 1rem;
+}
+
+.groups-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.group-card {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+}
+
+.group-card:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.group-info h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.group-color-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.group-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.group-actions button {
+    padding: 0.25rem 0.5rem;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.group-actions button:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.group-description {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+}
+
+.group-students {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.student-tag {
+    background: #f3f4f6;
+    color: #374151;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.students-selection {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 0.5rem;
+}
+
+.students-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.5rem;
+}
+
+.student-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.student-checkbox:hover {
+    background: #f3f4f6;
+}
+
+.student-checkbox input[type="checkbox"] {
+    margin: 0;
+}
+
+.color-picker input[type="color"] {
+    width: 100%;
+    height: 40px;
+    padding: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.empty-groups {
+    text-align: center;
+    color: #9ca3af;
+    padding: 2rem;
+}
 </style>
 {% endblock %}
 
@@ -1581,6 +1718,9 @@
                 </button>
                 <button class="tab-button" onclick="showTab('seating')">
                     <i class="fas fa-th"></i> Plan de classe
+                </button>
+                <button class="tab-button" onclick="showTab('groups')">
+                    <i class="fas fa-users"></i> Groupes
                 </button>
             </div>
         </div>
@@ -2060,6 +2200,89 @@
                 </div>
 
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onglet Groupes -->
+    <div id="groups-tab" class="tab-content">
+        <div class="groups-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-users"></i> Gestion des groupes
+                </h2>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="showCreateGroupModal()">
+                        <i class="fas fa-plus"></i> Créer un groupe
+                    </button>
+                </div>
+            </div>
+
+            <div class="groups-container">
+                <div class="groups-list" id="groupsList">
+                    <!-- Les groupes seront chargés ici -->
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-users fa-2x mb-2"></i>
+                        <p>Aucun groupe créé pour cette classe</p>
+                        <p class="small">Cliquez sur "Créer un groupe" pour commencer</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de création/édition de groupe -->
+<div class="modal" id="groupModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="groupModalTitle">Créer un groupe</h4>
+                <button type="button" class="close" onclick="closeGroupModal()">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="groupForm">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label for="groupName" class="form-label">Nom du groupe *</label>
+                                <input type="text" id="groupName" class="form-control" required 
+                                       placeholder="Ex: Groupe A, Avancés, Débutants...">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="groupColor" class="form-label">Couleur</label>
+                                <div class="color-picker">
+                                    <input type="color" id="groupColor" class="form-control" value="#4F46E5">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="groupDescription" class="form-label">Description (optionnel)</label>
+                        <textarea id="groupDescription" class="form-control" rows="2" 
+                                  placeholder="Description du groupe ou objectifs..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Sélectionner les élèves</label>
+                        <div class="students-selection">
+                            <div class="students-grid" id="studentsGrid">
+                                <!-- Les élèves seront chargés ici -->
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeGroupModal()">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="saveGroup()">
+                    <i class="fas fa-save"></i> Enregistrer
+                </button>
             </div>
         </div>
     </div>
@@ -3868,6 +4091,11 @@ function showTab(tabName) {
     // Charger les fichiers si on est sur l'onglet fichiers
     if (tabName === 'files') {
         loadClassFiles();
+    }
+    
+    // Charger les groupes si on est sur l'onglet groupes
+    if (tabName === 'groups') {
+        loadGroups();
     }
     
     // Charger le plan de classe si on est sur l'onglet plan de classe
@@ -6114,5 +6342,202 @@ function displayClassLateArrivals(lateArrivals) {
     table.style.display = 'table';
     noData.style.display = 'none';
 }
+
+// ===== GESTION DES GROUPES =====
+
+let currentEditingGroupId = null;
+
+// Charger les groupes de la classe
+function loadGroups() {
+    const classroomId = document.getElementById('classroomSelect').value;
+    if (!classroomId) return;
+
+    fetch(`/planning/get-groups/${classroomId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayGroups(data.groups);
+            } else {
+                console.error('Erreur lors du chargement des groupes:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+        });
+}
+
+// Afficher les groupes
+function displayGroups(groups) {
+    const groupsList = document.getElementById('groupsList');
+    
+    if (groups.length === 0) {
+        groupsList.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <p>Aucun groupe créé pour cette classe</p>
+                <p class="small">Cliquez sur "Créer un groupe" pour commencer</p>
+            </div>
+        `;
+        return;
+    }
+
+    groupsList.innerHTML = groups.map(group => `
+        <div class="group-card">
+            <div class="group-header">
+                <div class="group-info">
+                    <h3>
+                        <span class="group-color-indicator" style="background-color: ${group.color}"></span>
+                        ${group.name}
+                    </h3>
+                </div>
+                <div class="group-actions">
+                    <button onclick="editGroup(${group.id})" title="Modifier">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteGroup(${group.id})" title="Supprimer">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            ${group.description ? `<div class="group-description">${group.description}</div>` : ''}
+            <div class="group-students">
+                ${group.students.map(student => `
+                    <span class="student-tag">${student.first_name} ${student.last_name || ''}</span>
+                `).join('')}
+            </div>
+            <div class="mt-2 small text-muted">
+                ${group.students.length} élève(s)
+            </div>
+        </div>
+    `).join('');
+}
+
+// Afficher le modal de création de groupe
+function showCreateGroupModal() {
+    currentEditingGroupId = null;
+    document.getElementById('groupModalTitle').textContent = 'Créer un groupe';
+    document.getElementById('groupName').value = '';
+    document.getElementById('groupDescription').value = '';
+    document.getElementById('groupColor').value = '#4F46E5';
+    
+    loadStudentsForSelection();
+    document.getElementById('groupModal').classList.add('show');
+}
+
+// Éditer un groupe
+function editGroup(groupId) {
+    currentEditingGroupId = groupId;
+    document.getElementById('groupModalTitle').textContent = 'Modifier le groupe';
+    
+    const classroomId = document.getElementById('classroomSelect').value;
+    fetch(`/planning/get-group/${groupId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const group = data.group;
+                document.getElementById('groupName').value = group.name;
+                document.getElementById('groupDescription').value = group.description || '';
+                document.getElementById('groupColor').value = group.color;
+                
+                loadStudentsForSelection(group.student_ids);
+                document.getElementById('groupModal').classList.add('show');
+            }
+        })
+        .catch(error => console.error('Erreur:', error));
+}
+
+// Charger les élèves pour la sélection
+function loadStudentsForSelection(selectedStudentIds = []) {
+    const studentsGrid = document.getElementById('studentsGrid');
+    
+    studentsGrid.innerHTML = studentsJson.map(student => `
+        <label class="student-checkbox">
+            <input type="checkbox" value="${student.id}" ${selectedStudentIds.includes(student.id) ? 'checked' : ''}>
+            <span>${student.first_name} ${student.last_name || ''}</span>
+        </label>
+    `).join('');
+}
+
+// Sauvegarder le groupe
+function saveGroup() {
+    const name = document.getElementById('groupName').value.trim();
+    const description = document.getElementById('groupDescription').value.trim();
+    const color = document.getElementById('groupColor').value;
+    const classroomId = document.getElementById('classroomSelect').value;
+    
+    if (!name) {
+        alert('Le nom du groupe est obligatoire');
+        return;
+    }
+
+    const selectedStudents = Array.from(document.querySelectorAll('#studentsGrid input[type="checkbox"]:checked'))
+        .map(checkbox => parseInt(checkbox.value));
+
+    const groupData = {
+        name: name,
+        description: description,
+        color: color,
+        classroom_id: classroomId,
+        student_ids: selectedStudents
+    };
+
+    const url = currentEditingGroupId 
+        ? `/planning/update-group/${currentEditingGroupId}`
+        : '/planning/create-group';
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(groupData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeGroupModal();
+            loadGroups();
+            showNotification('success', data.message);
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la sauvegarde');
+    });
+}
+
+// Supprimer un groupe
+function deleteGroup(groupId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce groupe ?')) {
+        return;
+    }
+
+    fetch(`/planning/delete-group/${groupId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadGroups();
+            showNotification('success', 'Groupe supprimé avec succès');
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la suppression');
+    });
+}
+
+// Fermer le modal de groupe
+function closeGroupModal() {
+    document.getElementById('groupModal').classList.remove('show');
+    currentEditingGroupId = null;
+}
+
+// Note: La fonction showTab est déjà définie plus haut, on va la modifier directement
 </script>
 {% endblock %}

@@ -2047,6 +2047,239 @@ def load_seating_plan(classroom_id):
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
+# ===== ROUTES POUR LA GESTION DES GROUPES =====
+
+@planning_bp.route('/get-groups/<int:classroom_id>')
+@login_required
+def get_groups(classroom_id):
+    """Récupérer tous les groupes d'une classe"""
+    try:
+        from models.student_group import StudentGroup, StudentGroupMembership
+        from models.student import Student
+        
+        # Vérifier que la classe appartient à l'utilisateur
+        classroom = Classroom.query.filter_by(id=classroom_id, user_id=current_user.id).first()
+        if not classroom:
+            return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+        
+        # Récupérer les groupes de cette classe
+        groups = StudentGroup.query.filter_by(
+            classroom_id=classroom_id,
+            user_id=current_user.id
+        ).all()
+        
+        groups_data = []
+        for group in groups:
+            # Récupérer les élèves de ce groupe
+            students = db.session.query(Student).join(
+                StudentGroupMembership,
+                Student.id == StudentGroupMembership.student_id
+            ).filter(
+                StudentGroupMembership.group_id == group.id
+            ).all()
+            
+            groups_data.append({
+                'id': group.id,
+                'name': group.name,
+                'description': group.description,
+                'color': group.color,
+                'students': [{
+                    'id': student.id,
+                    'first_name': student.first_name,
+                    'last_name': student.last_name
+                } for student in students],
+                'student_count': len(students)
+            })
+        
+        return jsonify({
+            'success': True,
+            'groups': groups_data
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/get-group/<int:group_id>')
+@login_required
+def get_group(group_id):
+    """Récupérer un groupe spécifique"""
+    try:
+        from models.student_group import StudentGroup, StudentGroupMembership
+        
+        # Vérifier que le groupe appartient à l'utilisateur
+        group = StudentGroup.query.filter_by(id=group_id, user_id=current_user.id).first()
+        if not group:
+            return jsonify({'success': False, 'message': 'Groupe non trouvé'}), 404
+        
+        # Récupérer les IDs des élèves de ce groupe
+        student_ids = [membership.student_id for membership in group.memberships]
+        
+        return jsonify({
+            'success': True,
+            'group': {
+                'id': group.id,
+                'name': group.name,
+                'description': group.description,
+                'color': group.color,
+                'student_ids': student_ids
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/create-group', methods=['POST'])
+@login_required
+def create_group():
+    """Créer un nouveau groupe"""
+    try:
+        from models.student_group import StudentGroup, StudentGroupMembership
+        from models.student import Student
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+        
+        name = data.get('name', '').strip()
+        description = data.get('description', '').strip()
+        color = data.get('color', '#4F46E5')
+        classroom_id = data.get('classroom_id')
+        student_ids = data.get('student_ids', [])
+        
+        if not name:
+            return jsonify({'success': False, 'message': 'Le nom du groupe est obligatoire'}), 400
+        
+        # Vérifier que la classe appartient à l'utilisateur
+        classroom = Classroom.query.filter_by(id=classroom_id, user_id=current_user.id).first()
+        if not classroom:
+            return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+        
+        # Vérifier que tous les élèves appartiennent à cette classe
+        if student_ids:
+            valid_students = Student.query.filter(
+                Student.id.in_(student_ids),
+                Student.classroom_id == classroom_id
+            ).count()
+            if valid_students != len(student_ids):
+                return jsonify({'success': False, 'message': 'Certains élèves ne sont pas valides'}), 400
+        
+        # Créer le groupe
+        group = StudentGroup(
+            classroom_id=classroom_id,
+            user_id=current_user.id,
+            name=name,
+            description=description or None,
+            color=color
+        )
+        db.session.add(group)
+        db.session.flush()  # Pour obtenir l'ID du groupe
+        
+        # Ajouter les élèves au groupe
+        for student_id in student_ids:
+            membership = StudentGroupMembership(
+                group_id=group.id,
+                student_id=student_id
+            )
+            db.session.add(membership)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Groupe "{name}" créé avec succès',
+            'group_id': group.id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/update-group/<int:group_id>', methods=['POST'])
+@login_required
+def update_group(group_id):
+    """Mettre à jour un groupe existant"""
+    try:
+        from models.student_group import StudentGroup, StudentGroupMembership
+        from models.student import Student
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+        
+        # Vérifier que le groupe appartient à l'utilisateur
+        group = StudentGroup.query.filter_by(id=group_id, user_id=current_user.id).first()
+        if not group:
+            return jsonify({'success': False, 'message': 'Groupe non trouvé'}), 404
+        
+        name = data.get('name', '').strip()
+        description = data.get('description', '').strip()
+        color = data.get('color', '#4F46E5')
+        student_ids = data.get('student_ids', [])
+        
+        if not name:
+            return jsonify({'success': False, 'message': 'Le nom du groupe est obligatoire'}), 400
+        
+        # Vérifier que tous les élèves appartiennent à cette classe
+        if student_ids:
+            valid_students = Student.query.filter(
+                Student.id.in_(student_ids),
+                Student.classroom_id == group.classroom_id
+            ).count()
+            if valid_students != len(student_ids):
+                return jsonify({'success': False, 'message': 'Certains élèves ne sont pas valides'}), 400
+        
+        # Mettre à jour le groupe
+        group.name = name
+        group.description = description or None
+        group.color = color
+        
+        # Supprimer les anciennes associations
+        StudentGroupMembership.query.filter_by(group_id=group_id).delete()
+        
+        # Ajouter les nouvelles associations
+        for student_id in student_ids:
+            membership = StudentGroupMembership(
+                group_id=group_id,
+                student_id=student_id
+            )
+            db.session.add(membership)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Groupe "{name}" mis à jour avec succès'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/delete-group/<int:group_id>', methods=['DELETE'])
+@login_required
+def delete_group(group_id):
+    """Supprimer un groupe"""
+    try:
+        from models.student_group import StudentGroup
+        
+        # Vérifier que le groupe appartient à l'utilisateur
+        group = StudentGroup.query.filter_by(id=group_id, user_id=current_user.id).first()
+        if not group:
+            return jsonify({'success': False, 'message': 'Groupe non trouvé'}), 404
+        
+        group_name = group.name
+        db.session.delete(group)  # Les memberships seront supprimés automatiquement (cascade)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Groupe "{group_name}" supprimé avec succès'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @planning_bp.route('/api/slot/<date_str>/<int:period>')
 @login_required
 def get_slot_data(date_str, period):
