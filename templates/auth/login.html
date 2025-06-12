@@ -7,7 +7,7 @@
     <div class="auth-card">
         <div class="auth-header">
             <i class="fas fa-calendar-alt auth-icon"></i>
-            <h1 class="auth-title">Connexion</h1>
+            <h1 class="auth-title">Espace Enseignant</h1>
             <p class="auth-subtitle">Accédez à votre espace de planification</p>
         </div>
         
@@ -54,6 +54,7 @@
         
         <div class="auth-footer">
             <p>Pas encore de compte ? <a href="{{ url_for('auth.register') }}">Inscrivez-vous</a></p>
+            <p><a href="{{ url_for('parent_auth.login') }}">Vous êtes parent ?</a></p>
         </div>
     </div>
 </div>

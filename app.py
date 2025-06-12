@@ -49,6 +49,7 @@ def create_app(config_class=Config):
     from routes.evaluations import evaluations_bp
     from routes.attendance import attendance_bp
     from routes.settings import settings_bp
+    from routes.parent_auth import parent_auth_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(setup_bp)
@@ -60,14 +61,21 @@ def create_app(config_class=Config):
     app.register_blueprint(evaluations_bp)
     app.register_blueprint(attendance_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(parent_auth_bp)
 
     # Route d'accueil
     @app.route('/')
     def index():
         from flask_login import current_user
-        from flask import redirect, url_for
+        from flask import redirect, url_for, session
+        from models.parent import Parent
 
         if current_user.is_authenticated:
+            # Vérifier si c'est un parent
+            if isinstance(current_user, Parent):
+                return redirect(url_for('parent_auth.dashboard'))
+            
+            # Pour les enseignants, continuer avec la logique existante
             # Étape 1 : Vérifier la configuration de base
             if not current_user.school_year_start or not current_user.day_start_time:
                 return redirect(url_for('setup.initial_setup'))

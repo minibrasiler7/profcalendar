@@ -12,6 +12,8 @@ class Student(db.Model):
     last_name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120))
     date_of_birth = db.Column(db.Date)
+    parent_email_mother = db.Column(db.String(120))  # Email de la mère (optionnel)
+    parent_email_father = db.Column(db.String(120))  # Email du père (optionnel)
     additional_info = db.Column(db.Text)  # Informations supplémentaires sur l'élève
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

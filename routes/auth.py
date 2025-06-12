@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, login_required, current_user
 from urllib.parse import urlparse
 from extensions import db
@@ -44,13 +44,29 @@ class RegisterForm(FlaskForm):
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    # Si un parent est connecté, le déconnecter
     if current_user.is_authenticated:
-        return redirect(url_for('planning.dashboard'))
+        from models.parent import Parent
+        if isinstance(current_user, Parent):
+            logout_user()
+            session.clear()
+        else:
+            return redirect(url_for('planning.dashboard'))
 
     form = LoginForm()
     if form.validate_on_submit():
+        # Vérifier d'abord si c'est un email de parent
+        from models.parent import Parent
+        parent_check = Parent.query.filter_by(email=form.email.data).first()
+        if parent_check:
+            flash('Cet email appartient à un compte parent. Veuillez utiliser la connexion parent.', 'error')
+            return render_template('auth/login.html', form=form)
+        
+        # Ensuite vérifier l'enseignant
         user = User.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
+            session.clear()  # Nettoyer la session pour éviter les conflits
+            session['user_type'] = 'teacher'  # Marquer comme enseignant dans la session
             login_user(user, remember=True)
             next_page = request.args.get('next')
             if not next_page or urlparse(next_page).netloc != '':
@@ -86,6 +102,7 @@ def register():
         db.session.add(user)
         db.session.commit()
 
+        session['user_type'] = 'teacher'  # Marquer comme enseignant dans la session
         login_user(user, remember=True)
         flash('Inscription réussie ! Bienvenue sur TeacherPlanner.', 'success')
         return redirect(url_for('setup.initial_setup'))
@@ -101,6 +118,7 @@ def register():
 @auth_bp.route('/logout')
 @login_required
 def logout():
+    session.pop('user_type', None)  # Retirer le type d'utilisateur de la session
     logout_user()
     flash('Vous avez été déconnecté avec succès.', 'info')
     return redirect(url_for('auth.login'))

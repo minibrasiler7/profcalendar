@@ -7,6 +7,7 @@ from models.schedule import Schedule
 from datetime import datetime, timedelta
 from datetime import date as date_type
 import calendar
+from routes import teacher_required
 
 planning_bp = Blueprint('planning', __name__, url_prefix='/planning')
 
@@ -184,7 +185,7 @@ def get_current_or_next_lesson(user):
     return None, False, None
 
 @planning_bp.route('/')
-@login_required
+@teacher_required
 def dashboard():
     # Vérifier que la configuration de base est complète
     if not current_user.setup_completed:
@@ -1261,6 +1262,8 @@ def add_student():
         first_name = data.get('first_name', '').strip()
         last_name = data.get('last_name', '').strip()
         email = data.get('email', '').strip() if data.get('email') else None
+        parent_email_mother = data.get('parent_email_mother', '').strip() if data.get('parent_email_mother') else None
+        parent_email_father = data.get('parent_email_father', '').strip() if data.get('parent_email_father') else None
 
         # Validation du prénom obligatoire
         if not first_name:
@@ -1282,9 +1285,12 @@ def add_student():
         # Créer le nouvel élève
         student = Student(
             classroom_id=classroom_id,
+            user_id=current_user.id,
             first_name=first_name,
             last_name=last_name,
-            email=email
+            email=email,
+            parent_email_mother=parent_email_mother,
+            parent_email_father=parent_email_father
         )
 
         db.session.add(student)
@@ -1366,6 +1372,8 @@ def update_student():
         first_name = data.get('first_name', '').strip()
         last_name = data.get('last_name', '').strip()
         email = data.get('email', '').strip() if data.get('email') else None
+        parent_email_mother = data.get('parent_email_mother', '').strip() if data.get('parent_email_mother') else None
+        parent_email_father = data.get('parent_email_father', '').strip() if data.get('parent_email_father') else None
 
         # Validation du prénom obligatoire
         if not first_name:
@@ -1389,6 +1397,8 @@ def update_student():
         student.first_name = first_name
         student.last_name = last_name
         student.email = email
+        student.parent_email_mother = parent_email_mother
+        student.parent_email_father = parent_email_father
 
         db.session.commit()
 
@@ -1401,6 +1411,8 @@ def update_student():
                 'last_name': student.last_name,
                 'full_name': student.full_name,
                 'email': student.email,
+                'parent_email_mother': student.parent_email_mother,
+                'parent_email_father': student.parent_email_father,
                 'initials': student.first_name[0] + (student.last_name[0] if student.last_name else '')
             }
         })
@@ -1432,7 +1444,9 @@ def get_student(student_id):
                 'id': student.id,
                 'first_name': student.first_name,
                 'last_name': student.last_name or '',
-                'email': student.email or ''
+                'email': student.email or '',
+                'parent_email_mother': student.parent_email_mother or '',
+                'parent_email_father': student.parent_email_father or ''
             }
         })
 
@@ -2807,6 +2821,8 @@ def get_student_report_info(student_id):
                 'first_name': student.first_name,
                 'last_name': student.last_name,
                 'email': student.email,
+                'parent_email_mother': student.parent_email_mother,
+                'parent_email_father': student.parent_email_father,
             },
             'groups': [{'id': g.id, 'name': g.name} for g in groups]
         })

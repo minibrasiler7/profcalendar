@@ -35,13 +35,13 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    def get_id(self):
+        """Retourne l'ID composite pour flask-login"""
+        return f"teacher:{self.id}"
 
     def __repr__(self):
         return f'<User {self.username}>'
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
 
 class Holiday(db.Model):
     __tablename__ = 'holidays'

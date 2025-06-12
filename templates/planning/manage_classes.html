@@ -2040,8 +2040,18 @@
                             <small style="color: var(--gray-color); font-size: 0.75rem;">Obligatoire uniquement si un élève a déjà ce prénom</small>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Email (optionnel)</label>
+                            <label class="form-label">Email élève (optionnel)</label>
                             <input type="email" class="form-control" id="studentEmail">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Email mère (optionnel)</label>
+                            <input type="email" class="form-control" id="parentEmailMother" placeholder="exemple@mail.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email père (optionnel)</label>
+                            <input type="email" class="form-control" id="parentEmailFather" placeholder="exemple@mail.com">
                         </div>
                     </div>
                     <div class="form-actions">
@@ -2130,8 +2140,16 @@
                             <span id="report-last-name"></span>
                         </div>
                         <div class="info-item">
-                            <label>Email :</label>
+                            <label>Email élève :</label>
                             <span id="report-email"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Email mère :</label>
+                            <span id="report-parent-email-mother"></span>
+                        </div>
+                        <div class="info-item">
+                            <label>Email père :</label>
+                            <span id="report-parent-email-father"></span>
                         </div>
                         <div class="info-item">
                             <label>Groupes :</label>
@@ -4978,7 +4996,9 @@ document.getElementById('studentForm').addEventListener('submit', async function
         classroom_id: {{ selected_classroom_id }},
         first_name: document.getElementById('studentFirstName').value,
         last_name: document.getElementById('studentLastName').value,
-        email: document.getElementById('studentEmail').value
+        email: document.getElementById('studentEmail').value,
+        parent_email_mother: document.getElementById('parentEmailMother').value,
+        parent_email_father: document.getElementById('parentEmailFather').value
     };
 
     try {
@@ -5116,7 +5136,9 @@ async function editStudent(studentId) {
             // Remplir le formulaire avec les données de l'élève
             document.getElementById('studentFirstName').value = result.student.first_name;
             document.getElementById('studentLastName').value = result.student.last_name;
-            document.getElementById('studentEmail').value = result.student.email;
+            document.getElementById('studentEmail').value = result.student.email || '';
+            document.getElementById('parentEmailMother').value = result.student.parent_email_mother || '';
+            document.getElementById('parentEmailFather').value = result.student.parent_email_father || '';
 
             // Mettre à jour le titre et le bouton
             document.querySelector('#addStudentForm h3').textContent = 'Modifier l\'élève';
@@ -7422,6 +7444,8 @@ function loadStudentInfo(studentId) {
             document.getElementById('report-first-name').textContent = student.first_name || '-';
             document.getElementById('report-last-name').textContent = student.last_name || '-';
             document.getElementById('report-email').textContent = student.email || '-';
+            document.getElementById('report-parent-email-mother').textContent = student.parent_email_mother || '-';
+            document.getElementById('report-parent-email-father').textContent = student.parent_email_father || '-';
             
             // Charger les groupes de l'élève
             const groups = data.groups || [];
