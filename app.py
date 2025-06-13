@@ -18,6 +18,17 @@ def create_app(config_class=Config):
     # Configuration du login manager
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Veuillez vous connecter pour accéder à cette page.'
+    
+    # Gestionnaire personnalisé pour les requêtes non autorisées
+    @login_manager.unauthorized_handler
+    def unauthorized():
+        from flask import request, jsonify
+        # Pour les requêtes AJAX, retourner une erreur JSON
+        if request.is_json or request.headers.get('Accept') == 'application/json':
+            return jsonify({'error': 'Non autorisé. Veuillez vous connecter.'}), 401
+        # Pour les requêtes normales, rediriger vers la page de login
+        from flask import redirect, url_for
+        return redirect(url_for('auth.login', next=request.url))
 
     # Activer les logs SQLAlchemy en mode debug
     if app.debug:
