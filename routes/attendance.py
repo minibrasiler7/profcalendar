@@ -4,6 +4,7 @@ from extensions import db
 from models.attendance import Attendance
 from models.student import Student
 from models.classroom import Classroom
+from models.absence_justification import AbsenceJustification
 from datetime import datetime, date, time, timedelta
 
 attendance_bp = Blueprint('attendance', __name__, url_prefix='/attendance')
@@ -303,6 +304,96 @@ def get_attendance_stats():
         return jsonify({
             'success': True,
             'stats': stats
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@attendance_bp.route('/api/justifications')
+@login_required
+def get_justifications():
+    """API pour récupérer les justifications d'absence avec filtres"""
+    try:
+        # Paramètres de filtrage
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        classroom_id = request.args.get('classroom_id', type=int)
+        student_name = request.args.get('student_name', '').strip()
+        status = request.args.get('status', '').strip()
+        
+        # Query de base pour les justifications
+        query = db.session.query(AbsenceJustification, Student, Classroom).join(
+            Student, AbsenceJustification.student_id == Student.id
+        ).join(
+            Classroom, Student.classroom_id == Classroom.id
+        ).filter(
+            Classroom.user_id == current_user.id
+        )
+        
+        # Appliquer les filtres
+        if start_date:
+            try:
+                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+                query = query.filter(AbsenceJustification.absence_date >= start_date_obj)
+            except ValueError:
+                pass
+        
+        if end_date:
+            try:
+                end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+                query = query.filter(AbsenceJustification.absence_date <= end_date_obj)
+            except ValueError:
+                pass
+        
+        if classroom_id:
+            query = query.filter(Student.classroom_id == classroom_id)
+        
+        if student_name:
+            query = query.filter(
+                db.or_(
+                    Student.first_name.ilike(f'%{student_name}%'),
+                    Student.last_name.ilike(f'%{student_name}%')
+                )
+            )
+        
+        if status:
+            query = query.filter(AbsenceJustification.status == status)
+        
+        # Trier par date de création décroissante
+        results = query.order_by(AbsenceJustification.created_at.desc()).all()
+        
+        # Formater les données
+        justifications_data = []
+        for justification, student, classroom in results:
+            periods = justification.get_periods_list()
+            periods_str = ', '.join([f"P{p.get('period', '')}" for p in periods]) if periods else ''
+            
+            # Calculer les horaires en utilisant la fonction existante
+            period_numbers = [p.get('period') for p in periods if p.get('period')]
+            _, time_range = get_period_time_range(period_numbers, current_user)
+            
+            justifications_data.append({
+                'id': justification.id,
+                'date': justification.absence_date.strftime('%d/%m/%Y'),
+                'date_iso': justification.absence_date.isoformat(),
+                'student_name': student.full_name,
+                'classroom_name': classroom.name,
+                'periods': periods_str,
+                'time_range': time_range,
+                'reason_type': justification.reason_type,
+                'reason_display': justification.get_reason_display(),
+                'other_reason_text': justification.other_reason_text,
+                'dispense_subject': justification.dispense_subject,
+                'status': justification.status,
+                'status_display': justification.get_status_display(),
+                'teacher_response': justification.teacher_response,
+                'created_at': justification.created_at.strftime('%d/%m/%Y à %H:%M'),
+                'processed_at': justification.processed_at.strftime('%d/%m/%Y à %H:%M') if justification.processed_at else None
+            })
+        
+        return jsonify({
+            'success': True,
+            'justifications': justifications_data
         })
         
     except Exception as e:

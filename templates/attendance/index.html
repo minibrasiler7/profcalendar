@@ -272,6 +272,128 @@
     .tab-pane {
         padding: 20px;
     }
+    
+    /* Styles pour les justifications */
+    .justification-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+    }
+    
+    .justification-card:hover {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transform: translateY(-1px);
+    }
+    
+    .justification-header {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 1rem;
+        align-items: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .justification-info h4 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #374151;
+    }
+    
+    .justification-meta {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+    
+    .justification-status {
+        text-align: center;
+    }
+    
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+    
+    .status-pending {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+    
+    .status-approved {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+    
+    .status-rejected {
+        background-color: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .justification-details {
+        padding: 1rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .detail-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #6b7280;
+        letter-spacing: 0.05em;
+    }
+    
+    .detail-value {
+        font-size: 0.875rem;
+        color: #374151;
+    }
+    
+    .period-tags {
+        display: flex;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+    }
+    
+    .period-tag {
+        background: #3b82f6;
+        color: white;
+        padding: 0.125rem 0.375rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .teacher-response {
+        grid-column: 1 / -1;
+        margin-top: 0.5rem;
+        padding: 0.75rem;
+        background: #f1f5f9;
+        border-radius: 0.375rem;
+        border-left: 3px solid #3b82f6;
+    }
+    
+    .teacher-response .detail-label {
+        color: #3b82f6;
+    }
 </style>
 {% endblock %}
 
@@ -468,11 +590,73 @@
 
         <!-- Onglet Absences justifiées -->
         <div class="tab-pane fade" id="justified" role="tabpanel" aria-labelledby="justified-tab">
-            <div class="coming-soon">
-                <i class="fas fa-tools"></i>
-                <h3>Fonctionnalité en développement</h3>
-                <p>Cette section permettra aux parents de justifier les absences de leurs enfants via un portail dédié.</p>
-                <p class="text-muted">Cette fonctionnalité sera disponible prochainement.</p>
+            <!-- Bouton filtres avancés -->
+            <div class="filters-toggle">
+                <button class="btn-filter-toggle" onclick="toggleFilters('justified')">
+                    <i class="fas fa-filter"></i> Filtres avancés
+                </button>
+            </div>
+            
+            <!-- Filtres -->
+            <div class="filters-section" id="filters-justified">
+                <div class="date-filters">
+                    <div class="form-group">
+                        <label class="form-label">Date de début</label>
+                        <input type="date" class="form-control" id="start-date-justified">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date de fin</label>
+                        <input type="date" class="form-control" id="end-date-justified">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label">Classe</label>
+                        <select class="form-select" id="classroom-filter-justified">
+                            <option value="">Toutes les classes</option>
+                            {% for classroom in classrooms %}
+                            <option value="{{ classroom.id }}">{{ classroom.name }} - {{ classroom.subject }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Nom de l'élève</label>
+                        <input type="text" class="form-control" id="student-name-justified" placeholder="Rechercher un élève...">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Statut</label>
+                        <select class="form-select" id="status-filter-justified">
+                            <option value="">Tous les statuts</option>
+                            <option value="pending">En attente</option>
+                            <option value="approved">Approuvée</option>
+                            <option value="rejected">Refusée</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button class="btn btn-primary" onclick="loadJustifications()">
+                            <i class="fas fa-search"></i> Appliquer les filtres
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="clearFiltersJustified()">
+                            <i class="fas fa-times"></i> Réinitialiser
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liste des justifications -->
+            <div class="attendance-table">
+                <div class="loading-spinner" id="loading-justified">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                </div>
+                <div id="justifications-container" style="display: none;"></div>
+                <div class="no-data" id="no-justified" style="display: none;">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <p>Aucune justification trouvée pour les critères sélectionnés.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -510,11 +694,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const startDate = `${startYear}-09-01`;
     const endDate = `${endYear}-07-31`;
     
-    // Définir les dates pour les deux onglets
+    // Définir les dates pour les trois onglets
     document.getElementById('start-date-absences').value = startDate;
     document.getElementById('end-date-absences').value = endDate;
     document.getElementById('start-date-late').value = startDate;
     document.getElementById('end-date-late').value = endDate;
+    document.getElementById('start-date-justified').value = startDate;
+    document.getElementById('end-date-justified').value = endDate;
     
     // Charger les données initiales
     loadAbsences();
@@ -537,6 +723,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadLateArrivals();
             } else if (target === 'absences') {
                 loadAbsences();
+            } else if (target === 'justified') {
+                loadJustifications();
             }
         })
     })
@@ -544,7 +732,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function showLoading(type) {
     document.getElementById(`loading-${type}`).style.display = 'block';
-    document.getElementById(`${type}-table`).style.display = 'none';
+    if (type === 'justified') {
+        document.getElementById('justifications-container').style.display = 'none';
+    } else {
+        document.getElementById(`${type}-table`).style.display = 'none';
+    }
     document.getElementById(`no-${type}`).style.display = 'none';
 }
 
@@ -737,6 +929,128 @@ function clearFiltersLate() {
     document.getElementById('classroom-filter-late').value = '';
     document.getElementById('student-name-late').value = '';
     loadLateArrivals();
+}
+
+function loadJustifications() {
+    showLoading('justified');
+    
+    const params = new URLSearchParams({
+        start_date: document.getElementById('start-date-justified').value,
+        end_date: document.getElementById('end-date-justified').value,
+        classroom_id: document.getElementById('classroom-filter-justified').value,
+        student_name: document.getElementById('student-name-justified').value,
+        status: document.getElementById('status-filter-justified').value
+    });
+    
+    fetch(`{{ url_for('attendance.get_justifications') }}?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            hideLoading('justified');
+            
+            if (data.success) {
+                displayJustifications(data.justifications);
+            } else {
+                showError('Erreur lors du chargement des justifications: ' + data.message);
+            }
+        })
+        .catch(error => {
+            hideLoading('justified');
+            showError('Erreur de connexion: ' + error.message);
+        });
+}
+
+function displayJustifications(justifications) {
+    const container = document.getElementById('justifications-container');
+    const noData = document.getElementById('no-justified');
+    
+    container.innerHTML = '';
+    
+    if (justifications.length === 0) {
+        container.style.display = 'none';
+        noData.style.display = 'block';
+        return;
+    }
+    
+    justifications.forEach(justification => {
+        const card = document.createElement('div');
+        card.className = 'justification-card';
+        
+        let reasonDisplay = justification.reason_display;
+        if (justification.reason_type === 'dispense' && justification.dispense_subject) {
+            reasonDisplay += ` - ${justification.dispense_subject}`;
+        } else if (justification.reason_type === 'autre' && justification.other_reason_text) {
+            reasonDisplay += ` - ${justification.other_reason_text}`;
+        }
+        
+        const periodsHtml = justification.periods ? 
+            justification.periods.split(', ').map(p => `<span class="period-tag">${p}</span>`).join('') : 
+            '<span class="text-muted">Aucune</span>';
+        
+        card.innerHTML = `
+            <div class="justification-header">
+                <div class="justification-info">
+                    <h4>${justification.student_name}</h4>
+                    <div class="justification-meta">
+                        ${justification.classroom_name} • ${justification.date} • Soumis le ${justification.created_at}
+                    </div>
+                </div>
+                <div class="justification-status">
+                    <span class="status-badge status-${justification.status}">
+                        ${justification.status === 'pending' ? '<i class="fas fa-clock"></i>' : 
+                          justification.status === 'approved' ? '<i class="fas fa-check"></i>' : 
+                          '<i class="fas fa-times"></i>'}
+                        ${justification.status_display}
+                    </span>
+                </div>
+            </div>
+            <div class="justification-details">
+                <div class="detail-item">
+                    <div class="detail-label">Périodes</div>
+                    <div class="detail-value period-tags">${periodsHtml}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Horaires</div>
+                    <div class="detail-value">${justification.time_range || 'Non défini'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Motif</div>
+                    <div class="detail-value">${reasonDisplay}</div>
+                </div>
+                ${justification.processed_at ? `
+                <div class="detail-item">
+                    <div class="detail-label">Traité le</div>
+                    <div class="detail-value">${justification.processed_at}</div>
+                </div>
+                ` : ''}
+                ${justification.teacher_response ? `
+                <div class="teacher-response">
+                    <div class="detail-label">Réponse de l'enseignant</div>
+                    <div class="detail-value">${justification.teacher_response}</div>
+                </div>
+                ` : ''}
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+    
+    container.style.display = 'block';
+    noData.style.display = 'none';
+}
+
+function clearFiltersJustified() {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    let startYear = currentMonth < 7 ? currentYear - 1 : currentYear;
+    let endYear = startYear + 1;
+    
+    document.getElementById('start-date-justified').value = `${startYear}-09-01`;
+    document.getElementById('end-date-justified').value = `${endYear}-07-31`;
+    document.getElementById('classroom-filter-justified').value = '';
+    document.getElementById('student-name-justified').value = '';
+    document.getElementById('status-filter-justified').value = '';
+    loadJustifications();
 }
 
 function showError(message) {

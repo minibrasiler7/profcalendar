@@ -1955,6 +1955,159 @@
     line-height: 1.4;
 }
 
+/* Styles pour les justifications côté enseignant */
+.justifications-teacher-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.justification-teacher-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.justification-teacher-card:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.justification-teacher-card[data-status="pending"] {
+    border-left: 4px solid #f59e0b;
+}
+
+.justification-teacher-card[data-status="approved"] {
+    border-left: 4px solid #10b981;
+}
+
+.justification-teacher-card[data-status="rejected"] {
+    border-left: 4px solid #ef4444;
+}
+
+.justification-teacher-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.student-info h4 {
+    margin: 0;
+    color: #111827;
+    font-size: 1rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.absence-date {
+    color: #6b7280;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-left: 0.75rem;
+}
+
+.status-select {
+    padding: 0.375rem 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background-color: white;
+    font-size: 0.75rem;
+    color: #374151;
+    cursor: pointer;
+}
+
+.status-select:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+.justification-teacher-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 1rem;
+}
+
+.detail-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.detail-row strong {
+    color: #374151;
+    font-weight: 600;
+    font-size: 0.8rem;
+    min-width: 60px;
+}
+
+.detail-row:has(.teacher-response-input) {
+    grid-column: 1 / -1;
+}
+
+.detail-row.meta {
+    grid-column: 1 / -1;
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.period-tag-teacher {
+    display: inline-block;
+    background: #3b82f6;
+    color: white;
+    padding: 0.125rem 0.375rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-right: 0.25rem;
+}
+
+.file-link {
+    color: #3b82f6;
+    text-decoration: none;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.file-link:hover {
+    text-decoration: underline;
+}
+
+.teacher-response-input {
+    width: 100%;
+    min-height: 40px;
+    padding: 0.375rem 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.teacher-response-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.detail-row.meta {
+    padding-top: 0.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.text-muted {
+    color: #6b7280;
+}
+
 </style>
 {% endblock %}
 
@@ -2528,12 +2681,101 @@
 
             <!-- Absences justifiées -->
             <div id="class-justified" class="attendance-content" style="display: none;">
-                <div style="text-align: center; padding: 60px 20px; background: #f8f9fa; border-radius: 8px; color: #666;">
-                    <i class="fas fa-tools" style="font-size: 3em; margin-bottom: 20px; color: #007bff;"></i>
-                    <h3>Fonctionnalité en développement</h3>
-                    <p>Cette section permettra aux parents de justifier les absences de leurs enfants via un portail dédié.</p>
-                    <p style="color: #999;">Cette fonctionnalité sera disponible prochainement.</p>
-                </div>
+                {% if justifications %}
+                    <div class="justifications-teacher-list">
+                        {% for justification in justifications %}
+                            <div class="justification-teacher-card" data-status="{{ justification.status }}">
+                                <div class="justification-teacher-header">
+                                    <div class="student-info">
+                                        <h4>{{ justification.student.first_name }} {{ justification.student.last_name }}</h4>
+                                        <span class="absence-date">{{ justification.absence_date.strftime('%d/%m/%Y') }}</span>
+                                    </div>
+                                    <div class="justification-actions">
+                                        <select class="status-select" 
+                                                onchange="updateJustificationStatus({{ justification.id }}, this.value)"
+                                                {% if justification.status != 'pending' %}disabled{% endif %}>
+                                            <option value="pending" {% if justification.status == 'pending' %}selected{% endif %}>En attente</option>
+                                            <option value="approved" {% if justification.status == 'approved' %}selected{% endif %}>Approuver</option>
+                                            <option value="rejected" {% if justification.status == 'rejected' %}selected{% endif %}>Refuser</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="justification-teacher-details">
+                                    <div class="detail-row">
+                                        <strong>Périodes:</strong>
+                                        <div>
+                                            {% set periods = justification.get_periods_list() %}
+                                            {% if periods %}
+                                                {% for period in periods %}
+                                                    <span class="period-tag-teacher">P{{ period.period }}</span>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="detail-row">
+                                        <strong>Motif:</strong>
+                                        <span>
+                                            {% if justification.reason_type == 'maladie' %}
+                                                Maladie/Accident
+                                            {% elif justification.reason_type == 'medecin' %}
+                                                Rendez-vous médecin
+                                            {% elif justification.reason_type == 'transport' %}
+                                                Problème transport
+                                            {% elif justification.reason_type == 'conge_joker' %}
+                                                Congé joker
+                                            {% elif justification.reason_type == 'dispense' %}
+                                                Dispense - {{ justification.dispense_subject }}
+                                            {% elif justification.reason_type == 'autre' %}
+                                                {{ justification.other_reason_text[:50] }}{% if justification.other_reason_text|length > 50 %}...{% endif %}
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="detail-row">
+                                        <strong>Parent:</strong>
+                                        <span>{{ justification.parent.full_name }}</span>
+                                    </div>
+                                    
+                                    {% if justification.justification_file %}
+                                    <div class="detail-row">
+                                        <strong>Fichier:</strong>
+                                        <a href="/uploads/justifications/{{ justification.justification_file }}" 
+                                           target="_blank" class="file-link">
+                                            <i class="fas fa-paperclip"></i> Voir
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="detail-row">
+                                        <strong>Note:</strong>
+                                        <textarea class="teacher-response-input" 
+                                                  placeholder="Réponse ou note pour le parent..."
+                                                  rows="2"
+                                                  onchange="updateTeacherResponse({{ justification.id }}, this.value)">{{ justification.teacher_response or '' }}</textarea>
+                                    </div>
+                                    
+                                    <div class="detail-row meta">
+                                        <small class="text-muted">
+                                            Soumis le {{ justification.created_at.strftime('%d/%m %H:%M') }}
+                                            {% if justification.processed_at %}
+                                                • Traité le {{ justification.processed_at.strftime('%d/%m %H:%M') }}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div style="text-align: center; padding: 60px 20px; background: #f8f9fa; border-radius: 8px; color: #666;">
+                        <i class="fas fa-file-medical" style="font-size: 3em; margin-bottom: 20px; color: #007bff;"></i>
+                        <h3>Aucune justification d'absence</h3>
+                        <p>Les parents peuvent maintenant justifier les absences via leur portail dédié.</p>
+                        <p style="color: #999;">Les justifications apparaîtront ici pour validation.</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -7782,6 +8024,112 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+// Fonctions pour gérer les justifications d'absence
+function updateJustificationStatus(justificationId, status) {
+    fetch('/planning/update-justification-status', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            justification_id: justificationId,
+            status: status
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mettre à jour l'apparence de la card
+            const card = document.querySelector(`.justification-teacher-card[data-status]`);
+            if (card && card.querySelector(`select[onchange*="${justificationId}"]`)) {
+                card.setAttribute('data-status', status);
+                
+                // Désactiver le select si le statut n'est plus pending
+                if (status !== 'pending') {
+                    card.querySelector('.status-select').disabled = true;
+                }
+            }
+            
+            showNotification('Statut mis à jour avec succès', 'success');
+        } else {
+            showNotification('Erreur lors de la mise à jour: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('Erreur lors de la mise à jour du statut', 'error');
+    });
+}
+
+function updateTeacherResponse(justificationId, response) {
+    fetch('/planning/update-teacher-response', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            justification_id: justificationId,
+            teacher_response: response
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Note sauvegardée', 'success');
+        } else {
+            showNotification('Erreur lors de la sauvegarde: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showNotification('Erreur lors de la sauvegarde de la note', 'error');
+    });
+}
+
+function showNotification(message, type) {
+    // Créer ou réutiliser un élément de notification
+    let notification = document.getElementById('notification');
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'notification';
+        document.body.appendChild(notification);
+    }
+    
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 24px;
+        border-radius: 6px;
+        color: white;
+        font-weight: 500;
+        z-index: 1000;
+        opacity: 0;
+        transform: translateX(100%);
+        transition: all 0.3s ease;
+    `;
+    
+    if (type === 'success') {
+        notification.style.backgroundColor = '#10b981';
+    } else if (type === 'error') {
+        notification.style.backgroundColor = '#ef4444';
+    }
+    
+    // Animation d'entrée
+    setTimeout(() => {
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateX(0)';
+    }, 10);
+    
+    // Animation de sortie
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+    }, 3000);
+}
 
 // Note: La fonction showTab est déjà définie plus haut, on va la modifier directement
 </script>

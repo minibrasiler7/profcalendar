@@ -1124,6 +1124,14 @@ def manage_classes():
     # Sauvegarder les nouveaux compteurs créés
     db.session.commit()
 
+    # Récupérer les justifications d'absence pour cette classe
+    from models.absence_justification import AbsenceJustification
+    justifications = AbsenceJustification.query.join(
+        Student, AbsenceJustification.student_id == Student.id
+    ).filter(
+        Student.classroom_id == selected_classroom_id
+    ).order_by(AbsenceJustification.created_at.desc()).limit(50).all()
+
     return render_template('planning/manage_classes.html',
                          classrooms=classrooms,
                          selected_classroom=selected_classroom,
@@ -1133,7 +1141,8 @@ def manage_classes():
                          students_json=students_json,
                          recent_grades=recent_grades,
                          imported_sanctions=imported_sanctions,
-                         sanctions_data=sanctions_data)
+                         sanctions_data=sanctions_data,
+                         justifications=justifications)
 
 
 @planning_bp.route('/update-sanction-count', methods=['POST'])
@@ -3177,6 +3186,89 @@ def delete_student_report_file(file_id):
             'success': True,
             'message': 'Fichier supprimé'
         })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/update-justification-status', methods=['POST'])
+@login_required
+def update_justification_status():
+    """Mettre à jour le statut d'une justification d'absence"""
+    from models.absence_justification import AbsenceJustification
+    from datetime import datetime
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+    
+    try:
+        justification_id = data.get('justification_id')
+        status = data.get('status')
+        
+        if not justification_id or not status:
+            return jsonify({'success': False, 'message': 'ID de justification et statut requis'}), 400
+        
+        if status not in ['pending', 'approved', 'rejected']:
+            return jsonify({'success': False, 'message': 'Statut invalide'}), 400
+        
+        # Récupérer la justification
+        justification = AbsenceJustification.query.get(justification_id)
+        if not justification:
+            return jsonify({'success': False, 'message': 'Justification non trouvée'}), 404
+        
+        # Vérifier que l'enseignant a le droit de modifier cette justification
+        # (l'élève doit être dans une de ses classes)
+        student_classroom = justification.student.classroom
+        if not student_classroom or student_classroom.user_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Non autorisé'}), 403
+        
+        # Mettre à jour le statut
+        justification.status = status
+        justification.processed_at = datetime.utcnow()
+        justification.processed_by = current_user.id
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Statut mis à jour avec succès'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@planning_bp.route('/update-teacher-response', methods=['POST'])
+@login_required
+def update_teacher_response():
+    """Mettre à jour la réponse de l'enseignant pour une justification"""
+    from models.absence_justification import AbsenceJustification
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+    
+    try:
+        justification_id = data.get('justification_id')
+        teacher_response = data.get('teacher_response', '')
+        
+        if not justification_id:
+            return jsonify({'success': False, 'message': 'ID de justification requis'}), 400
+        
+        # Récupérer la justification
+        justification = AbsenceJustification.query.get(justification_id)
+        if not justification:
+            return jsonify({'success': False, 'message': 'Justification non trouvée'}), 404
+        
+        # Vérifier que l'enseignant a le droit de modifier cette justification
+        student_classroom = justification.student.classroom
+        if not student_classroom or student_classroom.user_id != current_user.id:
+            return jsonify({'success': False, 'message': 'Non autorisé'}), 403
+        
+        # Mettre à jour la réponse
+        justification.teacher_response = teacher_response.strip() if teacher_response else None
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Note sauvegardée avec succès'})
         
     except Exception as e:
         db.session.rollback()
