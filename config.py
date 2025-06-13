@@ -14,7 +14,7 @@ class Config:
 
     # Configuration session
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
-    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = False  # Mettre True en production avec HTTPS
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
 

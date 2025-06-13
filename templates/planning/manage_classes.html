@@ -2178,7 +2178,35 @@
                 </button>
             </div>
 
-            <!-- Formulaire d'ajout d'élève (caché par défaut) -->
+            {% if is_specialized_teacher %}
+            <!-- Liste déroulante pour enseignants spécialisés -->
+            <div id="addStudentForm" class="add-student-form" style="display: none;">
+                <h3>Ajouter un élève de la classe du maître</h3>
+                <form id="studentSelectForm">
+                    <div class="form-group">
+                        <label class="form-label">Sélectionner un élève</label>
+                        <select class="form-control" id="masterStudentSelect" required>
+                            <option value="">-- Choisir un élève --</option>
+                            {% for student in available_students %}
+                            <option value="{{ student.id }}">{{ student.full_name }}{% if student.email %} ({{ student.email }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                        {% if not available_students %}
+                        <small style="color: var(--gray-color); font-size: 0.75rem;">Tous les élèves de la classe du maître sont déjà ajoutés</small>
+                        {% endif %}
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" {% if not available_students %}disabled{% endif %}>
+                            <i class="fas fa-plus"></i> Ajouter l'élève
+                        </button>
+                        <button type="button" class="btn btn-outline" onclick="toggleAddStudentForm()">
+                            Annuler
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% else %}
+            <!-- Formulaire d'ajout d'élève pour maîtres de classe -->
             <div id="addStudentForm" class="add-student-form" style="display: none;">
                 <h3>Nouvel élève</h3>
                 <form id="studentForm">
@@ -2217,6 +2245,7 @@
                     </div>
                 </form>
             </div>
+            {% endif %}
 
             <!-- Liste des élèves -->
             {% if students %}
@@ -2235,9 +2264,11 @@
                         </div>
                     </div>
                     <div class="student-actions">
+                        {% if can_edit_students %}
                         <button class="btn-icon" title="Modifier" onclick="editStudent({{ student.id }})">
                             <i class="fas fa-edit"></i>
                         </button>
+                        {% endif %}
                         <button class="btn-icon danger" title="Supprimer" onclick="deleteStudent({{ student.id }}, '{{ student.full_name }}')">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -5122,6 +5153,9 @@ async function deleteAccommodation(accommodationId) {
 <script>
 // Variables globales
 let editingStudentId = null;
+const canEditStudents = {{ can_edit_students|tojson }};
+const isSpecializedTeacher = {{ is_specialized_teacher|tojson }};
+const availableStudents = {{ available_students|tojson }};
 
 // Gestion des onglets
 function showTab(tabName) {
@@ -5217,14 +5251,28 @@ function toggleAddStudentForm() {
 
 // Réinitialiser le formulaire
 function resetStudentForm() {
-    document.getElementById('studentForm').reset();
-    editingStudentId = null;
-    document.querySelector('#addStudentForm h3').textContent = 'Nouvel élève';
-    document.querySelector('#studentForm button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+    if (isSpecializedTeacher) {
+        // Réinitialiser le formulaire de sélection pour enseignants spécialisés
+        const selectForm = document.getElementById('studentSelectForm');
+        if (selectForm) {
+            selectForm.reset();
+        }
+    } else {
+        // Réinitialiser le formulaire classique pour maîtres de classe
+        const studentForm = document.getElementById('studentForm');
+        if (studentForm) {
+            studentForm.reset();
+            editingStudentId = null;
+            document.querySelector('#addStudentForm h3').textContent = 'Nouvel élève';
+            document.querySelector('#studentForm button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+        }
+    }
 }
 
-// Gestion du formulaire d'ajout/modification d'élève
-document.getElementById('studentForm').addEventListener('submit', async function(e) {
+// Gestion du formulaire d'ajout/modification d'élève (pour maîtres de classe)
+const studentForm = document.getElementById('studentForm');
+if (studentForm) {
+    studentForm.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const submitButton = e.target.querySelector('button[type="submit"]');
@@ -5292,7 +5340,98 @@ document.getElementById('studentForm').addEventListener('submit', async function
         submitButton.disabled = false;
         submitButton.innerHTML = originalText;
     }
-});
+    });
+}
+
+// Gestion du formulaire de sélection d'élève pour enseignants spécialisés
+if (isSpecializedTeacher) {
+    const selectForm = document.getElementById('studentSelectForm');
+    if (selectForm) {
+        selectForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+
+            // Désactiver le bouton et afficher un loader
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ajout...';
+
+            const masterStudentId = document.getElementById('masterStudentSelect').value;
+
+            if (!masterStudentId) {
+                showNotification('error', 'Veuillez sélectionner un élève');
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+                return;
+            }
+
+            const data = {
+                classroom_id: {{ selected_classroom_id }},
+                master_student_id: parseInt(masterStudentId)
+            };
+
+            try {
+                const response = await fetch('{{ url_for("planning.add_student_from_master") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Ajouter l'élève à la grille
+                    addStudentCard(result.student);
+                    
+                    // Réinitialiser et fermer le formulaire
+                    document.getElementById('masterStudentSelect').value = '';
+                    toggleAddStudentForm();
+                    
+                    // Supprimer l'élève de la liste déroulante
+                    const option = document.querySelector(`#masterStudentSelect option[value="${masterStudentId}"]`);
+                    if (option) {
+                        option.remove();
+                    }
+                    
+                    // Vérifier s'il reste des élèves disponibles
+                    const allOptions = document.querySelectorAll('#masterStudentSelect option');
+                    const remainingOptions = Array.from(allOptions).filter(option => option.value !== '');
+                    if (remainingOptions.length === 0) {
+                        const select = document.getElementById('masterStudentSelect');
+                        select.innerHTML = '<option value="">-- Aucun élève disponible --</option>';
+                        submitButton.disabled = true;
+                        submitButton.innerHTML = '<i class="fas fa-plus"></i> Ajouter l\'élève';
+                        
+                        // Ajouter le message informatif
+                        const helpText = document.createElement('small');
+                        helpText.style.color = 'var(--gray-color)';
+                        helpText.style.fontSize = '0.75rem';
+                        helpText.textContent = 'Tous les élèves de la classe du maître sont déjà ajoutés';
+                        select.parentNode.appendChild(helpText);
+                    }
+                    
+                    showNotification('success', result.message);
+                } else {
+                    showNotification('error', result.message || 'Erreur lors de l\'ajout');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                showNotification('error', 'Erreur lors de la communication avec le serveur');
+            } finally {
+                const allOptionsFinally = document.querySelectorAll('#masterStudentSelect option');
+                const remainingOptionsFinally = Array.from(allOptionsFinally).filter(option => option.value !== '');
+                if (remainingOptionsFinally.length > 0) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalText;
+                }
+            }
+        });
+    }
+}
 
 // Ajouter une carte d'élève au DOM
 function addStudentCard(student) {
@@ -5326,9 +5465,9 @@ function addStudentCard(student) {
             </div>
         </div>
         <div class="student-actions">
-            <button class="btn-icon" title="Modifier" onclick="editStudent(${student.id})">
+            ${canEditStudents ? `<button class="btn-icon" title="Modifier" onclick="editStudent(${student.id})">
                 <i class="fas fa-edit"></i>
-            </button>
+            </button>` : ''}
             <button class="btn-icon danger" title="Supprimer" onclick="deleteStudent(${student.id}, '${student.full_name}')">
                 <i class="fas fa-trash"></i>
             </button>
@@ -5421,6 +5560,41 @@ async function deleteStudent(studentId, studentName) {
 
         if (result.success) {
             showNotification('success', result.message);
+
+            // Si c'est un enseignant spécialisé et qu'on a l'info de l'élève original, le remettre dans la liste
+            if (isSpecializedTeacher && result.original_student) {
+                const originalStudent = result.original_student;
+                const select = document.getElementById('masterStudentSelect');
+                if (select) {
+                    // Vérifier d'abord s'il n'y a que l'option "aucun élève disponible"
+                    const noStudentsOption = select.querySelector('option[value=""]');
+                    if (noStudentsOption && noStudentsOption.textContent.includes('Aucun élève disponible')) {
+                        // Réinitialiser la liste
+                        select.innerHTML = '<option value="">-- Choisir un élève --</option>';
+                        
+                        // Réactiver le bouton d'ajout s'il existe
+                        const addButton = document.querySelector('#studentSelectForm button[type="submit"]');
+                        if (addButton) {
+                            addButton.disabled = false;
+                            addButton.innerHTML = '<i class="fas fa-plus"></i> Ajouter l\'élève';
+                        }
+                        
+                        // Supprimer le message d'information s'il existe
+                        const helpText = document.querySelector('#masterStudentSelect ~ small');
+                        if (helpText) {
+                            helpText.remove();
+                        }
+                    }
+                    
+                    // Créer une nouvelle option avec l'ID original
+                    const newOption = document.createElement('option');
+                    newOption.value = originalStudent.id;
+                    newOption.textContent = originalStudent.email ? 
+                        `${originalStudent.full_name} (${originalStudent.email})` : 
+                        originalStudent.full_name;
+                    select.appendChild(newOption);
+                }
+            }
 
             // Supprimer la carte de l'élève avec une animation
             const studentCard = document.getElementById(`student-${studentId}`);

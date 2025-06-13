@@ -11,6 +11,81 @@ from routes import teacher_required
 
 planning_bp = Blueprint('planning', __name__, url_prefix='/planning')
 
+def can_edit_student(student_id, current_user):
+    """Vérifier si l'utilisateur peut modifier un élève"""
+    from models.student import Student
+    from models.class_collaboration import SharedClassroom, TeacherCollaboration
+    
+    # Récupérer l'élève
+    student = Student.query.get(student_id)
+    if not student:
+        return False, "Élève non trouvé"
+    
+    classroom = student.classroom
+    
+    # Si l'utilisateur est propriétaire de la classe, il peut tout faire
+    if classroom.user_id == current_user.id:
+        return True, None
+    
+    # Vérifier si c'est un enseignant spécialisé pour cette classe
+    shared_classroom = SharedClassroom.query.filter_by(
+        derived_classroom_id=classroom.id
+    ).first()
+    
+    if shared_classroom:
+        collaboration = TeacherCollaboration.query.filter_by(
+            id=shared_classroom.collaboration_id,
+            specialized_teacher_id=current_user.id,
+            is_active=True
+        ).first()
+        
+        if collaboration:
+            # Enseignant spécialisé : ne peut pas modifier, seulement supprimer/ajouter
+            return False, "Les enseignants spécialisés ne peuvent pas modifier les élèves, seulement les supprimer ou en ajouter depuis la classe du maître"
+    
+    return False, "Accès non autorisé"
+
+def can_add_student_to_class(classroom_id, current_user):
+    """Vérifier si l'utilisateur peut ajouter un élève à une classe"""
+    from models.class_collaboration import SharedClassroom, TeacherCollaboration
+    
+    classroom = Classroom.query.get(classroom_id)
+    if not classroom:
+        print(f"DEBUG can_add_student_to_class - Classroom {classroom_id} not found")
+        return False, "Classe non trouvée", None
+    
+    print(f"DEBUG can_add_student_to_class - Classroom owner: {classroom.user_id}, Current user: {current_user.id}")
+    
+    # Vérifier d'abord si c'est une classe dérivée (enseignant spécialisé)
+    shared_classroom = SharedClassroom.query.filter_by(
+        derived_classroom_id=classroom.id
+    ).first()
+    
+    print(f"DEBUG can_add_student_to_class - Shared classroom found: {shared_classroom is not None}")
+    
+    if shared_classroom:
+        collaboration = TeacherCollaboration.query.filter_by(
+            id=shared_classroom.collaboration_id,
+            specialized_teacher_id=current_user.id,
+            is_active=True
+        ).first()
+        
+        print(f"DEBUG can_add_student_to_class - Collaboration found: {collaboration is not None}")
+        
+        if collaboration:
+            # C'est un enseignant spécialisé pour cette classe dérivée
+            original_classroom = shared_classroom.original_classroom
+            print(f"DEBUG can_add_student_to_class - Original classroom: {original_classroom.id if original_classroom else None}")
+            return True, None, original_classroom
+    
+    # Si l'utilisateur est propriétaire de la classe ET ce n'est pas une classe dérivée
+    if classroom.user_id == current_user.id:
+        print("DEBUG can_add_student_to_class - User is classroom owner (normal class)")
+        return True, None, None
+    
+    print("DEBUG can_add_student_to_class - Access denied")
+    return False, "Accès non autorisé", None
+
 @planning_bp.route('/api/day/<date_str>')
 @login_required
 def get_day_plannings(date_str):
@@ -1132,6 +1207,50 @@ def manage_classes():
         Student.classroom_id == selected_classroom_id
     ).order_by(AbsenceJustification.created_at.desc()).limit(50).all()
 
+    # Vérifier si l'utilisateur peut éditer les élèves de cette classe
+    from models.class_collaboration import SharedClassroom, TeacherCollaboration
+    can_edit_students = True  # Par défaut True si c'est sa classe
+    
+    # Vérifier si c'est une classe dérivée (enseignant spécialisé)
+    shared_classroom = SharedClassroom.query.filter_by(
+        derived_classroom_id=selected_classroom_id
+    ).first()
+    
+    collaboration = None
+    if shared_classroom:
+        collaboration = TeacherCollaboration.query.filter_by(
+            id=shared_classroom.collaboration_id,
+            specialized_teacher_id=current_user.id,
+            is_active=True
+        ).first()
+        
+        if collaboration:
+            can_edit_students = False  # Enseignant spécialisé ne peut pas éditer
+
+    # Pour les enseignants spécialisés, récupérer les élèves disponibles de la classe du maître
+    available_students = []
+    is_specialized_teacher = False
+    print(f"DEBUG manage_classes - shared_classroom exists: {shared_classroom is not None}")
+    print(f"DEBUG manage_classes - collaboration exists: {collaboration is not None}")
+    if shared_classroom and collaboration:
+        is_specialized_teacher = True
+        # Récupérer tous les élèves de la classe originale (maître)
+        master_students = Student.query.filter_by(classroom_id=shared_classroom.original_classroom_id).all()
+        
+        # Récupérer les élèves déjà présents dans la classe dérivée
+        current_student_names = {(s.first_name, s.last_name) for s in students}
+        
+        # Filtrer pour ne garder que ceux qui ne sont pas déjà dans la classe dérivée
+        for master_student in master_students:
+            if (master_student.first_name, master_student.last_name) not in current_student_names:
+                available_students.append({
+                    'id': master_student.id,
+                    'first_name': master_student.first_name,
+                    'last_name': master_student.last_name,
+                    'full_name': master_student.full_name,
+                    'email': master_student.email
+                })
+
     return render_template('planning/manage_classes.html',
                          classrooms=classrooms,
                          selected_classroom=selected_classroom,
@@ -1142,7 +1261,10 @@ def manage_classes():
                          recent_grades=recent_grades,
                          imported_sanctions=imported_sanctions,
                          sanctions_data=sanctions_data,
-                         justifications=justifications)
+                         justifications=justifications,
+                         can_edit_students=can_edit_students,
+                         available_students=available_students,
+                         is_specialized_teacher=is_specialized_teacher)
 
 
 @planning_bp.route('/update-sanction-count', methods=['POST'])
@@ -1261,12 +1383,12 @@ def add_student():
         return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
 
     try:
-        # Vérifier que la classe appartient à l'utilisateur
         classroom_id = data.get('classroom_id')
-        classroom = Classroom.query.filter_by(id=classroom_id, user_id=current_user.id).first()
-
-        if not classroom:
-            return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+        
+        # Vérifier les permissions avec la nouvelle fonction
+        can_add, error_message, original_classroom = can_add_student_to_class(classroom_id, current_user)
+        if not can_add:
+            return jsonify({'success': False, 'message': error_message}), 403
 
         first_name = data.get('first_name', '').strip()
         last_name = data.get('last_name', '').strip()
@@ -1277,6 +1399,21 @@ def add_student():
         # Validation du prénom obligatoire
         if not first_name:
             return jsonify({'success': False, 'message': 'Le prénom est obligatoire'}), 400
+
+        # Si c'est un enseignant spécialisé, l'élève doit exister dans la classe du maître
+        if original_classroom:
+            # Vérifier que l'élève existe dans la classe originale
+            original_student = Student.query.filter_by(
+                classroom_id=original_classroom.id,
+                first_name=first_name,
+                last_name=last_name
+            ).first()
+            
+            if not original_student:
+                return jsonify({
+                    'success': False,
+                    'message': f'L\'élève {first_name} {last_name or ""} n\'existe pas dans la classe du maître de classe. Vous ne pouvez ajouter que des élèves déjà présents dans la classe du maître.'
+                }), 400
 
         # Vérifier si un élève avec ce prénom existe déjà dans la classe
         existing_student = Student.query.filter_by(
@@ -1303,6 +1440,27 @@ def add_student():
         )
 
         db.session.add(student)
+        db.session.flush()  # Pour obtenir l'ID de l'élève
+        
+        # Si c'est un enseignant spécialisé, créer le lien StudentClassroomLink
+        if original_classroom:
+            from models.class_collaboration import StudentClassroomLink, SharedClassroom
+            
+            # Récupérer la classe partagée pour obtenir la matière
+            shared_classroom = SharedClassroom.query.filter_by(
+                derived_classroom_id=classroom_id
+            ).first()
+            
+            if shared_classroom:
+                student_link = StudentClassroomLink(
+                    student_id=student.id,
+                    classroom_id=classroom_id,
+                    subject=shared_classroom.subject,
+                    is_primary=False,
+                    added_by_teacher_id=current_user.id
+                )
+                db.session.add(student_link)
+
         db.session.commit()
 
         return jsonify({
@@ -1323,11 +1481,114 @@ def add_student():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@planning_bp.route('/add-student-from-master', methods=['POST'])
+@login_required
+def add_student_from_master():
+    """Ajouter un élève existant de la classe du maître à la classe dérivée"""
+    from models.student import Student
+    from models.class_collaboration import StudentClassroomLink, SharedClassroom
+
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
+
+    try:
+        classroom_id = data.get('classroom_id')
+        master_student_id = data.get('master_student_id')
+        
+        if not classroom_id or not master_student_id:
+            return jsonify({'success': False, 'message': 'Données manquantes'}), 400
+
+        # Debug : afficher les informations
+        print(f"DEBUG add_student_from_master - User ID: {current_user.id}")
+        print(f"DEBUG add_student_from_master - Classroom ID: {classroom_id}")
+        
+        # Vérifier les permissions
+        can_add, error_message, original_classroom = can_add_student_to_class(classroom_id, current_user)
+        print(f"DEBUG add_student_from_master - can_add: {can_add}, error: {error_message}")
+        if not can_add:
+            return jsonify({'success': False, 'message': error_message}), 403
+
+        if not original_classroom:
+            return jsonify({'success': False, 'message': 'Cette fonction est réservée aux enseignants spécialisés'}), 403
+
+        # Récupérer l'élève de la classe du maître
+        master_student = Student.query.filter_by(
+            id=master_student_id,
+            classroom_id=original_classroom.id
+        ).first()
+
+        if not master_student:
+            return jsonify({'success': False, 'message': 'Élève non trouvé dans la classe du maître'}), 404
+
+        # Vérifier qu'il n'existe pas déjà dans la classe dérivée
+        existing_student = Student.query.filter_by(
+            classroom_id=classroom_id,
+            first_name=master_student.first_name,
+            last_name=master_student.last_name
+        ).first()
+
+        if existing_student:
+            return jsonify({'success': False, 'message': 'Cet élève est déjà dans la classe'}), 400
+
+        # Créer une copie de l'élève pour la classe dérivée
+        derived_student = Student(
+            classroom_id=classroom_id,
+            user_id=current_user.id,
+            first_name=master_student.first_name,
+            last_name=master_student.last_name,
+            email=master_student.email,
+            date_of_birth=master_student.date_of_birth,
+            parent_email_mother=master_student.parent_email_mother,
+            parent_email_father=master_student.parent_email_father,
+            additional_info=master_student.additional_info
+        )
+
+        db.session.add(derived_student)
+        db.session.flush()  # Pour obtenir l'ID de l'élève
+        
+        # Créer le lien StudentClassroomLink
+        shared_classroom = SharedClassroom.query.filter_by(
+            derived_classroom_id=classroom_id
+        ).first()
+        
+        if shared_classroom:
+            student_link = StudentClassroomLink(
+                student_id=derived_student.id,
+                classroom_id=classroom_id,
+                subject=shared_classroom.subject,
+                is_primary=False,
+                added_by_teacher_id=current_user.id
+            )
+            db.session.add(student_link)
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'{derived_student.full_name} a été ajouté avec succès',
+            'student': {
+                'id': derived_student.id,
+                'first_name': derived_student.first_name,
+                'last_name': derived_student.last_name,
+                'full_name': derived_student.full_name,
+                'email': derived_student.email,
+                'initials': derived_student.first_name[0] + (derived_student.last_name[0] if derived_student.last_name else '')
+            }
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @planning_bp.route('/delete-student/<int:student_id>', methods=['DELETE'])
 @login_required
 def delete_student(student_id):
     """Supprimer un élève"""
     from models.student import Student
+    from models.class_collaboration import StudentClassroomLink
 
     try:
         # Vérifier que l'élève existe et appartient à une classe de l'utilisateur
@@ -1341,14 +1602,76 @@ def delete_student(student_id):
 
         student_name = student.full_name
 
-        # Supprimer l'élève (les notes seront supprimées automatiquement grâce à cascade)
+        # Supprimer d'abord toutes les données liées à cet élève manuellement
+        from models.evaluation import EvaluationGrade
+        from models.attendance import Attendance
+        from models.student_sanctions import StudentSanctionCount
+        from models.absence_justification import AbsenceJustification
+        
+        # Supprimer tous les liens et données associées
+        StudentClassroomLink.query.filter_by(student_id=student_id).delete()
+        EvaluationGrade.query.filter_by(student_id=student_id).delete()
+        Attendance.query.filter_by(student_id=student_id).delete()
+        StudentSanctionCount.query.filter_by(student_id=student_id).delete()
+        AbsenceJustification.query.filter_by(student_id=student_id).delete()
+        
+        # Supprimer les autres relations si elles existent
+        try:
+            from models.accommodation import Accommodation
+            Accommodation.query.filter_by(student_id=student_id).delete()
+        except ImportError:
+            pass
+            
+        try:
+            from models.parent import ParentStudentConnection
+            ParentStudentConnection.query.filter_by(student_id=student_id).delete()
+        except ImportError:
+            pass
+            
+        try:
+            from models.student_group import StudentGroupMembership
+            StudentGroupMembership.query.filter_by(student_id=student_id).delete()
+        except ImportError:
+            pass
+
+        # Si c'est une classe dérivée, récupérer l'info de l'élève original pour le retour
+        from models.class_collaboration import SharedClassroom
+        original_student_info = None
+        shared_classroom = SharedClassroom.query.filter_by(
+            derived_classroom_id=student.classroom_id
+        ).first()
+        
+        if shared_classroom:
+            # Chercher l'élève correspondant dans la classe originale
+            original_student = Student.query.filter_by(
+                classroom_id=shared_classroom.original_classroom_id,
+                first_name=student.first_name,
+                last_name=student.last_name
+            ).first()
+            
+            if original_student:
+                original_student_info = {
+                    'id': original_student.id,
+                    'first_name': original_student.first_name,
+                    'last_name': original_student.last_name,
+                    'full_name': original_student.full_name,
+                    'email': original_student.email
+                }
+
+        # Enfin, supprimer l'élève
         db.session.delete(student)
         db.session.commit()
 
-        return jsonify({
+        response_data = {
             'success': True,
             'message': f'{student_name} a été supprimé avec succès'
-        })
+        }
+        
+        # Ajouter l'info de l'élève original si disponible
+        if original_student_info:
+            response_data['original_student'] = original_student_info
+
+        return jsonify(response_data)
 
     except Exception as e:
         db.session.rollback()
@@ -1368,12 +1691,13 @@ def update_student():
         return jsonify({'success': False, 'message': 'Données invalides'}), 400
 
     try:
-        # Vérifier que l'élève existe et appartient à une classe de l'utilisateur
-        student = Student.query.join(Classroom).filter(
-            Student.id == student_id,
-            Classroom.user_id == current_user.id
-        ).first()
+        # Vérifier les permissions avec la nouvelle fonction
+        can_edit, error_message = can_edit_student(student_id, current_user)
+        if not can_edit:
+            return jsonify({'success': False, 'message': error_message}), 403
 
+        # Récupérer l'élève
+        student = Student.query.get(student_id)
         if not student:
             return jsonify({'success': False, 'message': 'Élève non trouvé'}), 404
 

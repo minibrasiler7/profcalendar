@@ -12,8 +12,10 @@ from models.student_sanctions import StudentSanctionCount
 from models.evaluation import Evaluation, EvaluationGrade
 from models.seating_plan import SeatingPlan
 from models.student_group import StudentGroup, StudentGroupMembership
+from models.class_collaboration import ClassMaster, TeacherAccessCode, TeacherCollaboration, SharedClassroom, StudentClassroomLink
 
 __all__ = ['User', 'Holiday', 'Break', 'Classroom', 'Schedule', 'Planning',
            'Student', 'Grade', 'ClassFile', 'Chapter', 'ClassroomChapter', 'StudentFile', 'StudentInfoHistory', 'Attendance', 'FileFolder', 'UserFile', 'FileShare',
            'SanctionTemplate', 'SanctionThreshold', 'SanctionOption', 'ClassroomSanctionImport', 'StudentSanctionRecord', 'StudentSanctionCount',
-           'Evaluation', 'EvaluationGrade', 'SeatingPlan', 'StudentGroup', 'StudentGroupMembership']
+           'Evaluation', 'EvaluationGrade', 'SeatingPlan', 'StudentGroup', 'StudentGroupMembership',
+           'ClassMaster', 'TeacherAccessCode', 'TeacherCollaboration', 'SharedClassroom', 'StudentClassroomLink']

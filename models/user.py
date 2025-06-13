@@ -42,6 +42,74 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return f'<User {self.username}>'
+    
+    # Méthodes pour le système de collaboration
+    def is_master_of_class(self, classroom):
+        """Vérifie si cet enseignant est maître de la classe donnée"""
+        from models.class_collaboration import ClassMaster
+        return ClassMaster.query.filter_by(
+            master_teacher_id=self.id,
+            classroom_id=classroom.id
+        ).first() is not None
+    
+    def get_master_classes(self, school_year=None):
+        """Retourne les classes dont cet enseignant est le maître"""
+        from models.class_collaboration import ClassMaster
+        query = ClassMaster.query.filter_by(master_teacher_id=self.id)
+        if school_year:
+            query = query.filter_by(school_year=school_year)
+        return query.all()
+    
+    def get_collaborating_teachers(self):
+        """Retourne les enseignants qui collaborent avec ce maître de classe"""
+        from models.class_collaboration import TeacherCollaboration
+        return TeacherCollaboration.query.filter_by(
+            master_teacher_id=self.id,
+            is_active=True
+        ).all()
+    
+    def get_master_teacher(self):
+        """Retourne le maître de classe avec qui cet enseignant collabore (s'il y en a un)"""
+        from models.class_collaboration import TeacherCollaboration
+        collaboration = TeacherCollaboration.query.filter_by(
+            specialized_teacher_id=self.id,
+            is_active=True
+        ).first()
+        return collaboration.master_teacher if collaboration else None
+    
+    def can_access_student_data(self, student, data_type='all'):
+        """Vérifie si cet enseignant peut accéder aux données d'un élève"""
+        # Si c'est le maître de classe de l'élève
+        if student.classroom and self.is_master_of_class(student.classroom):
+            return True
+        
+        # Si c'est un enseignant spécialisé qui enseigne à cet élève
+        from models.class_collaboration import StudentClassroomLink
+        student_link = StudentClassroomLink.query.filter_by(
+            student_id=student.id,
+            classroom_id__in=[c.id for c in self.classrooms]
+        ).first()
+        
+        if student_link:
+            # Accès limité selon le type de données demandé
+            if data_type in ['grades', 'attendance', 'sanctions', 'all']:
+                return True
+        
+        return False
+    
+    def generate_access_code(self, max_uses=None, expires_at=None):
+        """Génère un nouveau code d'accès pour ce maître de classe"""
+        from models.class_collaboration import TeacherAccessCode
+        
+        code = TeacherAccessCode(
+            master_teacher_id=self.id,
+            code=TeacherAccessCode.generate_code(),
+            max_uses=max_uses,
+            expires_at=expires_at
+        )
+        db.session.add(code)
+        db.session.commit()
+        return code
 
 class Holiday(db.Model):
     __tablename__ = 'holidays'
