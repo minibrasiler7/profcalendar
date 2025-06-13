@@ -73,11 +73,5 @@ class EvaluationGrade(db.Model):
         return (self.points / self.evaluation.max_points) * 100
     
     def get_note_swiss(self):
-        """Convertit en note suisse (1-6)"""
-        percentage = self.get_percentage()
-        if percentage is None:
-            return None
-        
-        # Conversion pourcentage vers note suisse
-        # 100% = 6, 0% = 1
-        return 1 + (percentage / 100) * 5
+        """Retourne directement la note saisie par l'enseignant"""
+        return self.points
