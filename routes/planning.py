@@ -8,6 +8,9 @@ from datetime import datetime, timedelta
 from datetime import date as date_type
 import calendar
 from routes import teacher_required
+import secrets
+import string
+from models.classroom_access_code import ClassroomAccessCode
 
 planning_bp = Blueprint('planning', __name__, url_prefix='/planning')
 
@@ -1675,6 +1678,65 @@ def delete_student(student_id):
 
     except Exception as e:
         db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@planning_bp.route('/generate-class-code/<int:classroom_id>', methods=['POST'])
+@login_required
+def generate_class_code(classroom_id):
+    """Générer un code d'accès pour toute une classe"""
+    
+    try:
+        print(f"Tentative de génération de code pour la classe ID: {classroom_id}")  # Debug
+        
+        # Vérifier que la classe appartient à l'utilisateur
+        classroom = Classroom.query.filter_by(id=classroom_id, user_id=current_user.id).first()
+        
+        if not classroom:
+            print(f"Classe non trouvée pour ID: {classroom_id}, user: {current_user.id}")  # Debug
+            return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+        
+        print(f"Classe trouvée: {classroom.name}")  # Debug
+        
+        # Générer un code unique de 6 caractères
+        def generate_code():
+            return ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
+        
+        # S'assurer que le code est unique
+        while True:
+            code = generate_code()
+            existing = ClassroomAccessCode.query.filter_by(code=code).first()
+            if not existing:
+                break
+        
+        # Supprimer l'ancien code s'il existe
+        old_code = ClassroomAccessCode.query.filter_by(classroom_id=classroom_id).first()
+        if old_code:
+            db.session.delete(old_code)
+        
+        # Créer le nouveau code d'accès
+        access_code = ClassroomAccessCode(
+            classroom_id=classroom_id,
+            code=code,
+            created_by_user_id=current_user.id,
+            expires_at=datetime.utcnow() + timedelta(days=30)  # Valide pendant 30 jours
+        )
+        
+        db.session.add(access_code)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'code': code,
+            'classroom_name': f"{classroom.name} - {classroom.subject}",
+            'message': 'Code d\'accès généré avec succès'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erreur lors de la génération du code de classe: {e}")  # Debug
+        import traceback
+        traceback.print_exc()  # Debug
         return jsonify({'success': False, 'message': str(e)}), 500
 
 

@@ -62,6 +62,7 @@ def create_app(config_class=Config):
     from routes.settings import settings_bp
     from routes.parent_auth import parent_auth_bp
     from routes.collaboration import collaboration_bp
+    from routes.student_auth import student_auth_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(setup_bp)
@@ -75,6 +76,7 @@ def create_app(config_class=Config):
     app.register_blueprint(settings_bp)
     app.register_blueprint(parent_auth_bp)
     app.register_blueprint(collaboration_bp)
+    app.register_blueprint(student_auth_bp)
 
     # Route d'accueil
     @app.route('/')

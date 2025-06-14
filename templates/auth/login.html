@@ -54,7 +54,15 @@
         
         <div class="auth-footer">
             <p>Pas encore de compte ? <a href="{{ url_for('auth.register') }}">Inscrivez-vous</a></p>
-            <p><a href="{{ url_for('parent_auth.login') }}">Vous êtes parent ?</a></p>
+            <div class="platform-links">
+                <p>Autres plateformes :</p>
+                <a href="{{ url_for('parent_auth.login') }}" class="platform-link">
+                    <i class="fas fa-users"></i> Espace Parent
+                </a>
+                <a href="{{ url_for('student_auth.login') }}" class="platform-link">
+                    <i class="fas fa-graduation-cap"></i> Espace Élève
+                </a>
+            </div>
         </div>
     </div>
 </div>
@@ -156,6 +164,36 @@
 
 .auth-footer a:hover {
     text-decoration: underline;
+}
+
+.platform-links {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.platform-links p {
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.platform-link {
+    display: inline-block;
+    margin: 0 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.platform-link:hover {
+    background-color: #f7fafc;
+    border-color: var(--primary-color);
+    text-decoration: none;
+}
+
+.platform-link i {
+    margin-right: 0.5rem;
 }
 </style>
 

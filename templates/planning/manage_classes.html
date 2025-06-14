@@ -110,6 +110,11 @@
     margin-bottom: 2rem;
 }
 
+.header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
 .section-title {
     font-size: 1.25rem;
     font-weight: 600;
@@ -2173,9 +2178,14 @@
                 <h2 class="section-title">
                     <i class="fas fa-user-graduate"></i> Liste des élèves
                 </h2>
-                <button class="btn btn-primary" onclick="toggleAddStudentForm()">
-                    <i class="fas fa-plus"></i> Ajouter un élève
-                </button>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="generateClassCode()">
+                        <i class="fas fa-key"></i> Code d'accès classe
+                    </button>
+                    <button class="btn btn-primary" onclick="toggleAddStudentForm()">
+                        <i class="fas fa-plus"></i> Ajouter un élève
+                    </button>
+                </div>
             </div>
 
             {% if is_specialized_teacher %}
@@ -5631,6 +5641,82 @@ async function deleteStudent(studentId, studentName) {
         console.error('Erreur:', error);
         showNotification('error', 'Erreur lors de la communication avec le serveur');
     }
+}
+
+// Fonction pour générer un code d'accès pour toute la classe
+async function generateClassCode() {
+    const classroomId = document.getElementById('classSelect').value;
+    
+    try {
+        const response = await fetch(`{{ url_for("planning.generate_class_code", classroom_id=0) }}`.replace('0', classroomId), {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Afficher le modal avec le code
+            showClassCodeModal(result.code, result.classroom_name);
+        } else {
+            showNotification('error', result.message || 'Erreur lors de la génération du code');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur lors de la communication avec le serveur');
+    }
+}
+
+// Fonction pour afficher le modal avec le code de classe
+function showClassCodeModal(code, classroomName) {
+    // Créer le modal
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Code d'accès classe généré</h3>
+                <button class="modal-close" onclick="this.closest('.modal').remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <p style="margin-bottom: 1rem;">Code d'accès pour la classe <strong>${classroomName}</strong> :</p>
+                <div style="background: #f3f4f6; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
+                    <h2 style="margin: 0; font-size: 2rem; letter-spacing: 0.5rem; color: #667eea;">${code}</h2>
+                </div>
+                <p style="color: #6b7280; font-size: 0.875rem;">
+                    Ce code est valide pendant 30 jours.<br>
+                    Tous les élèves de la classe peuvent utiliser ce code pour créer leur compte.<br>
+                    Ils doivent utiliser l'email que vous avez enregistré pour eux.
+                </p>
+                <div style="margin-top: 1.5rem;">
+                    <button class="btn btn-secondary" onclick="copyToClipboard('${code}', this)">
+                        <i class="fas fa-copy"></i> Copier le code
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// Fonction pour copier dans le presse-papier
+function copyToClipboard(text, button) {
+    navigator.clipboard.writeText(text).then(() => {
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check"></i> Copié !';
+        button.style.backgroundColor = '#10b981';
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.style.backgroundColor = '';
+        }, 2000);
+    }).catch(() => {
+        showNotification('error', 'Impossible de copier le code');
+    });
 }
 
 // Fonction pour afficher les notifications

@@ -128,15 +128,15 @@
         </div>
         <div class="progress-step">
             <div class="progress-circle">2</div>
-            <span class="progress-label">Classes</span>
-        </div>
-        <div class="progress-step">
-            <div class="progress-circle">3</div>
             <span class="progress-label">Vacances</span>
         </div>
         <div class="progress-step">
-            <div class="progress-circle">4</div>
+            <div class="progress-circle">3</div>
             <span class="progress-label">Pauses</span>
+        </div>
+        <div class="progress-step">
+            <div class="progress-circle">4</div>
+            <span class="progress-label">Classes</span>
         </div>
         <div class="progress-step">
             <div class="progress-circle">5</div>
@@ -146,6 +146,26 @@
 
     <form method="POST" action="{{ url_for('setup.initial_setup') }}">
         {{ form.hidden_tag() }}
+        
+        <!-- Section Copie de configuration -->
+        <div class="setup-section">
+            <i class="fas fa-copy section-icon"></i>
+            <h2 class="section-title">Copie de configuration (optionnel)</h2>
+            <p class="section-description">Si vous travaillez dans le même établissement qu'un autre enseignant, vous pouvez copier sa configuration pour gagner du temps.</p>
+            
+            <div class="form-group">
+                {{ form.copy_from_teacher.label(class="form-label") }}
+                {{ form.copy_from_teacher(class="form-control", placeholder="Nom d'utilisateur ou email de l'enseignant") }}
+                <p class="form-help">Laissez vide pour configurer manuellement. Si rempli, les 3 premières étapes seront automatiquement configurées.</p>
+                {% if form.copy_from_teacher.errors %}
+                    <div class="form-error">
+                        {% for error in form.copy_from_teacher.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
         
         <!-- Section Année scolaire -->
         <div class="setup-section">
