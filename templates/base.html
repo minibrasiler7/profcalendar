@@ -17,6 +17,7 @@
 </head>
 <body>
     <!-- Navigation -->
+    {% if session.get('user_type') != 'student' %}
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-brand">
@@ -75,6 +76,7 @@
             {% endif %}
         </div>
     </nav>
+    {% endif %}
 
     <!-- Messages flash -->
     {% with messages = get_flashed_messages(with_categories=true) %}
