@@ -1780,7 +1780,7 @@
 .form-row {
     display: flex;
     gap: 0.5rem;
-    align-items: end;
+    align-items: start;
 }
 
 /* Student Report Styles */
@@ -3121,6 +3121,66 @@
             <button type="button" class="btn btn-outline" onclick="closeAccommodationModal()">Annuler</button>
             <button type="button" class="btn btn-primary" onclick="saveAccommodation()">
                 <i class="fas fa-save"></i> Enregistrer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de partage de fichiers avec les élèves -->
+<div id="shareFileModal" class="modal">
+    <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-header">
+            <h3 id="shareFileModalTitle">Partager un fichier avec des élèves</h3>
+            <button type="button" class="modal-close" onclick="closeShareFileModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="file-to-share-info" style="background-color: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="background-color: #667eea; color: white; padding: 0.5rem; border-radius: 8px;">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div>
+                        <h4 id="shareFileName" style="margin: 0; color: #2d3748;"></h4>
+                        <p style="margin: 0; color: #718096; font-size: 0.875rem;">Fichier à partager</p>
+                    </div>
+                </div>
+            </div>
+
+            <form id="shareFileForm">
+                <input type="hidden" id="shareFileId" value="">
+                
+                <!-- Sélection des élèves -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-users"></i> Sélectionner les élèves
+                    </label>
+                    <div class="students-selection-grid" id="studentsSelectionGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.5rem; max-height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
+                        <!-- Les élèves seront chargés ici -->
+                    </div>
+                    <div style="margin-top: 0.5rem; font-size: 0.875rem; color: #718096;">
+                        <span id="selectedStudentsCount">0</span> élève(s) sélectionné(s)
+                    </div>
+                </div>
+
+                <!-- Message optionnel -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-comment"></i> Message pour les élèves (optionnel)
+                    </label>
+                    <textarea id="shareMessage" class="form-control" rows="3" 
+                              placeholder="Ajoutez un message personnalisé pour expliquer pourquoi vous partagez ce fichier (ex: 'Document pour rattraper le cours du 15/01')"></textarea>
+                    <div style="font-size: 0.75rem; color: #718096; margin-top: 0.25rem;">
+                        Ce message apparaîtra avec le fichier sur la plateforme élève
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeShareFileModal()">Annuler</button>
+            <button type="button" class="btn btn-primary" onclick="submitFileShare()" id="shareFileSubmitBtn">
+                <i class="fas fa-share"></i> Partager le fichier
             </button>
         </div>
     </div>
@@ -6079,6 +6139,9 @@ function renderClassFiles(currentPath) {
                     <a href="/api/class-files/download/${file.id}" class="action-btn" title="Télécharger">
                         <i class="fas fa-download"></i>
                     </a>
+                    <button class="action-btn" onclick="shareFileWithStudents(${file.id}, '${file.original_filename}')" title="Partager avec des élèves" style="color: #10B981;">
+                        <i class="fas fa-share"></i>
+                    </button>
                     <button class="action-btn" onclick="renameClassItem('file', ${file.id}, '${file.original_filename}')" title="Renommer">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -8392,5 +8455,218 @@ function showNotification(message, type) {
 }
 
 // Note: La fonction showTab est déjà définie plus haut, on va la modifier directement
+
+// ===== FONCTIONS DE PARTAGE DE FICHIERS =====
+
+// Ouvrir le modal de partage de fichiers
+function shareFileWithStudents(fileId, fileName) {
+    // Récupérer les données du fichier
+    document.getElementById('shareFileId').value = fileId;
+    document.getElementById('shareFileName').textContent = fileName;
+    
+    // Charger la liste des élèves
+    loadStudentsForFileSharing();
+    
+    // Afficher le modal
+    document.getElementById('shareFileModal').style.display = 'flex';
+}
+
+// Charger les élèves pour le partage de fichiers
+async function loadStudentsForFileSharing() {
+    const classroomId = {{ selected_classroom_id }};
+    const studentsGrid = document.getElementById('studentsSelectionGrid');
+    
+    console.log('Chargement des élèves pour la classe ID:', classroomId);
+    
+    try {
+        const response = await fetch(`/api/class-files/students/list/${classroomId}`);
+        console.log('Réponse status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('Résultat:', result);
+        
+        if (result.success) {
+            const students = result.students;
+            
+            if (students.length === 0) {
+                studentsGrid.innerHTML = '<p style="text-align: center; color: #718096; grid-column: 1/-1;">Aucun élève dans cette classe</p>';
+                return;
+            }
+            
+            // Ajouter le bouton "Sélectionner tout" en haut
+            let html = `
+                <div style="grid-column: 1/-1; margin-bottom: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+                    <label class="student-checkbox-option" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background-color: #f7fafc; border: 2px solid #cbd5e0; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <input type="checkbox" id="selectAllStudents" onchange="toggleSelectAllStudents()">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div style="width: 32px; height: 32px; background-color: #4a5568; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-users" style="font-size: 0.875rem;"></i>
+                            </div>
+                            <div style="color: #2d3748;">Sélectionner tous les élèves</div>
+                        </div>
+                    </label>
+                </div>
+            `;
+            
+            students.forEach(student => {
+                html += `
+                    <label class="student-checkbox-option" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                        <input type="checkbox" name="selectedStudents" value="${student.id}" onchange="updateSelectedStudentsCount()">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div style="width: 32px; height: 32px; background-color: #667eea; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.875rem;">
+                                ${student.first_name ? student.first_name.charAt(0).toUpperCase() : ''}${student.last_name ? student.last_name.charAt(0).toUpperCase() : ''}
+                            </div>
+                            <div>
+                                <div style="font-weight: 500; color: #2d3748;">${student.first_name} ${student.last_name}</div>
+                                <div style="font-size: 0.75rem; color: #718096;">${student.email || 'Pas d\'email'}</div>
+                            </div>
+                        </div>
+                    </label>
+                `;
+            });
+            
+            studentsGrid.innerHTML = html;
+            updateSelectedStudentsCount();
+            
+            // Ajouter les styles CSS pour les checkboxes
+            if (!document.getElementById('student-checkbox-styles')) {
+                const style = document.createElement('style');
+                style.id = 'student-checkbox-styles';
+                style.textContent = `
+                    .student-checkbox-option:hover {
+                        background-color: #f7fafc;
+                        border-color: #cbd5e0;
+                    }
+                    .student-checkbox-option input[type="checkbox"]:checked + div {
+                        color: #667eea;
+                    }
+                    .student-checkbox-option:has(input:checked) {
+                        background-color: #eef2ff;
+                        border-color: #667eea;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        } else {
+            console.error('Erreur API:', result.message);
+            studentsGrid.innerHTML = `<p style="text-align: center; color: #ef4444; grid-column: 1/-1;">Erreur: ${result.message || 'Impossible de charger les élèves'}</p>`;
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des élèves:', error);
+        studentsGrid.innerHTML = `<p style="text-align: center; color: #ef4444; grid-column: 1/-1;">Erreur réseau: ${error.message}</p>`;
+    }
+}
+
+// Fonction pour sélectionner/désélectionner tous les élèves
+function toggleSelectAllStudents() {
+    const selectAllCheckbox = document.getElementById('selectAllStudents');
+    const studentCheckboxes = document.querySelectorAll('input[name="selectedStudents"]');
+    
+    studentCheckboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+    
+    updateSelectedStudentsCount();
+}
+
+// Mettre à jour le compteur d'élèves sélectionnés
+function updateSelectedStudentsCount() {
+    const checkboxes = document.querySelectorAll('input[name="selectedStudents"]:checked');
+    const allCheckboxes = document.querySelectorAll('input[name="selectedStudents"]');
+    const count = checkboxes.length;
+    
+    document.getElementById('selectedStudentsCount').textContent = count;
+    
+    // Mettre à jour la case "sélectionner tout"
+    const selectAllCheckbox = document.getElementById('selectAllStudents');
+    if (selectAllCheckbox) {
+        if (count === 0) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        } else if (count === allCheckboxes.length) {
+            selectAllCheckbox.checked = true;
+            selectAllCheckbox.indeterminate = false;
+        } else {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = true;
+        }
+    }
+    
+    // Activer/désactiver le bouton de partage
+    const submitBtn = document.getElementById('shareFileSubmitBtn');
+    if (count > 0) {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+    } else {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.6';
+    }
+}
+
+// Soumettre le partage de fichier
+async function submitFileShare() {
+    const fileId = document.getElementById('shareFileId').value;
+    const message = document.getElementById('shareMessage').value.trim();
+    const selectedStudents = Array.from(document.querySelectorAll('input[name="selectedStudents"]:checked')).map(cb => cb.value);
+    
+    if (selectedStudents.length === 0) {
+        showNotification('Veuillez sélectionner au moins un élève', 'error');
+        return;
+    }
+    
+    // Désactiver le bouton pendant l'envoi
+    const submitBtn = document.getElementById('shareFileSubmitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Partage en cours...';
+    
+    try {
+        const response = await fetch('/api/class-files/share', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                file_id: parseInt(fileId),
+                student_ids: selectedStudents.map(id => parseInt(id)),
+                message: message || null
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(`Fichier partagé avec ${selectedStudents.length} élève(s)`, 'success');
+            closeShareFileModal();
+        } else {
+            showNotification(result.message || 'Erreur lors du partage', 'error');
+        }
+    } catch (error) {
+        console.error('Erreur lors du partage:', error);
+        showNotification('Erreur lors du partage du fichier', 'error');
+    } finally {
+        // Réactiver le bouton
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-share"></i> Partager le fichier';
+    }
+}
+
+// Fermer le modal de partage de fichiers
+function closeShareFileModal() {
+    document.getElementById('shareFileModal').style.display = 'none';
+    
+    // Réinitialiser le formulaire
+    document.getElementById('shareFileId').value = '';
+    document.getElementById('shareFileName').textContent = '';
+    document.getElementById('shareMessage').value = '';
+    
+    // Décocher tous les élèves
+    document.querySelectorAll('input[name="selectedStudents"]').forEach(cb => cb.checked = false);
+    updateSelectedStudentsCount();
+}
+
 </script>
 {% endblock %}

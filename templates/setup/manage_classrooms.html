@@ -25,7 +25,7 @@
     height: 2px;
     background-color: var(--primary-color);
     z-index: 0;
-    width: 20%; /* 1/5 pour l'étape 2 */
+    width: 60%; /* 3/5 pour l'étape 4 */
 }
 
 .progress-step {
@@ -143,7 +143,22 @@
     margin-bottom: 1rem;
     opacity: 0.5;
 }
+
+.setup-section {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 2rem;
+}
+
+.form-help {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+    margin-top: 0.25rem;
+}
 </style>
+
 {% endblock %}
 
 {% block content %}
@@ -154,17 +169,17 @@
             <div class="progress-circle"><i class="fas fa-check"></i></div>
             <span class="progress-label">Configuration</span>
         </div>
-        <div class="progress-step active">
-            <div class="progress-circle">2</div>
-            <span class="progress-label">Classes</span>
-        </div>
-        <div class="progress-step">
-            <div class="progress-circle">3</div>
+        <div class="progress-step completed">
+            <div class="progress-circle"><i class="fas fa-check"></i></div>
             <span class="progress-label">Vacances</span>
         </div>
-        <div class="progress-step">
-            <div class="progress-circle">4</div>
+        <div class="progress-step completed">
+            <div class="progress-circle"><i class="fas fa-check"></i></div>
             <span class="progress-label">Pauses</span>
+        </div>
+        <div class="progress-step active">
+            <div class="progress-circle">4</div>
+            <span class="progress-label">Classes</span>
         </div>
         <div class="progress-step">
             <div class="progress-circle">5</div>
@@ -172,35 +187,42 @@
         </div>
     </div>
 
-    <!-- Formulaire d'ajout de classe -->
-    <div class="add-classroom-section">
-        <h2><i class="fas fa-plus-circle"></i> Ajouter une classe</h2>
-        <form method="POST" action="{{ url_for('setup.manage_classrooms') }}">
-            {{ form.hidden_tag() }}
+    <!-- Section de configuration -->
+    <div class="setup-section">
+        <h2><i class="fas fa-chalkboard-teacher"></i> Configuration des classes</h2>
+        
+        <!-- Formulaire de création de classe -->
+        <div class="add-classroom-section">
+            <h3><i class="fas fa-plus-circle"></i> Créer une nouvelle classe</h3>
             
-            <div class="form-row">
-                <div class="form-group">
-                    {{ form.name.label(class="form-label") }}
-                    {{ form.name(class="form-control", placeholder="Ex: 6ème A") }}
-                    {% if form.name.errors %}
-                        <div class="form-error">
-                            {% for error in form.name.errors %}
-                                <small>{{ error }}</small>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
+            <form method="POST" action="{{ url_for('setup.manage_classrooms') }}">
+                {{ form.hidden_tag() }}
+                <input type="hidden" name="action_type" value="create">
                 
-                <div class="form-group">
-                    {{ form.subject.label(class="form-label") }}
-                    {{ form.subject(class="form-control", placeholder="Ex: Mathématiques") }}
-                    {% if form.subject.errors %}
-                        <div class="form-error">
-                            {% for error in form.subject.errors %}
-                                <small>{{ error }}</small>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.name.label(class="form-label") }}
+                        {{ form.name(class="form-control", placeholder="Ex: 6ème A") }}
+                        {% if form.name.errors %}
+                            <div class="form-error">
+                                {% for error in form.name.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form.subject.label(class="form-label") }}
+                        {{ form.subject(class="form-control", placeholder="Ex: Mathématiques") }}
+                        {% if form.subject.errors %}
+                            <div class="form-error">
+                                {% for error in form.subject.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -209,19 +231,50 @@
                         {{ form.color(class="form-control color-picker", type="color") }}
                     </div>
                 </div>
-            </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Créer la classe
+                </button>
+            </form>
+        </div>
+        
+        <!-- Formulaire pour rejoindre une classe -->
+        <div class="add-classroom-section" style="margin-top: 2rem;">
+            <h3><i class="fas fa-link"></i> Ou rejoindre une classe existante</h3>
+            <p>En tant qu'enseignant spécialisé, liez-vous à une classe d'un maître de classe.</p>
             
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Ajouter la classe
-            </button>
-        </form>
+            <form method="POST" action="{{ url_for('setup.manage_classrooms') }}">
+                {{ form.hidden_tag() }}
+                <input type="hidden" name="action_type" value="join">
+                
+                <div class="form-group">
+                    <label class="form-label">Code d'accès</label>
+                    <input type="text" name="access_code" class="form-control" placeholder="Entrez le code fourni par le maître de classe" maxlength="8" style="text-transform: uppercase;">
+                    <p class="form-help">Code à 8 caractères fourni par le maître de classe</p>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Nom du maître de classe</label>
+                    <input type="text" name="master_teacher_name" class="form-control" placeholder="Nom d'utilisateur ou email du maître">
+                    <p class="form-help">Pour vérifier que vous rejoignez la bonne classe</p>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-link"></i> Rejoindre la classe
+                </button>
+            </form>
+        </div>
     </div>
 
     <!-- Liste des classes -->
     <div class="classrooms-list">
         <h2><i class="fas fa-list"></i> Mes classes</h2>
         
+        <!-- Classes propres (maître) -->
         {% if classrooms %}
+            <h3 style="font-size: 1.1rem; margin-bottom: 1rem; color: var(--gray-color);">
+                <i class="fas fa-crown"></i> Classes dont je suis maître
+            </h3>
             {% for classroom in classrooms %}
             <div class="classroom-item">
                 <div class="classroom-info">
@@ -232,32 +285,77 @@
                     </div>
                 </div>
                 
-                <form method="POST" action="{{ url_for('setup.delete_classroom', id=classroom.id) }}" style="margin: 0;">
-                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette classe ?');">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </form>
+                <div class="classroom-actions" style="display: flex; gap: 0.5rem;">
+                    <form method="POST" action="{{ url_for('setup.become_class_master', classroom_id=classroom.id) }}" style="margin: 0;">
+                        <button type="submit" class="btn btn-success btn-sm" title="Devenir maître de cette classe">
+                            <i class="fas fa-crown"></i> Maître
+                        </button>
+                    </form>
+                    
+                    <form method="POST" action="{{ url_for('setup.delete_classroom', id=classroom.id) }}" style="margin: 0;">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette classe ?');" title="Supprimer cette classe">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
             </div>
             {% endfor %}
-        {% else %}
+        {% endif %}
+        
+        <!-- Classes liées (spécialisé) -->
+        {% if linked_classrooms %}
+            <h3 style="font-size: 1.1rem; margin-top: 2rem; margin-bottom: 1rem; color: var(--gray-color);">
+                <i class="fas fa-link"></i> Classes en collaboration
+            </h3>
+            {% for item in linked_classrooms %}
+            <div class="classroom-item">
+                <div class="classroom-info">
+                    <div class="classroom-color" style="background-color: {{ item.classroom.color }};"></div>
+                    <div class="classroom-details">
+                        <h3>{{ item.classroom.name }}</h3>
+                        <p>{{ item.classroom.subject }} - Maître: {{ item.master_teacher.username }}</p>
+                    </div>
+                </div>
+                
+                <span class="badge" style="background-color: #e3f2fd; color: #1565c0; padding: 0.25rem 0.75rem; border-radius: 20px;">
+                    <i class="fas fa-handshake"></i> Collaboration
+                </span>
+            </div>
+            {% endfor %}
+        {% endif %}
+        
+        <!-- État vide -->
+        {% if not classrooms and not linked_classrooms %}
             <div class="empty-state">
                 <i class="fas fa-chalkboard-teacher"></i>
-                <p>Aucune classe ajoutée pour le moment.</p>
-                <p>Commencez par ajouter vos classes ci-dessus.</p>
+                <p>Aucune classe configurée pour le moment.</p>
+                <p>Créez vos propres classes ou rejoignez une classe existante.</p>
             </div>
         {% endif %}
     </div>
 
     <!-- Boutons de navigation -->
     <div class="action-buttons" style="margin-top: 2rem;">
-        <a href="{{ url_for('setup.initial_setup') }}" class="btn btn-outline">
+        {% if not current_user.setup_completed %}
+        <a href="{{ url_for('setup.manage_breaks') }}" class="btn btn-outline">
             <i class="fas fa-arrow-left"></i> Précédent
         </a>
-        
-        {% if classrooms %}
-        <a href="{{ url_for('setup.manage_holidays') }}" class="btn btn-primary">
-            Suivant <i class="fas fa-arrow-right"></i>
+        {% else %}
+        <a href="{{ url_for('planning.dashboard') }}" class="btn btn-outline">
+            <i class="fas fa-arrow-left"></i> Retour au tableau de bord
         </a>
+        {% endif %}
+        
+        {% if classrooms or linked_classrooms %}
+            {% if not current_user.setup_completed %}
+            <a href="{{ url_for('schedule.weekly_schedule') }}" class="btn btn-primary">
+                Suivant <i class="fas fa-arrow-right"></i>
+            </a>
+            {% else %}
+            <a href="{{ url_for('planning.dashboard') }}" class="btn btn-primary">
+                Retour au tableau de bord <i class="fas fa-arrow-right"></i>
+            </a>
+            {% endif %}
         {% endif %}
     </div>
 </div>

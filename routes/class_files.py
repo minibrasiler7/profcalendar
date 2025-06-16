@@ -4,6 +4,7 @@ from extensions import db
 from models.student import ClassFile  # Utiliser le modèle existant
 from models.file_manager import UserFile, FileFolder
 from models.classroom import Classroom
+from datetime import datetime
 import os
 import uuid
 import shutil
@@ -628,5 +629,144 @@ def delete_class_folder_by_path():
         })
         
     except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Erreur: {str(e)}'}), 500
+
+# ===== ROUTES POUR LE PARTAGE DE FICHIERS =====
+
+@class_files_bp.route('/students/list/<int:classroom_id>')
+@login_required
+def list_students_for_sharing(classroom_id):
+    """Liste les élèves d'une classe pour le partage de fichiers"""
+    try:
+        print(f"🔍 API appelée pour classroom_id: {classroom_id}, user_id: {current_user.id}")
+        
+        # Vérifier que la classe appartient à l'utilisateur
+        classroom = Classroom.query.filter_by(
+            id=classroom_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not classroom:
+            print(f"❌ Classe {classroom_id} introuvable pour l'utilisateur {current_user.id}")
+            return jsonify({'success': False, 'message': 'Classe introuvable'}), 404
+        
+        print(f"✅ Classe trouvée: {classroom.name}")
+        
+        # Récupérer tous les élèves de cette classe
+        from models.student import Student
+        students = Student.query.filter_by(classroom_id=classroom_id).order_by(Student.last_name, Student.first_name).all()
+        
+        print(f"📋 {len(students)} élèves trouvés")
+        
+        students_data = []
+        for student in students:
+            students_data.append({
+                'id': student.id,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'email': student.email,
+                'full_name': student.full_name
+            })
+            print(f"   - {student.first_name} {student.last_name} (ID: {student.id})")
+        
+        result = {
+            'success': True,
+            'students': students_data
+        }
+        print(f"✅ Réponse envoyée: {len(students_data)} élèves")
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"❌ Erreur dans list_students_for_sharing: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Erreur: {str(e)}'}), 500
+
+@class_files_bp.route('/share', methods=['POST'])
+@login_required
+def share_file_with_students():
+    """Partager un fichier avec des élèves spécifiques"""
+    try:
+        data = request.get_json()
+        file_id = data.get('file_id')
+        student_ids = data.get('student_ids', [])
+        message = data.get('message') or ''
+        message = message.strip() if message else None
+        
+        print(f"🔍 Partage de fichier {file_id} avec {len(student_ids)} élève(s)")
+        
+        if not file_id or not student_ids:
+            print(f"❌ Paramètres manquants: file_id={file_id}, student_ids={student_ids}")
+            return jsonify({'success': False, 'message': 'Paramètres manquants'}), 400
+        
+        # Vérifier que le fichier appartient à une classe de l'utilisateur
+        class_file = db.session.query(ClassFile).join(
+            Classroom, ClassFile.classroom_id == Classroom.id
+        ).filter(
+            ClassFile.id == file_id,
+            Classroom.user_id == current_user.id
+        ).first()
+        
+        if not class_file:
+            print(f"❌ Fichier {file_id} introuvable pour l'utilisateur {current_user.id}")
+            return jsonify({'success': False, 'message': 'Fichier introuvable'}), 404
+        
+        # Vérifier que tous les élèves appartiennent à la classe du fichier
+        from models.student import Student
+        students = Student.query.filter(
+            Student.id.in_(student_ids),
+            Student.classroom_id == class_file.classroom_id
+        ).all()
+        
+        if len(students) != len(student_ids):
+            print(f"❌ Certains élèves ne sont pas dans la classe {class_file.classroom_id}")
+            return jsonify({'success': False, 'message': 'Certains élèves ne sont pas dans cette classe'}), 400
+        
+        # Créer les partages (en évitant les doublons)
+        from models.file_sharing import StudentFileShare
+        shares_created = 0
+        
+        for student_id in student_ids:
+            # Vérifier si le partage existe déjà
+            existing_share = StudentFileShare.query.filter_by(
+                file_id=file_id,
+                student_id=student_id
+            ).first()
+            
+            if existing_share:
+                # Réactiver si désactivé ou mettre à jour le message
+                if not existing_share.is_active:
+                    existing_share.is_active = True
+                    existing_share.shared_at = datetime.utcnow()
+                    existing_share.shared_by_teacher_id = current_user.id
+                    shares_created += 1
+                existing_share.message = message
+            else:
+                # Créer un nouveau partage
+                new_share = StudentFileShare(
+                    file_id=file_id,
+                    student_id=student_id,
+                    shared_by_teacher_id=current_user.id,
+                    message=message,
+                    is_active=True
+                )
+                db.session.add(new_share)
+                shares_created += 1
+        
+        db.session.commit()
+        print(f"✅ Fichier partagé avec {shares_created} élève(s)")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Fichier partagé avec {shares_created} élève(s)',
+            'shares_created': shares_created
+        })
+        
+    except Exception as e:
+        print(f"❌ Erreur lors du partage de fichier: {str(e)}")
+        import traceback
+        traceback.print_exc()
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Erreur: {str(e)}'}), 500

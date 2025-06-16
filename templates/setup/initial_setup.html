@@ -157,6 +157,12 @@
                 {{ form.copy_from_teacher.label(class="form-label") }}
                 {{ form.copy_from_teacher(class="form-control", placeholder="Nom d'utilisateur ou email de l'enseignant") }}
                 <p class="form-help">Laissez vide pour configurer manuellement. Si rempli, les 3 premières étapes seront automatiquement configurées.</p>
+                <div id="teacher-status" style="margin-top: 0.5rem; font-size: 0.875rem;">
+                    <!-- Le statut sera affiché ici -->
+                </div>
+                <div id="copy-info" class="alert alert-info" style="display: none; margin-top: 1rem;">
+                    <i class="fas fa-info-circle"></i> Les paramètres de cet enseignant ont été chargés. En cliquant sur "Suivant", les vacances et pauses seront également copiées.
+                </div>
                 {% if form.copy_from_teacher.errors %}
                     <div class="form-error">
                         {% for error in form.copy_from_teacher.errors %}
@@ -279,5 +285,125 @@
     color: var(--gray-color);
     font-size: 0.875rem;
 }
+
+.alert {
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+}
+
+.alert-info {
+    background-color: #e3f2fd;
+    color: #1565c0;
+    border: 1px solid #bbdefb;
+}
+
+.disabled-section {
+    opacity: 0.5;
+    pointer-events: none;
+}
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const copyField = document.getElementById('copy_from_teacher');
+    const copyInfo = document.getElementById('copy-info');
+    const teacherStatus = document.getElementById('teacher-status');
+    const setupSections = document.querySelectorAll('.setup-section:not(:first-child)');
+    
+    let debounceTimer;
+    let teacherFound = false;
+    
+    function checkTeacher() {
+        const username = copyField.value.trim();
+        
+        if (!username) {
+            teacherStatus.innerHTML = '';
+            copyInfo.style.display = 'none';
+            setupSections.forEach(section => {
+                section.classList.remove('disabled-section');
+            });
+            clearFields();
+            teacherFound = false;
+            return;
+        }
+        
+        // Afficher un message de chargement
+        teacherStatus.innerHTML = '<span style="color: #666;"><i class="fas fa-spinner fa-spin"></i> Recherche en cours...</span>';
+        
+        fetch('{{ url_for("setup.check_teacher") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            },
+            body: JSON.stringify({ username_or_email: username })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists && !data.incomplete) {
+                teacherStatus.innerHTML = '<span style="color: #28a745;"><i class="fas fa-check-circle"></i> Utilisateur trouvé dans la base de données</span>';
+                copyInfo.style.display = 'block';
+                setupSections.forEach(section => {
+                    section.classList.add('disabled-section');
+                });
+                fillFields(data.data);
+                teacherFound = true;
+            } else if (data.exists && data.incomplete) {
+                teacherStatus.innerHTML = '<span style="color: #ffc107;"><i class="fas fa-exclamation-triangle"></i> ' + data.message + '</span>';
+                copyInfo.style.display = 'none';
+                setupSections.forEach(section => {
+                    section.classList.remove('disabled-section');
+                });
+                clearFields();
+                teacherFound = false;
+            } else {
+                teacherStatus.innerHTML = '<span style="color: #dc3545;"><i class="fas fa-times-circle"></i> Ce nom d\'utilisateur n\'existe pas</span>';
+                copyInfo.style.display = 'none';
+                setupSections.forEach(section => {
+                    section.classList.remove('disabled-section');
+                });
+                clearFields();
+                teacherFound = false;
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            teacherStatus.innerHTML = '<span style="color: #dc3545;"><i class="fas fa-exclamation-circle"></i> Erreur de connexion</span>';
+        });
+    }
+    
+    function fillFields(data) {
+        document.getElementById('school_year_start').value = data.school_year_start || '';
+        document.getElementById('school_year_end').value = data.school_year_end || '';
+        document.getElementById('day_start_time').value = data.day_start_time || '';
+        document.getElementById('day_end_time').value = data.day_end_time || '';
+        document.getElementById('period_duration').value = data.period_duration || '';
+        document.getElementById('break_duration').value = data.break_duration || '';
+    }
+    
+    function clearFields() {
+        // Ne pas effacer les champs si l'utilisateur les a déjà remplis manuellement
+        if (!teacherFound) return;
+        
+        document.getElementById('school_year_start').value = '';
+        document.getElementById('school_year_end').value = '';
+        document.getElementById('day_start_time').value = '';
+        document.getElementById('day_end_time').value = '';
+        document.getElementById('period_duration').value = '';
+        document.getElementById('break_duration').value = '';
+    }
+    
+    // Utiliser un debounce pour éviter trop de requêtes
+    copyField.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(checkTeacher, 300); // Attendre 300ms après la dernière frappe
+    });
+    
+    // Vérifier l'état initial
+    if (copyField.value) {
+        checkTeacher();
+    }
+});
+</script>
 {% endblock %}

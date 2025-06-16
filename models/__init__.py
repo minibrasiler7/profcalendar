@@ -14,10 +14,11 @@ from models.seating_plan import SeatingPlan
 from models.student_group import StudentGroup, StudentGroupMembership
 from models.class_collaboration import ClassMaster, TeacherAccessCode, TeacherCollaboration, SharedClassroom, StudentClassroomLink
 from models.classroom_access_code import ClassroomAccessCode
+from models.file_sharing import StudentFileShare
 
 __all__ = ['User', 'Holiday', 'Break', 'Classroom', 'Schedule', 'Planning',
            'Student', 'Grade', 'ClassFile', 'Chapter', 'ClassroomChapter', 'StudentFile', 'StudentInfoHistory', 'Attendance', 'FileFolder', 'UserFile', 'FileShare',
            'SanctionTemplate', 'SanctionThreshold', 'SanctionOption', 'ClassroomSanctionImport', 'StudentSanctionRecord', 'StudentSanctionCount',
            'Evaluation', 'EvaluationGrade', 'SeatingPlan', 'StudentGroup', 'StudentGroupMembership',
            'ClassMaster', 'TeacherAccessCode', 'TeacherCollaboration', 'SharedClassroom', 'StudentClassroomLink',
-           'ClassroomAccessCode']
+           'ClassroomAccessCode', 'StudentFileShare']
