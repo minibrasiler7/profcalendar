@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+
+{% block title %}Sélectionner une Classe - TeacherPlanner{% endblock %}
+
+{% block extra_css %}
+<style>
+.select-class-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.select-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.select-header h1 {
+    margin: 0 0 1rem 0;
+    color: var(--dark-color);
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.select-header h1 i {
+    color: var(--primary-color);
+    margin-right: 0.5rem;
+}
+
+.collaboration-info {
+    background: linear-gradient(135deg, #e0f2fe, #b3e5fc);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid #4fc3f7;
+}
+
+.collaboration-info h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--dark-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.collaboration-info h3 i {
+    color: #0277bd;
+}
+
+.master-name {
+    font-weight: 600;
+    color: #0277bd;
+}
+
+.classes-section {
+    background: var(--white);
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+}
+
+.section-title {
+    margin: 0 0 2rem 0;
+    color: var(--dark-color);
+    font-size: 1.5rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.section-title i {
+    color: var(--primary-color);
+}
+
+.classes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+}
+
+.class-card {
+    background: var(--light-gray);
+    border-radius: 1rem;
+    padding: 2rem;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.class-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+.class-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    background: white;
+}
+
+.class-header {
+    margin-bottom: 1.5rem;
+}
+
+.class-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--dark-color);
+    margin: 0 0 0.5rem 0;
+}
+
+.class-subject {
+    color: var(--gray-color);
+    font-size: 0.875rem;
+    margin: 0 0 1rem 0;
+}
+
+.class-year {
+    display: inline-block;
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.class-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-label {
+    font-weight: 500;
+    color: var(--dark-color);
+    font-size: 0.875rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.form-text {
+    font-size: 0.75rem;
+    color: var(--gray-color);
+    margin: 0;
+}
+
+.required-field {
+    color: var(--danger-color);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    text-align: center;
+    justify-content: center;
+}
+
+.btn-success {
+    background: var(--success-color);
+    color: white;
+    width: 100%;
+}
+
+.btn-success:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: var(--gray-color);
+    color: white;
+    text-align: center;
+    display: block;
+    margin: 2rem auto 0;
+    width: fit-content;
+}
+
+.btn-secondary:hover {
+    background: var(--dark-color);
+    color: white;
+    text-decoration: none;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--gray-color);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    color: var(--dark-color);
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .select-class-container {
+        padding: 1rem;
+    }
+    
+    .classes-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .select-header h1 {
+        font-size: 2rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="select-class-container">
+    <div class="select-header">
+        <h1>
+            <i class="fas fa-school"></i>
+            Sélectionner une Classe à Partager
+        </h1>
+    </div>
+
+    <div class="collaboration-info">
+        <h3>
+            <i class="fas fa-handshake"></i>
+            Collaboration Établie
+        </h3>
+        <p>
+            Vous collaborez maintenant avec 
+            <span class="master-name">{{ collaboration.master_teacher.username }}</span>. 
+            Choisissez une de ses classes pour créer votre classe spécialisée.
+        </p>
+    </div>
+
+    <div class="classes-section">
+        <h2 class="section-title">
+            <i class="fas fa-list"></i>
+            Classes Disponibles
+        </h2>
+
+        {% if master_classes %}
+        <div class="classes-grid">
+            {% for master_class in master_classes %}
+            <div class="class-card">
+                <div class="class-header">
+                    <h3 class="class-name">{{ master_class.classroom.name }}</h3>
+                    <p class="class-subject">{{ master_class.classroom.subject }}</p>
+                    <span class="class-year">{{ master_class.school_year }}</span>
+                </div>
+
+                <form action="{{ url_for('collaboration.create_shared_class') }}" method="POST" class="class-form">
+                    <input type="hidden" name="collaboration_id" value="{{ collaboration.id }}">
+                    <input type="hidden" name="original_classroom_id" value="{{ master_class.classroom.id }}">
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            Matière que vous enseignez <span class="required-field">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="subject" 
+                            class="form-control" 
+                            placeholder="Ex: Mathématiques, Français, Anglais..."
+                            required
+                        >
+                        <small class="form-text">
+                            Spécifiez la matière que vous enseignez dans cette classe
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            Nom de votre classe (optionnel)
+                        </label>
+                        <input 
+                            type="text" 
+                            name="new_class_name" 
+                            class="form-control" 
+                            placeholder="Laissez vide pour utiliser: {{ master_class.classroom.name }} - [Votre Matière]"
+                        >
+                        <small class="form-text">
+                            Par défaut: "{{ master_class.classroom.name }} - [Votre Matière]"
+                        </small>
+                    </div>
+
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-plus"></i>
+                        Créer ma Classe Spécialisée
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-school"></i>
+            </div>
+            <h3>Aucune Classe Disponible</h3>
+            <p>
+                {{ collaboration.master_teacher.username }} n'a pas encore de classes configurées 
+                comme maître de classe pour cette année scolaire.
+            </p>
+        </div>
+        {% endif %}
+    </div>
+
+    <a href="{{ url_for('collaboration.index') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i>
+        Retour à la Collaboration
+    </a>
+</div>
+
+<script>
+// Validation des formulaires
+document.querySelectorAll('.class-form').forEach(form => {
+    form.addEventListener('submit', function(e) {
+        const subject = this.querySelector('input[name="subject"]').value.trim();
+        
+        if (!subject) {
+            e.preventDefault();
+            alert('Veuillez spécifier la matière que vous enseignez');
+            return;
+        }
+        
+        if (subject.length < 2) {
+            e.preventDefault();
+            alert('Le nom de la matière doit contenir au moins 2 caractères');
+            return;
+        }
+        
+        // Confirmation avant création
+        const className = this.querySelector('input[name="new_class_name"]').value.trim();
+        const originalName = this.closest('.class-card').querySelector('.class-name').textContent;
+        const finalName = className || `${originalName} - ${subject}`;
+        
+        if (!confirm(`Créer la classe "${finalName}" pour la matière "${subject}" ?`)) {
+            e.preventDefault();
+        }
+    });
+});
+
+// Auto-suggestion pour les matières courantes
+const subjects = [
+    'Mathématiques', 'Français', 'Anglais', 'Allemand', 'Histoire', 
+    'Géographie', 'Sciences', 'Physique', 'Chimie', 'Biologie',
+    'Éducation physique', 'Arts visuels', 'Musique', 'Informatique'
+];
+
+document.querySelectorAll('input[name="subject"]').forEach(input => {
+    input.addEventListener('input', function() {
+        // Simple auto-completion (pour une version plus avancée, utilisez une bibliothèque)
+        const value = this.value.toLowerCase();
+        const matches = subjects.filter(subject => 
+            subject.toLowerCase().includes(value) && value.length > 1
+        );
+        
+        if (matches.length === 1 && matches[0].toLowerCase().startsWith(value)) {
+            const suggestion = matches[0];
+            this.value = suggestion;
+            this.setSelectionRange(value.length, suggestion.length);
+        }
+    });
+});
+</script>
+{% endblock %}

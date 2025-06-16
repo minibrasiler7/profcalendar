@@ -1,0 +1,419 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration des classes - TeacherPlanner{% endblock %}
+
+{% block extra_css %}
+<style>
+.setup-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.setup-progress {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+    position: relative;
+}
+
+.setup-progress::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--light-gray);
+    z-index: 0;
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.progress-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--light-gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--gray-color);
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.progress-step.active .progress-circle {
+    background-color: var(--primary-color);
+    color: var(--white);
+    transform: scale(1.1);
+}
+
+.progress-step.completed .progress-circle {
+    background-color: var(--success-color);
+    color: var(--white);
+}
+
+.progress-label {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+    text-align: center;
+}
+
+.setup-section {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 2rem;
+}
+
+.section-icon {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--dark-color);
+}
+
+.section-description {
+    color: var(--gray-color);
+    margin-bottom: 2rem;
+}
+
+.setup-type-selection {
+    margin-bottom: 2rem;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.radio-option:hover {
+    border-color: var(--primary-color);
+    background-color: var(--light-gray);
+}
+
+.radio-option input[type="radio"] {
+    margin-right: 1rem;
+    transform: scale(1.2);
+}
+
+.radio-option.selected {
+    border-color: var(--primary-color);
+    background-color: rgba(74, 144, 226, 0.1);
+}
+
+.option-content {
+    flex-grow: 1;
+}
+
+.option-title {
+    font-weight: 600;
+    color: var(--dark-color);
+    margin-bottom: 0.25rem;
+}
+
+.option-description {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+}
+
+.conditional-section {
+    display: none;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.conditional-section.active {
+    display: block;
+}
+
+.classroom-entry {
+    background-color: var(--light-gray);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+.classroom-entry h4 {
+    margin: 0 0 1rem 0;
+    color: var(--dark-color);
+}
+
+.color-picker-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.color-preview {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    cursor: pointer;
+}
+
+.add-classroom-btn {
+    background: none;
+    border: 2px dashed var(--primary-color);
+    color: var(--primary-color);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    width: 100%;
+    font-size: 1rem;
+    margin-top: 1rem;
+    transition: all 0.3s ease;
+}
+
+.add-classroom-btn:hover {
+    background-color: rgba(74, 144, 226, 0.1);
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="setup-container">
+    <!-- Barre de progression -->
+    <div class="setup-progress">
+        <div class="progress-step completed">
+            <div class="progress-circle">1</div>
+            <span class="progress-label">Configuration</span>
+        </div>
+        <div class="progress-step completed">
+            <div class="progress-circle">2</div>
+            <span class="progress-label">Vacances</span>
+        </div>
+        <div class="progress-step completed">
+            <div class="progress-circle">3</div>
+            <span class="progress-label">Pauses</span>
+        </div>
+        <div class="progress-step active">
+            <div class="progress-circle">4</div>
+            <span class="progress-label">Classes</span>
+        </div>
+        <div class="progress-step">
+            <div class="progress-circle">5</div>
+            <span class="progress-label">Horaire type</span>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('setup.manage_classrooms') }}" id="classroomForm">
+        {{ form.hidden_tag() }}
+        
+        <!-- Section Configuration des classes -->
+        <div class="setup-section">
+            <i class="fas fa-chalkboard section-icon"></i>
+            <h2 class="section-title">Configuration des classes</h2>
+            <p class="section-description">Choisissez comment vous souhaitez configurer vos classes.</p>
+            
+            <!-- Sélection du type -->
+            <div class="setup-type-selection">
+                <div class="radio-group">
+                    {% for value, label in form.setup_type.choices %}
+                    <label class="radio-option" for="setup_type_{{ value }}">
+                        {{ form.setup_type(id="setup_type_" + value, value=value) }}
+                        <div class="option-content">
+                            <div class="option-title">
+                                {% if value == 'master' %}
+                                    Créer mes propres classes
+                                {% else %}
+                                    Me lier à un enseignant existant
+                                {% endif %}
+                            </div>
+                            <div class="option-description">
+                                {% if value == 'master' %}
+                                    Je veux créer mes classes et éventuellement devenir maître de classe pour partager avec d'autres enseignants.
+                                {% else %}
+                                    Je veux me lier à un enseignant existant pour créer des classes dérivées (enseignant spécialisé).
+                                {% endif %}
+                            </div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Section pour créer des classes (maître) -->
+            <div id="master-section" class="conditional-section">
+                <h3><i class="fas fa-plus"></i> Création de classes</h3>
+                <p>Ajoutez les classes que vous souhaitez enseigner.</p>
+                
+                <div id="classrooms-container">
+                    {% for classroom_form in form.classrooms %}
+                    <div class="classroom-entry">
+                        <h4>Classe {{ loop.index }}</h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                {{ classroom_form.name.label(class="form-label") }}
+                                {{ classroom_form.name(class="form-control", placeholder="Ex: 6ème A") }}
+                            </div>
+                            <div class="form-group">
+                                {{ classroom_form.subject.label(class="form-label") }}
+                                {{ classroom_form.subject(class="form-control", placeholder="Ex: Mathématiques") }}
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            {{ classroom_form.color.label(class="form-label") }}
+                            <div class="color-picker-container">
+                                {{ classroom_form.color(class="form-control", type="color", style="width: 60px;") }}
+                                <span>Couleur de la classe dans l'interface</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <button type="button" class="add-classroom-btn" onclick="addClassroom()">
+                    <i class="fas fa-plus"></i> Ajouter une autre classe
+                </button>
+            </div>
+            
+            <!-- Section pour se lier (spécialisé) -->
+            <div id="specialized-section" class="conditional-section">
+                <h3><i class="fas fa-link"></i> Liaison avec un enseignant</h3>
+                <p>Utilisez le code d'accès fourni par l'enseignant maître de classe.</p>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.access_code.label(class="form-label") }}
+                        {{ form.access_code(class="form-control", placeholder="Code fourni par l'enseignant") }}
+                        <p class="form-help">Le code d'accès vous a été communiqué par l'enseignant maître de classe.</p>
+                    </div>
+                    <div class="form-group">
+                        {{ form.master_teacher_name.label(class="form-label") }}
+                        {{ form.master_teacher_name(class="form-control", placeholder="Nom d'utilisateur de l'enseignant") }}
+                        <p class="form-help">Pour vérification, entrez le nom d'utilisateur de l'enseignant.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Boutons d'action -->
+        <div class="action-buttons">
+            <a href="{{ url_for('setup.manage_breaks') }}" class="btn btn-outline">
+                <i class="fas fa-arrow-left"></i> Retour aux pauses
+            </a>
+            
+            <button type="submit" class="btn btn-primary">
+                Suivant <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Gestion des options radio
+document.addEventListener('DOMContentLoaded', function() {
+    const radioOptions = document.querySelectorAll('.radio-option');
+    const masterSection = document.getElementById('master-section');
+    const specializedSection = document.getElementById('specialized-section');
+    
+    function updateSections() {
+        const selectedValue = document.querySelector('input[name="setup_type"]:checked')?.value;
+        
+        // Réinitialiser les sections
+        masterSection.classList.remove('active');
+        specializedSection.classList.remove('active');
+        
+        // Réinitialiser les styles des options
+        radioOptions.forEach(option => {
+            option.classList.remove('selected');
+        });
+        
+        if (selectedValue === 'master') {
+            masterSection.classList.add('active');
+            document.querySelector('#setup_type_master').closest('.radio-option').classList.add('selected');
+        } else if (selectedValue === 'specialized') {
+            specializedSection.classList.add('active');
+            document.querySelector('#setup_type_specialized').closest('.radio-option').classList.add('selected');
+        }
+    }
+    
+    // Écouter les changements de radio
+    document.querySelectorAll('input[name="setup_type"]').forEach(radio => {
+        radio.addEventListener('change', updateSections);
+    });
+    
+    // Écouter les clics sur les labels
+    radioOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            const radio = this.querySelector('input[type="radio"]');
+            radio.checked = true;
+            updateSections();
+        });
+    });
+    
+    // Initialiser l'affichage
+    updateSections();
+});
+
+// Ajouter une nouvelle classe
+let classroomCount = {{ form.classrooms|length }};
+
+function addClassroom() {
+    const container = document.getElementById('classrooms-container');
+    classroomCount++;
+    
+    const classroomHtml = `
+        <div class="classroom-entry">
+            <h4>Classe ${classroomCount}</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Nom de la classe</label>
+                    <input type="text" name="classrooms-${classroomCount-1}-name" class="form-control" placeholder="Ex: 6ème A">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Matière enseignée</label>
+                    <input type="text" name="classrooms-${classroomCount-1}-subject" class="form-control" placeholder="Ex: Mathématiques">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Couleur</label>
+                <div class="color-picker-container">
+                    <input type="color" name="classrooms-${classroomCount-1}-color" class="form-control" value="#4F46E5" style="width: 60px;">
+                    <span>Couleur de la classe dans l'interface</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', classroomHtml);
+}
+</script>
+{% endblock %}

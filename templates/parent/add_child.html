@@ -1,0 +1,290 @@
+{% extends "parent/base.html" %}
+
+{% block title %}Ajouter un enfant - TeacherPlanner{% endblock %}
+
+{% block content %}
+<div class="add-child-container">
+    <div class="add-child-header">
+        <div class="header-content">
+            <h1>
+                <i class="fas fa-user-plus"></i>
+                Ajouter un enfant
+            </h1>
+            <p class="subtitle">
+                Liez-vous à une autre classe pour accéder aux informations d'un enfant supplémentaire
+            </p>
+        </div>
+    </div>
+
+    <div class="add-child-form-section">
+        <div class="form-container">
+            <form method="POST" class="add-child-form">
+                <div class="form-group">
+                    <label for="teacher_name" class="form-label">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        Nom de l'enseignant
+                    </label>
+                    <input 
+                        type="text" 
+                        id="teacher_name" 
+                        name="teacher_name" 
+                        class="form-control" 
+                        placeholder="Nom d'utilisateur ou email de l'enseignant"
+                        required
+                    >
+                    <small class="form-text">
+                        Saisissez le nom d'utilisateur ou l'email de l'enseignant de votre enfant
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="class_code" class="form-label">
+                        <i class="fas fa-key"></i>
+                        Code de classe
+                    </label>
+                    <input 
+                        type="text" 
+                        id="class_code" 
+                        name="class_code" 
+                        class="form-control" 
+                        placeholder="Ex: ABC123"
+                        required
+                        style="text-transform: uppercase;"
+                    >
+                    <small class="form-text">
+                        Demandez le code de classe à l'enseignant de votre enfant
+                    </small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-link"></i>
+                        Ajouter l'enfant
+                    </button>
+                    <a href="{{ url_for('parent_auth.dashboard') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i>
+                        Retour au tableau de bord
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="info-section">
+            <div class="info-card">
+                <h3>
+                    <i class="fas fa-info-circle"></i>
+                    Comment ça fonctionne ?
+                </h3>
+                <ul>
+                    <li>Chaque enseignant possède un code de classe unique</li>
+                    <li>Votre email doit figurer dans le dossier de l'élève</li>
+                    <li>Une fois lié, vous pourrez voir les informations de tous vos enfants depuis un seul compte</li>
+                    <li>Chaque enfant peut être dans une classe différente avec un enseignant différent</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.add-child-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.add-child-header {
+    margin-bottom: 3rem;
+    text-align: center;
+}
+
+.header-content h1 {
+    margin: 0 0 1rem 0;
+    color: var(--dark-color);
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.header-content h1 i {
+    color: var(--primary-color);
+    margin-right: 0.5rem;
+}
+
+.subtitle {
+    color: var(--gray-color);
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.add-child-form-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+}
+
+.form-container {
+    background: var(--white);
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+}
+
+.add-child-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--dark-color);
+    margin: 0;
+}
+
+.form-label i {
+    color: var(--primary-color);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.form-text {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+    margin: 0;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    text-align: center;
+    justify-content: center;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+    flex: 1;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+    background: var(--gray-color);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: var(--dark-color);
+    color: white;
+    text-decoration: none;
+}
+
+.info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.info-card {
+    background: var(--white);
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.info-card h3 {
+    margin: 0 0 1rem 0;
+    color: var(--dark-color);
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-card h3 i {
+    color: var(--primary-color);
+}
+
+.info-card ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.info-card li {
+    margin-bottom: 0.75rem;
+    color: var(--gray-color);
+    line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+    .add-child-container {
+        padding: 1rem;
+    }
+    
+    .add-child-form-section {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .header-content h1 {
+        font-size: 2rem;
+    }
+}
+</style>
+
+<script>
+// Convertir automatiquement le code de classe en majuscules
+document.getElementById('class_code').addEventListener('input', function(e) {
+    e.target.value = e.target.value.toUpperCase();
+});
+</script>
+{% endblock %}

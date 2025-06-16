@@ -1,0 +1,568 @@
+{% extends "base.html" %}
+
+{% block title %}Collaboration Enseignants - TeacherPlanner{% endblock %}
+
+{% block extra_css %}
+<style>
+.collaboration-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.section-card {
+    background: var(--white);
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+.section-title i {
+    color: var(--primary-color);
+}
+
+.master-badge {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.collaborator-badge {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.classes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.class-card {
+    background: var(--light-gray);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.class-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.class-name {
+    font-weight: 600;
+    color: var(--dark-color);
+    margin-bottom: 0.5rem;
+}
+
+.class-subject {
+    color: var(--gray-color);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.access-codes-section {
+    margin-top: 2rem;
+}
+
+.code-item {
+    background: var(--light-gray);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--border-color);
+}
+
+.code-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.code-value {
+    font-family: monospace;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    background: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border-color);
+    display: inline-block;
+}
+
+.code-details {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+}
+
+.code-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.generate-code-form {
+    background: var(--light-gray);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-label {
+    font-weight: 500;
+    color: var(--dark-color);
+}
+
+.form-control {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--gray-color);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.collaborators-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.collaborator-item {
+    background: var(--light-gray);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.collaborator-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.collaborator-name {
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+.collaboration-date {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    text-align: center;
+    justify-content: center;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background: var(--success-color);
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+}
+
+.btn-outline-primary {
+    background: transparent;
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background: var(--primary-color);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-danger {
+    background: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="collaboration-container">
+    <div class="page-header">
+        <h1>
+            <i class="fas fa-users"></i>
+            Collaboration Enseignants
+        </h1>
+        <p>Gérez vos collaborations avec d'autres enseignants et partagez vos classes</p>
+    </div>
+
+    <!-- Section Maître de Classe -->
+    {% if master_classes %}
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-title">
+                <i class="fas fa-crown"></i>
+                Mes Classes en tant que Maître de Classe
+            </div>
+            <div class="master-badge">
+                <i class="fas fa-star"></i>
+                Maître de Classe
+            </div>
+        </div>
+
+        <div class="classes-grid">
+            {% for master_class in master_classes %}
+            <div class="class-card">
+                <div class="class-name">{{ master_class.classroom.name }}</div>
+                <div class="class-subject">{{ master_class.classroom.subject }}</div>
+                <div class="class-actions">
+                    <a href="{{ url_for('planning.manage_classes') }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-cog"></i>
+                        Gérer
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Section Codes d'Accès -->
+        <div class="access-codes-section">
+            <h3>Codes d'Accès pour Enseignants Spécialisés</h3>
+            
+            {% if access_codes %}
+            <div class="codes-list">
+                {% for code in access_codes %}
+                <div class="code-item">
+                    <div class="code-info">
+                        <div class="code-value">{{ code.code }}</div>
+                        <div class="code-details">
+                            Créé le {{ code.created_at.strftime('%d/%m/%Y') }} • 
+                            Utilisé {{ code.current_uses }} fois
+                            {% if code.max_uses %} / {{ code.max_uses }}{% endif %}
+                            {% if code.expires_at %}• Expire le {{ code.expires_at.strftime('%d/%m/%Y') }}{% endif %}
+                        </div>
+                    </div>
+                    <div class="code-actions">
+                        <a href="{{ url_for('collaboration.deactivate_code', code_id=code.id) }}" 
+                           class="btn btn-danger btn-sm"
+                           onclick="return confirm('Êtes-vous sûr de vouloir désactiver ce code ?')">
+                            <i class="fas fa-ban"></i>
+                            Désactiver
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Formulaire pour générer un nouveau code -->
+            <div class="generate-code-form">
+                <h4>Générer un Nouveau Code d'Accès</h4>
+                <form id="generateCodeForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Nombre maximum d'utilisations (optionnel)</label>
+                            <input type="number" name="max_uses" class="form-control" placeholder="Illimité">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Expire dans (jours, optionnel)</label>
+                            <input type="number" name="expires_in_days" class="form-control" placeholder="Jamais">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-plus"></i>
+                        Générer un Code
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Section Enseignants Collaborateurs -->
+        {% if collaborating_teachers %}
+        <div class="collaborators-section">
+            <h3>Enseignants qui Collaborent avec Vous</h3>
+            <div class="collaborators-list">
+                {% for collaboration in collaborating_teachers %}
+                <div class="collaborator-item">
+                    <div class="collaborator-info">
+                        <div class="collaborator-name">{{ collaboration.specialized_teacher.username }}</div>
+                        <div class="collaboration-date">Collaboration depuis le {{ collaboration.joined_at.strftime('%d/%m/%Y') }}</div>
+                    </div>
+                    <div class="collaborator-actions">
+                        <a href="{{ url_for('collaboration.end_collaboration', collaboration_id=collaboration.id) }}" 
+                           class="btn btn-danger btn-sm"
+                           onclick="return confirm('Êtes-vous sûr de vouloir terminer cette collaboration ?')">
+                            <i class="fas fa-unlink"></i>
+                            Terminer
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Section Classes Disponibles pour devenir Maître -->
+    {% if current_user.classrooms %}
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-title">
+                <i class="fas fa-chalkboard"></i>
+                {% if master_classes %}
+                Gestion des Classes
+                {% else %}
+                Devenir Maître de Classe
+                {% endif %}
+            </div>
+        </div>
+
+        {% if master_classes %}
+        <p>Voici toutes vos classes. Vous pouvez devenir maître de classe pour d'autres classes si elles n'ont pas déjà un maître.</p>
+        {% else %}
+        <p>Vous pouvez devenir maître de classe pour vos classes existantes. Cela vous permettra de partager vos élèves et configurations avec d'autres enseignants.</p>
+        {% endif %}
+
+        <div class="classes-grid">
+            {% for classroom in current_user.classrooms %}
+            <div class="class-card">
+                <div class="class-name">{{ classroom.name }}</div>
+                <div class="class-subject">{{ classroom.subject }}</div>
+                <div class="class-actions">
+                    {% if classroom.id in classes_with_masters %}
+                    <span class="btn btn-secondary btn-sm" disabled>
+                        <i class="fas fa-crown"></i>
+                        Déjà un Maître
+                    </span>
+                    {% else %}
+                    <a href="{{ url_for('collaboration.become_master', classroom_id=classroom.id) }}" 
+                       class="btn btn-success btn-sm">
+                        <i class="fas fa-crown"></i>
+                        Devenir Maître
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Section Collaboration en tant qu'Enseignant Spécialisé -->
+    {% if collaborations %}
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-title">
+                <i class="fas fa-handshake"></i>
+                Mes Collaborations
+            </div>
+            <div class="collaborator-badge">
+                <i class="fas fa-user-graduate"></i>
+                Enseignant Spécialisé
+            </div>
+        </div>
+
+        <p>Vous collaborez avec les maîtres de classe suivants :</p>
+        
+        <div class="collaborators-list">
+            {% for collaboration in collaborations %}
+            <div class="collaborator-item">
+                <div class="collaborator-info">
+                    <div class="collaborator-name">{{ collaboration.master_teacher.username }}</div>
+                    <div class="collaboration-date">Collaboration depuis le {{ collaboration.joined_at.strftime('%d/%m/%Y') }}</div>
+                </div>
+                <div class="collaborator-actions">
+                    <a href="{{ url_for('collaboration.delete_collaboration', collaboration_id=collaboration.id) }}" 
+                       class="btn btn-danger btn-sm"
+                       onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette collaboration ? Toutes vos classes dérivées seront supprimées.')">
+                        <i class="fas fa-trash"></i>
+                        Supprimer
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="collaboration-actions">
+            <a href="{{ url_for('planning.manage_classes') }}" class="btn btn-primary">
+                <i class="fas fa-chalkboard"></i>
+                Gérer mes Classes
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Section pour se lier à un Maître de Classe -->
+    {% if not master_classes %}
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-title">
+                <i class="fas fa-link"></i>
+                {% if collaborations %}
+                Collaborer avec un Autre Maître de Classe
+                {% else %}
+                Se Lier à un Maître de Classe
+                {% endif %}
+            </div>
+        </div>
+
+        <p>
+            {% if collaborations %}
+            Vous pouvez collaborer avec plusieurs maîtres de classe. Utilisez un nouveau code d'accès pour établir une collaboration supplémentaire.
+            {% else %}
+            Si vous souhaitez collaborer avec un maître de classe, utilisez le code d'accès qu'il vous a fourni.
+            {% endif %}
+        </p>
+
+        <div class="join-actions">
+            <a href="{{ url_for('collaboration.join_teacher') }}" class="btn btn-outline-primary">
+                <i class="fas fa-user-plus"></i>
+                Rejoindre un Maître de Classe
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- État vide -->
+    {% if not master_classes and not collaborations and not current_user.classrooms %}
+    <div class="empty-state">
+        <div class="empty-icon">
+            <i class="fas fa-users"></i>
+        </div>
+        <h3>Aucune Collaboration</h3>
+        <p>Vous n'avez pas encore de classes. Créez d'abord une classe pour pouvoir collaborer avec d'autres enseignants.</p>
+        <a href="{{ url_for('planning.manage_classes') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            Créer une Classe
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.getElementById('generateCodeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('{{ url_for("collaboration.generate_code") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Code généré avec succès : ${data.code}`);
+            location.reload();
+        } else {
+            alert('Erreur : ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Erreur lors de la génération du code');
+    });
+});
+</script>
+{% endblock %}

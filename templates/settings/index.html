@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Paramètres{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Paramètres</h2>
+    
+    <!-- Navigation des sections -->
+    <div class="settings-nav mb-4">
+        <a href="#accommodations" class="settings-nav-link active" onclick="showSection('accommodations', this)">
+            <i class="fas fa-universal-access"></i>
+            Aménagements
+        </a>
+        <a href="#parent-access" class="settings-nav-link" onclick="showSection('parent-access', this)">
+            <i class="fas fa-users"></i>
+            Accès parents
+        </a>
+    </div>
+    
+    <!-- Section Aménagements -->
+    <div id="accommodations-section" class="settings-section">
+        <div class="card">
+            <div class="card-header">
+                <h5>Affichage des aménagements</h5>
+            </div>
+            <div class="card-body">
+                <p>Choisissez comment les aménagements des élèves doivent être affichés dans la vue des cours :</p>
+                
+                <div class="form-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="accommodations_display" id="accommodations_none" value="none" {% if preferences.show_accommodations == 'none' %}checked{% endif %}>
+                        <label class="form-check-label" for="accommodations_none">
+                            Ne pas afficher les aménagements
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="accommodations_display" id="accommodations_emoji" value="emoji" {% if preferences.show_accommodations == 'emoji' %}checked{% endif %}>
+                        <label class="form-check-label" for="accommodations_emoji">
+                            Afficher uniquement l'émoticône des aménagements
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="accommodations_display" id="accommodations_name" value="name" {% if preferences.show_accommodations == 'name' %}checked{% endif %}>
+                        <label class="form-check-label" for="accommodations_name">
+                            Afficher le nom complet des aménagements
+                        </label>
+                    </div>
+                </div>
+                
+                <button type="button" class="btn btn-primary" onclick="saveAccommodationsSettings()">
+                    Enregistrer les paramètres
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section Accès parents -->
+    <div id="parent-access-section" class="settings-section" style="display: none;">
+        <div class="card">
+            <div class="card-header">
+                <h5>
+                    <i class="fas fa-key"></i>
+                    Codes d'accès pour les parents
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>Gérez les codes d'accès permettant aux parents de se connecter à vos classes.</p>
+                
+                <a href="{{ url_for('settings.class_codes') }}" class="btn btn-primary">
+                    <i class="fas fa-cog"></i>
+                    Gérer les codes de classe
+                </a>
+                
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i>
+                        Les parents utilisent ces codes pour accéder aux informations de leurs enfants.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.settings-nav {
+    display: flex;
+    gap: 1rem;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 2rem;
+}
+
+.settings-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 1.5rem;
+    text-decoration: none;
+    color: var(--gray-color);
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.settings-nav-link:hover {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.settings-nav-link.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    font-weight: 600;
+}
+
+.settings-section {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+</style>
+
+<script>
+function showSection(sectionName, linkElement) {
+    // Masquer toutes les sections
+    document.querySelectorAll('.settings-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    
+    // Retirer la classe active de tous les liens
+    document.querySelectorAll('.settings-nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    
+    // Afficher la section sélectionnée
+    document.getElementById(sectionName + '-section').style.display = 'block';
+    
+    // Ajouter la classe active au lien cliqué
+    linkElement.classList.add('active');
+}
+
+async function saveAccommodationsSettings() {
+    const selectedValue = document.querySelector('input[name="accommodations_display"]:checked').value;
+    
+    try {
+        const response = await fetch('/settings/update-accommodations-display', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                show_accommodations: selectedValue
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Afficher un message de succès
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show mt-3';
+            alertDiv.innerHTML = `
+                ${result.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('#accommodations-section .card-body').appendChild(alertDiv);
+            
+            // Supprimer l'alerte après 3 secondes
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 3000);
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Erreur lors de la sauvegarde:', error);
+        alert('Erreur lors de la sauvegarde des paramètres: ' + error.message);
+    }
+}
+</script>
+{% endblock %}

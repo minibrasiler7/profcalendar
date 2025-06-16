@@ -1,0 +1,2576 @@
+{% extends "parent/base.html" %}
+
+{% block title %}Tableau de bord Parent - TeacherPlanner{% endblock %}
+
+{% block content %}
+<div class="parent-dashboard">
+    <!-- En-tête du tableau de bord -->
+    <div class="dashboard-header">
+        <div class="header-content">
+            <h1>
+                <i class="fas fa-home"></i>
+                Tableau de bord
+            </h1>
+            <p class="welcome-text">
+                Bonjour {{ current_user.full_name }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Section des enfants -->
+    <div class="children-section">
+        <div class="section-header">
+            <div class="section-title">
+                <h2>
+                    <i class="fas fa-users"></i>
+                    Mes enfants ({{ children|length }})
+                </h2>
+            </div>
+            <div class="section-actions">
+                <a href="{{ url_for('parent_auth.add_child') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-user-plus"></i>
+                    Ajouter un enfant
+                </a>
+            </div>
+        </div>
+
+        {% if children %}
+            <div class="children-grid">
+                {% for student, parent_child in children %}
+                    <div class="child-card">
+                        <div class="child-header">
+                            <div class="child-avatar">
+                                <i class="fas fa-user-graduate"></i>
+                            </div>
+                            <div class="child-info">
+                                <h3>{{ student.first_name }} {{ student.last_name }}</h3>
+                                <span class="child-class">
+                                    {{ student.classroom.name if student.classroom else 'Classe non définie' }}
+                                    {% if student.classroom and student.classroom.teacher %}
+                                        <br><small>Enseignant : {{ student.classroom.teacher.username }}</small>
+                                    {% endif %}
+                                </span>
+                                <span class="relationship-badge relationship-{{ parent_child.relationship }}">
+                                    {% if parent_child.relationship == 'mother' %}
+                                        <i class="fas fa-heart"></i> Mère
+                                    {% elif parent_child.relationship == 'father' %}
+                                        <i class="fas fa-heart"></i> Père
+                                    {% else %}
+                                        <i class="fas fa-heart"></i> Parent
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="child-quick-stats">
+                            <button class="stat-button" onclick="showChildInfo({{ student.id }}, 'attendance')">
+                                <i class="fas fa-calendar-check text-success"></i>
+                                <span>Présences</span>
+                            </button>
+                            <button class="stat-button" onclick="showChildInfo({{ student.id }}, 'grades')">
+                                <i class="fas fa-star text-warning"></i>
+                                <span>Notes</span>
+                            </button>
+                            <button class="stat-button" onclick="showChildInfo({{ student.id }}, 'sanctions')">
+                                <i class="fas fa-exclamation-triangle text-danger"></i>
+                                <span>Coches</span>
+                            </button>
+                            <button class="stat-button" onclick="showChildTeachers({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')">
+                                <i class="fas fa-chalkboard-teacher text-info"></i>
+                                <span>Enseignants</span>
+                            </button>
+                        </div>
+                        
+                        <div class="child-actions">
+                            <button class="btn btn-primary btn-sm" onclick="showJustifyAbsence({{ student.id }})">
+                                <i class="fas fa-file-medical"></i>
+                                Justifier une absence
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-user-friends"></i>
+                </div>
+                <h3>Aucun enfant trouvé</h3>
+                <p>
+                    Aucun enfant n'a été automatiquement lié à votre compte.<br>
+                    Veuillez vérifier que votre email correspond à celui du dossier scolaire,<br>
+                    ou contactez l'enseignant pour résoudre ce problème.
+                </p>
+                <div class="empty-actions">
+                    <a href="{{ url_for('parent_auth.link_teacher') }}" class="btn btn-primary">
+                        <i class="fas fa-link"></i>
+                        Réessayer la liaison
+                    </a>
+                    <a href="{{ url_for('parent_auth.add_child') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-user-plus"></i>
+                        Ajouter un enfant
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Section des justifications d'absence -->
+    {% if justifications %}
+    <div class="justifications-section">
+        <div class="section-header">
+            <h2>
+                <i class="fas fa-file-medical"></i>
+                Mes justifications d'absence
+            </h2>
+        </div>
+        
+        <div class="justifications-list">
+            {% for justification in justifications %}
+                <div class="justification-card">
+                    <div class="justification-header">
+                        <div class="justification-info">
+                            <h4>{{ justification.student.first_name }} {{ justification.student.last_name }}</h4>
+                            <span class="justification-date">{{ justification.absence_date.strftime('%d/%m/%Y') }}</span>
+                        </div>
+                        <div class="justification-status">
+                            <span class="status-badge status-{{ justification.status }}">
+                                {% if justification.status == 'pending' %}
+                                    <i class="fas fa-clock"></i> En attente
+                                {% elif justification.status == 'approved' %}
+                                    <i class="fas fa-check"></i> Approuvée
+                                {% elif justification.status == 'rejected' %}
+                                    <i class="fas fa-times"></i> Refusée
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="justification-details">
+                        <div class="justification-periods">
+                            <strong>Périodes :</strong>
+                            {% set periods = justification.get_periods_list() %}
+                            {% if periods %}
+                                {% for period in periods %}
+                                    <span class="period-tag">P{{ period.period }}</span>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="justification-reason">
+                            <strong>Motif :</strong>
+                            {% if justification.reason_type == 'maladie' %}
+                                Maladie/Accident
+                            {% elif justification.reason_type == 'medecin' %}
+                                Rendez-vous de médecin
+                            {% elif justification.reason_type == 'transport' %}
+                                Problème de transport
+                            {% elif justification.reason_type == 'conge_joker' %}
+                                Congé joker
+                            {% elif justification.reason_type == 'dispense' %}
+                                Dispense - {{ justification.dispense_subject }}
+                            {% elif justification.reason_type == 'autre' %}
+                                Autre - {{ justification.other_reason_text }}
+                            {% endif %}
+                        </div>
+                        
+                        {% if justification.teacher_response %}
+                        <div class="teacher-note">
+                            <strong>Note de l'enseignant :</strong>
+                            <p>{{ justification.teacher_response }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="justification-meta">
+                            <small class="text-muted">
+                                Soumis le {{ justification.created_at.strftime('%d/%m/%Y à %H:%M') }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Section des informations utiles -->
+    <div class="info-section">
+        <div class="info-card">
+            <h3>
+                <i class="fas fa-info-circle"></i>
+                Informations importantes
+            </h3>
+            <ul>
+                <li>Les données sont mises à jour en temps réel par l'enseignant</li>
+                <li>Vous recevrez des notifications pour les événements importants</li>
+                <li>En cas de problème, contactez directement l'enseignant</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Panel d'information détaillée -->
+    <div id="info-panel" class="info-panel">
+        <div class="info-panel-header">
+            <h3 id="info-panel-title">Informations</h3>
+            <button class="btn-close-panel" onclick="closeInfoPanel()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="info-panel-content" class="info-panel-content">
+            <!-- Le contenu sera chargé dynamiquement -->
+        </div>
+    </div>
+
+    <!-- Panel des enseignants -->
+    <div id="teachers-panel" class="info-panel">
+        <div class="info-panel-header">
+            <h3 id="teachers-panel-title">Enseignants</h3>
+            <button class="btn-close-panel" onclick="closeTeachersPanel()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="teachers-panel-content" class="info-panel-content">
+            <!-- Le contenu sera chargé dynamiquement -->
+        </div>
+    </div>
+</div>
+
+<style>
+:root {
+    --primary-color: #4a90e2;
+    --primary-dark: #357abd;
+    --secondary-color: #5bc0de;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+    --white: #ffffff;
+    --light-gray: #f8f9fa;
+    --gray-color: #6c757d;
+    --border-color: #dee2e6;
+    --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+}
+
+.parent-dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.dashboard-header {
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.header-content h1 {
+    margin: 0;
+    color: var(--dark-color);
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.header-content h1 i {
+    color: var(--primary-color);
+    margin-right: 0.5rem;
+}
+
+.welcome-text {
+    margin: 0.5rem 0 0 0;
+    color: var(--gray-color);
+    font-size: 1.1rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.section-title h2 {
+    margin: 0;
+    color: var(--dark-color);
+    font-size: 1.8rem;
+    font-weight: 600;
+}
+
+.section-title h2 i {
+    color: var(--primary-color);
+    margin-right: 0.5rem;
+}
+
+.section-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn-outline-primary {
+    background: transparent;
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background: var(--primary-color);
+    color: white;
+    text-decoration: none;
+}
+
+.children-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.child-card {
+    background: var(--white);
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.child-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.child-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.child-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+}
+
+.child-avatar i {
+    font-size: 1.5rem;
+    color: white;
+}
+
+.child-info h3 {
+    margin: 0 0 0.25rem 0;
+    color: var(--dark-color);
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.child-class {
+    color: var(--gray-color);
+    font-size: 0.9rem;
+    display: block;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+
+.child-class small {
+    color: var(--primary-color);
+    font-weight: 500;
+    font-size: 0.8rem;
+}
+
+.relationship-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.relationship-mother {
+    background-color: #fce4ec;
+    color: #ad1457;
+}
+
+.relationship-father {
+    background-color: #e3f2fd;
+    color: #1565c0;
+}
+
+.relationship-parent {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.child-quick-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-button {
+    text-align: center;
+    padding: 1rem;
+    background: var(--light-gray);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.stat-button:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.stat-button i {
+    font-size: 1.5rem;
+}
+
+.stat-button span {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.child-actions {
+    text-align: center;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--gray-color);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    color: var(--dark-color);
+    margin-bottom: 1rem;
+}
+
+.empty-state p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+.empty-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.info-section {
+    margin-top: 3rem;
+}
+
+.info-card {
+    background: var(--white);
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.info-card h3 {
+    margin: 0 0 1rem 0;
+    color: var(--dark-color);
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.info-card h3 i {
+    color: var(--primary-color);
+    margin-right: 0.5rem;
+}
+
+.info-card ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.info-card li {
+    margin-bottom: 0.5rem;
+    color: var(--gray-color);
+}
+
+.text-success { color: #28a745; }
+.text-warning { color: #ffc107; }
+.text-danger { color: #dc3545; }
+.text-info { color: #17a2b8; }
+
+/* Panel d'information */
+.info-panel {
+    position: fixed;
+    top: 0;
+    right: -600px;
+    width: 600px;
+    height: 100vh;
+    background: var(--white);
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+    transition: right 0.3s ease;
+    z-index: 1000;
+    overflow-y: auto;
+    display: none; /* Caché par défaut */
+}
+
+.info-panel.show {
+    right: 0;
+}
+
+.info-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--light-gray);
+}
+
+.info-panel-header h3 {
+    margin: 0;
+    color: var(--dark-color);
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.btn-close-panel {
+    background: none;
+    border: none;
+    color: var(--gray-color);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.btn-close-panel:hover {
+    background: var(--white);
+    color: var(--danger-color);
+}
+
+.info-panel-content {
+    padding: 2rem;
+}
+
+/* Formulaire de justification */
+.justify-form {
+    max-width: 500px;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--dark-color);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.periods-container {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    background: var(--light-gray);
+}
+
+.quick-select-options {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.periods-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+}
+
+.checkbox-label:hover {
+    background-color: rgba(74, 144, 226, 0.1);
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.checkbox-label span {
+    font-size: 0.9rem;
+    color: var(--dark-color);
+}
+
+.period-item {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 0.5rem;
+    align-items: end;
+    margin-bottom: 0.5rem;
+}
+
+.btn-add-period {
+    background: var(--success-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    margin-top: 0.5rem;
+}
+
+.btn-remove-period {
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: var(--gray-color);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: var(--dark-color);
+}
+
+.loading, .error {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-color);
+    font-style: italic;
+}
+
+.error {
+    color: var(--danger-color);
+}
+
+.form-text {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+    margin-top: 0.25rem;
+}
+
+/* Styles pour l'affichage des données */
+.info-content h4 {
+    margin: 0 0 1.5rem 0;
+    color: var(--dark-color);
+    font-size: 1.25rem;
+    font-weight: 600;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.empty-state-small {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-color);
+}
+
+.empty-state-small i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.info-message {
+    background: var(--light-gray);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    text-align: center;
+    border-left: 4px solid var(--primary-color);
+}
+
+.info-message i {
+    color: var(--primary-color);
+    margin-right: 0.5rem;
+}
+
+/* Présences */
+.attendance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.attendance-item {
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.attendance-date {
+    font-weight: 600;
+    color: var(--dark-color);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.attendance-date i {
+    color: var(--primary-color);
+}
+
+.attendance-periods {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.period-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background: var(--light-gray);
+    border-radius: 0.25rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.period-info {
+    font-weight: 500;
+    color: var(--dark-color);
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-badge.present {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-badge.absent {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.status-badge.late {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.period-note {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+    font-style: italic;
+    width: 100%;
+    margin-top: 0.25rem;
+}
+
+.general-note {
+    background: var(--light-gray);
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    border-left: 3px solid var(--primary-color);
+}
+
+.no-periods {
+    color: var(--gray-color);
+    font-style: italic;
+    text-align: center;
+    padding: 1rem;
+}
+
+/* Sanctions */
+.sanctions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.sanction-item {
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--danger-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.sanction-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.sanction-date {
+    font-weight: 600;
+    color: var(--dark-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sanction-date i {
+    color: var(--danger-color);
+}
+
+.sanction-count {
+    background: var(--danger-color);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.sanction-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sanction-type {
+    color: var(--danger-color);
+    font-size: 1rem;
+}
+
+.sanction-description {
+    color: var(--gray-color);
+    font-size: 0.875rem;
+}
+
+.sanction-reason {
+    color: var(--gray-color);
+    font-size: 0.875rem;
+    background: var(--light-gray);
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+}
+
+/* Styles pour les justifications d'absence */
+.justifications-section {
+    margin: 3rem 0;
+}
+
+.justifications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.justification-card {
+    background: var(--white);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.justification-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.justification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.justification-info h4 {
+    margin: 0 0 0.25rem 0;
+    color: var(--dark-color);
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.justification-date {
+    color: var(--gray-color);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.justification-status .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.status-badge.status-pending {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.status-badge.status-approved {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-badge.status-rejected {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.justification-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.justification-periods {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.period-tag {
+    display: inline-block;
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.justification-reason,
+.teacher-note {
+    color: var(--dark-color);
+}
+
+.teacher-note {
+    background: var(--light-gray);
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border-left: 3px solid var(--info-color);
+}
+
+.teacher-note p {
+    margin: 0.5rem 0 0 0;
+    color: var(--gray-color);
+    font-style: italic;
+}
+
+.justification-meta {
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.text-muted {
+    color: var(--gray-color);
+}
+
+/* Styles pour les notes - Tableau */
+.grades-table-container {
+    margin-top: 1rem;
+}
+
+.subject-table-section {
+    margin-bottom: 2rem;
+}
+
+.subject-title {
+    margin: 0 0 1rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #374151;
+    padding: 0.5rem 0;
+    border-bottom: 2px solid #3b82f6;
+}
+
+.evaluations-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+}
+
+.evaluations-table th {
+    background: #f8fafc;
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    position: relative;
+    vertical-align: middle;
+}
+
+.evaluations-table td {
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    border: 1px solid #e5e7eb;
+    background: white;
+    font-size: 0.875rem;
+}
+
+.student-column {
+    background: #1f2937 !important;
+    color: white !important;
+    font-weight: 600;
+    min-width: 120px;
+}
+
+.student-name-cell {
+    background: #1f2937 !important;
+    color: white !important;
+    font-weight: 600;
+    text-align: left !important;
+    padding-left: 1rem !important;
+}
+
+.eval-column {
+    min-width: 80px;
+    max-width: 120px;
+    background: #f1f5f9;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+.eval-column:hover {
+    background: #e2e8f0;
+}
+
+.ta-column {
+    background: #f3e8ff !important;
+    color: #7c3aed !important;
+    cursor: pointer;
+    border: 2px solid #c4b5fd;
+    position: relative;
+}
+
+.ta-column:hover {
+    background: #e9d5ff !important;
+}
+
+.ta-individual-column {
+    background: #faf5ff !important;
+    border: 1px solid #d8b4fe;
+    font-size: 0.7rem;
+    min-width: 60px;
+}
+
+.ta-group-title {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.expand-icon {
+    font-size: 0.75rem;
+    color: #7c3aed;
+}
+
+.grade-cell {
+    font-weight: 600;
+    color: #1f2937;
+    background: white;
+}
+
+.ta-group-cell {
+    background: #f3e8ff;
+    color: #7c3aed;
+    font-weight: 700;
+}
+
+.ta-individual-cell {
+    background: #faf5ff;
+    font-size: 0.8rem;
+}
+
+.average-column {
+    background: #059669 !important;
+    color: white !important;
+    font-weight: 600;
+    min-width: 100px;
+}
+
+.average-cell {
+    background: #d1fae5 !important;
+    padding: 0.5rem !important;
+}
+
+.averages-display {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    text-align: center;
+}
+
+.avg-general {
+    font-weight: 700;
+    color: #059669;
+    font-size: 0.875rem;
+}
+
+.avg-sig {
+    font-size: 0.75rem;
+    color: #7c2d12;
+    font-weight: 500;
+}
+
+.avg-ta {
+    font-size: 0.75rem;
+    color: #7c3aed;
+    font-weight: 500;
+}
+
+/* Tableau unifié des notes */
+.unified-grades-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+}
+
+.unified-grades-table th {
+    background: #f8fafc;
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    vertical-align: middle;
+}
+
+.unified-grades-table td {
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    border: 1px solid #e5e7eb;
+    background: white;
+    font-size: 0.875rem;
+}
+
+.subject-column {
+    background: var(--primary-color) !important;
+    color: white !important;
+    font-weight: 600;
+    min-width: 120px;
+}
+
+.subject-name {
+    background: var(--primary-color) !important;
+    color: white !important;
+    font-weight: 600;
+    text-align: left !important;
+    padding-left: 1rem !important;
+}
+
+.grade-column {
+    min-width: 80px;
+    max-width: 120px;
+    background: #f1f5f9;
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+.grade-column.ta-eval {
+    background: #f3e8ff !important;
+    color: #7c3aed !important;
+    border: 2px solid #c4b5fd;
+}
+
+.grade-column.sig-eval {
+    background: #f1f5f9 !important;
+    color: #374151 !important;
+}
+
+.ta-grade {
+    background: #faf5ff !important;
+    color: #7c3aed !important;
+    font-weight: 600;
+}
+
+.sig-grade {
+    background: white !important;
+    color: #1f2937 !important;
+    font-weight: 600;
+}
+
+.grade-cell.empty {
+    background: #f9fafb !important;
+    color: #9ca3af !important;
+    font-style: italic;
+}
+
+.average-column {
+    background: #059669 !important;
+    color: white !important;
+    font-weight: 600;
+    min-width: 100px;
+}
+
+.average-cell {
+    background: #d1fae5 !important;
+    color: #059669 !important;
+    font-weight: 700 !important;
+    padding: 0.5rem !important;
+}
+
+/* Codes couleur pour les notes */
+.grade-cell[data-grade="excellent"] {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.grade-cell[data-grade="good"] {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.grade-cell[data-grade="average"] {
+    background: #fed7aa;
+    color: #c2410c;
+}
+
+.grade-cell[data-grade="poor"] {
+    background: #fecaca;
+    color: #dc2626;
+}
+
+/* Styles pour les sanctions */
+.sanctions-summary {
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: center;
+}
+
+.total-checks-card {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    border: 2px solid #ef4444;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    text-align: center;
+    min-width: 150px;
+}
+
+.checks-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #dc2626;
+}
+
+.checks-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #7f1d1d;
+    text-transform: uppercase;
+}
+
+.sanctions-by-subject {
+    margin-bottom: 1.5rem;
+}
+
+.sanctions-by-subject h5,
+.sanctions-history h5 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.5rem;
+}
+
+.sanctions-tabs {
+    margin-top: 1rem;
+}
+
+.sanctions-tabs .nav-tabs {
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 1rem;
+}
+
+.sanctions-tabs .nav-link {
+    color: #6b7280;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+}
+
+.sanctions-tabs .nav-link.active {
+    color: #ef4444;
+    background: none;
+    border-bottom-color: #ef4444;
+}
+
+.subject-sanctions {
+    padding: 1rem 0;
+}
+
+.subject-total {
+    background: #fef2f2;
+    border-left: 4px solid #ef4444;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0 0.5rem 0.5rem 0;
+    color: #7f1d1d;
+}
+
+.templates-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.template-item {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    display: flex;
+    justify-content: between;
+    align-items: center;
+}
+
+.template-name {
+    font-weight: 500;
+    color: #374151;
+    flex-grow: 1;
+}
+
+.template-count {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.check-count {
+    background: #dc2626;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: 600;
+    min-width: 2rem;
+    text-align: center;
+}
+
+.check-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.sanctions-history {
+    margin-top: 1.5rem;
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.history-item {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #f59e0b;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #fffbeb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.history-date {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: #92400e;
+}
+
+.history-subject {
+    background: #f59e0b;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.history-content {
+    padding: 1rem;
+}
+
+.history-type {
+    margin-bottom: 0.5rem;
+    color: #374151;
+}
+
+.history-description {
+    margin-bottom: 0.5rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.history-reason {
+    margin-bottom: 0.5rem;
+    color: #6b7280;
+    font-style: italic;
+    font-size: 0.875rem;
+}
+
+.history-meta {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    border-top: 1px solid #f3f4f6;
+    padding-top: 0.5rem;
+}
+
+.teachers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.teacher-item {
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    transition: box-shadow 0.2s;
+}
+
+.teacher-item:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.teacher-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.teacher-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    margin-right: 1rem;
+}
+
+.teacher-info h4 {
+    margin: 0 0 0.25rem 0;
+    color: var(--dark-color);
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.teacher-role {
+    background-color: #e3f2fd;
+    color: #1565c0;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.teacher-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.teacher-detail {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.teacher-detail i {
+    color: var(--primary-color);
+    width: 16px;
+    text-align: center;
+}
+
+.teacher-detail span {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+}
+
+.teacher-email {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.teacher-email:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .parent-dashboard {
+        padding: 1rem;
+    }
+    
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .children-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .child-quick-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .teacher-details {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+let currentStudentId = null;
+
+function showChildInfo(studentId, type) {
+    console.log('showChildInfo called:', studentId, type);
+    currentStudentId = studentId;
+    const panel = document.getElementById('info-panel');
+    const title = document.getElementById('info-panel-title');
+    const content = document.getElementById('info-panel-content');
+    
+    console.log('Panel element:', panel);
+    console.log('Title element:', title);
+    console.log('Content element:', content);
+    
+    // Définir le titre selon le type
+    const titles = {
+        'attendance': 'Absences et Retards',
+        'grades': 'Notes et Évaluations',
+        'sanctions': 'Coches par matière'
+    };
+    
+    title.textContent = titles[type] || 'Informations';
+    
+    // Afficher le panel
+    console.log('Adding show class to panel');
+    panel.classList.add('show');
+    panel.style.display = 'block'; // Force l'affichage
+    console.log('Panel classes after adding show:', panel.className);
+    
+    // Charger le contenu
+    content.innerHTML = '<div class="loading">Chargement...</div>';
+    
+    // Fetch des données (à implémenter côté serveur)
+    fetch(`/parent/student/${studentId}/${type}`, {
+        method: 'GET',
+        credentials: 'same-origin',  // Important pour inclure les cookies de session
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Data received:', data);
+            content.innerHTML = renderChildInfo(data, type);
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+            content.innerHTML = '<div class="error">Erreur lors du chargement des données</div>';
+        });
+}
+
+function showJustifyAbsence(studentId) {
+    console.log('showJustifyAbsence called:', studentId);
+    currentStudentId = studentId;
+    const panel = document.getElementById('info-panel');
+    const title = document.getElementById('info-panel-title');
+    const content = document.getElementById('info-panel-content');
+    
+    console.log('Panel element for justification:', panel);
+    
+    title.textContent = 'Justifier une absence';
+    
+    // Afficher un loader pendant le chargement des périodes
+    content.innerHTML = '<div class="loading">Chargement des périodes...</div>';
+    panel.classList.add('show');
+    panel.style.display = 'block';
+    
+    // Charger les périodes de l'enseignant
+    fetch(`/parent/teacher-periods/${studentId}`, {
+        method: 'GET',
+        credentials: 'same-origin',  // Important pour inclure les cookies de session
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
+            console.log('Response URL:', response.url);
+            
+            // Si c'est une redirection vers login, c'est un problème de session
+            if (response.status === 302 || response.url.includes('/auth/login')) {
+                throw new Error('Session expirée. Veuillez vous reconnecter.');
+            }
+            
+            if (!response.ok) {
+                return response.text().then(text => {
+                    console.error('Response error text:', text);
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${text}`);
+                });
+            }
+            
+            return response.json();
+        })
+        .then(data => {
+            console.log('Periods data received:', data);
+            
+            if (data.error) {
+                content.innerHTML = `<div class="error">Erreur: ${data.error}</div>`;
+                return;
+            }
+            
+            const periods = data.periods || [];
+            renderJustifyAbsenceForm(content, periods);
+        })
+        .catch(error => {
+            console.error('Error fetching periods:', error);
+            content.innerHTML = `<div class="error">Erreur lors du chargement des périodes: ${error.message}</div>`;
+        });
+}
+
+function renderJustifyAbsenceForm(content, periods) {
+    // Créer les options de périodes dynamiquement
+    let morningPeriods = periods.filter(p => p.is_morning);
+    let afternoonPeriods = periods.filter(p => !p.is_morning);
+    
+    let periodsHTML = '';
+    periods.forEach(period => {
+        const periodClass = period.is_morning ? 'morning' : 'afternoon';
+        periodsHTML += `
+            <label class="checkbox-label">
+                <input type="checkbox" name="periods[]" value="${period.period_number}" 
+                       data-time="${period.start_time}-${period.end_time}" 
+                       class="period-checkbox ${periodClass}">
+                <span>Période ${period.period_number} (${period.start_time}-${period.end_time})</span>
+            </label>
+        `;
+    });
+    
+    content.innerHTML = `
+        <form class="justify-form" onsubmit="submitJustification(event)">
+            <div class="form-group">
+                <label class="form-label">Date de l'absence</label>
+                <input type="date" name="absence_date" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Périodes concernées</label>
+                <div class="periods-container">
+                    <div class="quick-select-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="all_day" id="all_day" onchange="toggleAllPeriods(this)">
+                            <span>Toute la journée</span>
+                        </label>
+                        ${morningPeriods.length > 0 ? `
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="all_morning" id="all_morning" onchange="toggleMorningPeriods(this)">
+                            <span>Tout le matin</span>
+                        </label>
+                        ` : ''}
+                        ${afternoonPeriods.length > 0 ? `
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="all_afternoon" id="all_afternoon" onchange="toggleAfternoonPeriods(this)">
+                            <span>Tout l'après-midi</span>
+                        </label>
+                        ` : ''}
+                    </div>
+                    <div class="periods-list" id="periods-list">
+                        ${periodsHTML}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Motif de l'absence</label>
+                <select name="reason" class="form-control" onchange="handleReasonChange(this)" required>
+                    <option value="">-- Sélectionner un motif --</option>
+                    <option value="maladie">Maladie/Accident</option>
+                    <option value="medecin">Rendez-vous de médecin</option>
+                    <option value="transport">Problème de transport</option>
+                    <option value="conge_joker">Congé joker</option>
+                    <option value="dispense">Dispense</option>
+                    <option value="autre">Autre</option>
+                </select>
+            </div>
+            
+            <div id="dispense-fields" class="form-group" style="display: none;">
+                <label class="form-label">Discipline dispensée</label>
+                <input type="text" name="dispense_subject" class="form-control" placeholder="Ex: Sport, Musique...">
+                
+                <div class="form-row" style="margin-top: 1rem;">
+                    <div>
+                        <label class="form-label">Date de début de dispense</label>
+                        <input type="date" name="dispense_start" class="form-control">
+                    </div>
+                    <div>
+                        <label class="form-label">Date de fin de dispense</label>
+                        <input type="date" name="dispense_end" class="form-control">
+                    </div>
+                </div>
+            </div>
+            
+            <div id="other-reason" class="form-group" style="display: none;">
+                <label class="form-label">Préciser le motif</label>
+                <textarea name="other_reason_text" class="form-control" rows="3" placeholder="Veuillez préciser le motif de l'absence..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Justificatif (optionnel)</label>
+                <input type="file" name="justification_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                <small class="form-text text-muted">Formats acceptés : PDF, JPG, PNG</small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i>
+                    Envoyer la justification
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="closeInfoPanel()">
+                    Annuler
+                </button>
+            </div>
+        </form>
+    `;
+}
+
+function closeInfoPanel() {
+    const panel = document.getElementById('info-panel');
+    panel.classList.remove('show');
+    setTimeout(() => {
+        panel.style.display = 'none';
+    }, 300); // Attendre la fin de la transition
+}
+
+function toggleAllPeriods(checkbox) {
+    const periodCheckboxes = document.querySelectorAll('.period-checkbox');
+    const morningCheckbox = document.getElementById('all_morning');
+    const afternoonCheckbox = document.getElementById('all_afternoon');
+    
+    periodCheckboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    
+    if (checkbox.checked) {
+        morningCheckbox.checked = true;
+        afternoonCheckbox.checked = true;
+    }
+}
+
+function toggleMorningPeriods(checkbox) {
+    const morningCheckboxes = document.querySelectorAll('.period-checkbox.morning');
+    const allDayCheckbox = document.getElementById('all_day');
+    const afternoonCheckbox = document.getElementById('all_afternoon');
+    
+    morningCheckboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    
+    // Si matin et après-midi sont cochés, cocher "toute la journée"
+    if (checkbox.checked && afternoonCheckbox.checked) {
+        allDayCheckbox.checked = true;
+    } else {
+        allDayCheckbox.checked = false;
+    }
+}
+
+function toggleAfternoonPeriods(checkbox) {
+    const afternoonCheckboxes = document.querySelectorAll('.period-checkbox.afternoon');
+    const allDayCheckbox = document.getElementById('all_day');
+    const morningCheckbox = document.getElementById('all_morning');
+    
+    afternoonCheckboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    
+    // Si matin et après-midi sont cochés, cocher "toute la journée"
+    if (checkbox.checked && morningCheckbox.checked) {
+        allDayCheckbox.checked = true;
+    } else {
+        allDayCheckbox.checked = false;
+    }
+}
+
+function handleReasonChange(select) {
+    const dispenseFields = document.getElementById('dispense-fields');
+    const otherReason = document.getElementById('other-reason');
+    
+    // Réinitialiser
+    dispenseFields.style.display = 'none';
+    otherReason.style.display = 'none';
+    
+    if (select.value === 'dispense') {
+        dispenseFields.style.display = 'block';
+    } else if (select.value === 'autre') {
+        otherReason.style.display = 'block';
+    }
+}
+
+function submitJustification(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    formData.append('student_id', currentStudentId);
+    
+    // Vérifier qu'au moins une période est sélectionnée
+    const checkedPeriods = document.querySelectorAll('input[name="periods[]"]:checked');
+    if (checkedPeriods.length === 0) {
+        alert('Veuillez sélectionner au moins une période');
+        return;
+    }
+    
+    // Envoyer la justification
+    fetch('/parent/justify-absence', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Justification envoyée avec succès !');
+            closeInfoPanel();
+        } else {
+            alert('Erreur : ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Erreur lors de l\'envoi de la justification');
+    });
+}
+
+function renderChildInfo(data, type) {
+    if (data.error) {
+        return `<div class="error">${data.error}</div>`;
+    }
+    
+    const studentName = data.student_name || 'Élève';
+    
+    switch (type) {
+        case 'attendance':
+            return renderAttendanceInfo(data, studentName);
+        case 'grades':
+            return renderGradesInfo(data, studentName);
+        case 'sanctions':
+            return renderSanctionsInfo(data, studentName);
+        default:
+            return `<div>Type de données non reconnu: ${type}</div>`;
+    }
+}
+
+function renderAttendanceInfo(data, studentName) {
+    const attendanceData = data.attendance_data || [];
+    
+    if (attendanceData.length === 0) {
+        return `
+            <div class="info-content">
+                <h4>${studentName}</h4>
+                <div class="empty-state-small">
+                    <i class="fas fa-calendar-check"></i>
+                    <p>Aucune absence ou retard enregistré</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    let html = `
+        <div class="info-content">
+            <h4>${studentName} - Absences et Retards</h4>
+            <div class="attendance-list">
+    `;
+    
+    attendanceData.forEach(attendance => {
+        html += `
+            <div class="attendance-item">
+                <div class="attendance-date">
+                    <i class="fas fa-calendar"></i>
+                    ${attendance.date}
+                </div>
+                <div class="attendance-periods">
+        `;
+        
+        if (attendance.periods && attendance.periods.length > 0) {
+            attendance.periods.forEach(period => {
+                const statusIcon = period.status === 'present' ? 'fas fa-check text-success' : 
+                                 period.status === 'absent' ? 'fas fa-times text-danger' : 
+                                 'fas fa-clock text-warning';
+                const statusText = period.status === 'present' ? 'Présent' : 
+                                 period.status === 'absent' ? 'Absent' : 'Retard';
+                
+                html += `
+                    <div class="period-status">
+                        <span class="period-info">Période ${period.period}</span>
+                        <span class="status-badge ${period.status}">
+                            <i class="${statusIcon}"></i> ${statusText}
+                        </span>
+                        ${period.late_minutes ? `<small>Retard: ${period.late_minutes} min</small>` : ''}
+                        ${period.note ? `<div class="period-note">${period.note}</div>` : ''}
+                    </div>
+                `;
+            });
+        } else {
+            html += '<div class="no-periods">Aucune donnée de période</div>';
+        }
+        
+        html += `
+                </div>
+                ${attendance.general_note ? `<div class="general-note"><strong>Note:</strong> ${attendance.general_note}</div>` : ''}
+            </div>
+        `;
+    });
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    return html;
+}
+
+function renderGradesInfo(data, studentName) {
+    const subjectsData = data.subjects_data || {};
+    const allEvaluations = data.all_evaluations || [];
+    const hasGrades = data.has_grades || false;
+    
+    if (!hasGrades) {
+        return `
+            <div class="info-content">
+                <h4>${studentName} - Notes et Évaluations</h4>
+                <div class="empty-state-small">
+                    <i class="fas fa-chart-line"></i>
+                    <p>Aucune note disponible</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    return `
+        <div class="info-content">
+            <h4>${studentName} - Notes et Évaluations</h4>
+            <div class="grades-table-container">
+                ${renderUnifiedGradesTable(subjectsData, allEvaluations)}
+            </div>
+        </div>
+    `;
+}
+
+function renderUnifiedGradesTable(subjectsData, allEvaluations) {
+    const subjects = Object.keys(subjectsData);
+    
+    if (subjects.length === 0) {
+        return '<p>Aucune note disponible</p>';
+    }
+    
+    // Organiser les notes par discipline et par ordre chronologique
+    const organizedData = {};
+    subjects.forEach(subject => {
+        const subjectData = subjectsData[subject];
+        const grades = subjectData.grades || {};
+        
+        // Récupérer les évaluations de cette discipline triées par date
+        const subjectEvaluations = allEvaluations
+            .filter(eval => eval.subject === subject)
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        organizedData[subject] = {
+            ...subjectData,
+            evaluations: subjectEvaluations,
+            gradesList: subjectEvaluations.map(eval => ({
+                value: grades[eval.id] || null,
+                type: eval.type
+            }))
+        };
+    });
+    
+    // Déterminer le nombre maximum de notes par discipline
+    const maxGrades = Math.max(...subjects.map(subject => organizedData[subject].gradesList.length));
+    
+    // Créer l'en-tête du tableau
+    let html = `
+        <table class="unified-grades-table">
+            <thead>
+                <tr>
+                    <th class="subject-column">Discipline</th>
+    `;
+    
+    // Ajouter les colonnes de notes (Note 1, Note 2, etc.)
+    for (let i = 1; i <= maxGrades; i++) {
+        html += `<th class="grade-column">Note ${i}</th>`;
+    }
+    
+    // Ajouter la colonne moyenne
+    html += `<th class="average-column">Moyenne</th></tr></thead><tbody>`;
+    
+    // Ajouter une ligne pour chaque discipline
+    subjects.forEach(subject => {
+        const subjectData = organizedData[subject];
+        const averages = subjectData.averages || {};
+        
+        html += `
+            <tr>
+                <td class="subject-name">${subject}</td>
+        `;
+        
+        // Ajouter une cellule pour chaque position de note
+        for (let i = 0; i < maxGrades; i++) {
+            if (i < subjectData.gradesList.length) {
+                const gradeInfo = subjectData.gradesList[i];
+                if (gradeInfo.value !== null) {
+                    const evalType = gradeInfo.type === 'ta' ? 'ta-grade' : 'sig-grade';
+                    html += `<td class="grade-cell ${evalType}">${gradeInfo.value}</td>`;
+                } else {
+                    html += `<td class="grade-cell empty">-</td>`;
+                }
+            } else {
+                html += `<td class="grade-cell empty">-</td>`;
+            }
+        }
+        
+        // Ajouter la moyenne
+        const average = averages.general !== null ? averages.general : '-';
+        html += `<td class="average-cell">${average}</td></tr>`;
+    });
+    
+    html += `</tbody></table>`;
+    
+    return html;
+}
+
+function renderSubjectGradesTable(subjectData) {
+    const evaluations = subjectData.evaluations || [];
+    const studentGrades = subjectData.student_grades || {};
+    const grades = studentGrades.grades || {};
+    const averages = studentGrades.averages || {};
+    const taGroups = subjectData.ta_groups || {};
+    
+    // Organiser les évaluations pour l'affichage
+    const processedEvaluations = processEvaluationsForDisplay(evaluations, taGroups);
+    
+    let html = `
+        <div class="subject-table-section">
+            <h5 class="subject-title">${subjectData.subject_name}</h5>
+            <table class="evaluations-table">
+                <thead>
+                    <tr>
+                        <th class="student-column">Discipline</th>
+    `;
+    
+    // En-têtes des colonnes d'évaluations
+    processedEvaluations.forEach(evalItem => {
+        if (evalItem.type === 'ta_group') {
+            html += `<th class="eval-column ta-column" onclick="toggleTAGroup('${evalItem.groupName}', '${subjectData.subject_name}')">
+                        <span class="ta-group-title">${evalItem.groupName}</span>
+                        <i class="fas fa-plus-circle expand-icon" id="icon-${evalItem.groupName}-${subjectData.subject_name}"></i>
+                     </th>`;
+        } else if (evalItem.type === 'ta_individual') {
+            html += `<th class="eval-column ta-individual-column" style="display: none;" data-group="${evalItem.groupName}">
+                        ${evalItem.title}
+                     </th>`;
+        } else {
+            html += `<th class="eval-column">${evalItem.title}</th>`;
+        }
+    });
+    
+    // Colonne moyennes
+    html += `
+                        <th class="average-column">Moyennes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="student-row">
+                        <td class="student-name-cell">${subjectData.subject_name}</td>
+    `;
+    
+    // Cellules des notes
+    processedEvaluations.forEach(evalItem => {
+        if (evalItem.type === 'ta_group') {
+            // Calculer la moyenne du groupe TA
+            const groupGrades = evalItem.evaluations
+                .map(evalId => grades[evalId]?.note_swiss)
+                .filter(grade => grade !== null && grade !== undefined);
+            const groupAverage = groupGrades.length > 0 ? 
+                (groupGrades.reduce((sum, grade) => sum + grade, 0) / groupGrades.length).toFixed(2) : 
+                '-';
+            
+            html += `<td class="grade-cell ta-group-cell">${groupAverage}</td>`;
+        } else if (evalItem.type === 'ta_individual') {
+            const grade = grades[evalItem.id];
+            const gradeValue = grade?.note_swiss ? grade.note_swiss.toFixed(2) : '-';
+            html += `<td class="grade-cell ta-individual-cell" style="display: none;" data-group="${evalItem.groupName}">
+                        ${gradeValue}
+                     </td>`;
+        } else {
+            const grade = grades[evalItem.id];
+            const gradeValue = grade?.note_swiss ? grade.note_swiss.toFixed(2) : '-';
+            html += `<td class="grade-cell">${gradeValue}</td>`;
+        }
+    });
+    
+    // Cellule moyennes
+    html += `
+                        <td class="average-cell">
+                            <div class="averages-display">
+                                ${averages.general ? `<div class="avg-general">Gén: ${averages.general}</div>` : ''}
+                                ${averages.significatif ? `<div class="avg-sig">Sig: ${averages.significatif}</div>` : ''}
+                                ${averages.ta ? `<div class="avg-ta">TA: ${averages.ta}</div>` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    return html;
+}
+
+function processEvaluationsForDisplay(evaluations, taGroups) {
+    const processed = [];
+    const groupsAdded = new Set();
+    
+    evaluations.forEach(evaluation => {
+        if (evaluation.type === 'significatif') {
+            processed.push({
+                type: 'significatif',
+                id: evaluation.id,
+                title: evaluation.title,
+                date: evaluation.date
+            });
+        } else if (evaluation.type === 'ta' && evaluation.ta_group_name) {
+            const groupName = evaluation.ta_group_name;
+            
+            // Ajouter le groupe si pas encore ajouté
+            if (!groupsAdded.has(groupName)) {
+                processed.push({
+                    type: 'ta_group',
+                    groupName: groupName,
+                    evaluations: taGroups[groupName] || []
+                });
+                groupsAdded.add(groupName);
+            }
+            
+            // Ajouter l'évaluation individuelle (initialement cachée)
+            processed.push({
+                type: 'ta_individual',
+                id: evaluation.id,
+                title: evaluation.title,
+                groupName: groupName,
+                date: evaluation.date
+            });
+        }
+    });
+    
+    return processed;
+}
+
+function toggleTAGroup(groupName, subjectName) {
+    const iconId = `icon-${groupName}-${subjectName}`;
+    const icon = document.getElementById(iconId);
+    const isExpanded = icon.classList.contains('fa-minus-circle');
+    
+    // Trouver toutes les colonnes et cellules du groupe
+    const groupColumns = document.querySelectorAll(`th[data-group="${groupName}"]`);
+    const groupCells = document.querySelectorAll(`td[data-group="${groupName}"]`);
+    
+    if (isExpanded) {
+        // Contracter
+        icon.classList.remove('fa-minus-circle');
+        icon.classList.add('fa-plus-circle');
+        groupColumns.forEach(col => col.style.display = 'none');
+        groupCells.forEach(cell => cell.style.display = 'none');
+    } else {
+        // Étendre
+        icon.classList.remove('fa-plus-circle');
+        icon.classList.add('fa-minus-circle');
+        groupColumns.forEach(col => col.style.display = 'table-cell');
+        groupCells.forEach(cell => cell.style.display = 'table-cell');
+    }
+}
+
+function renderSanctionsInfo(data, studentName) {
+    const sanctionsBySubject = data.sanctions_by_subject || {};
+    const totalChecks = data.total_checks || 0;
+    const hasSanctions = data.has_sanctions || false;
+    
+    if (!hasSanctions) {
+        return `
+            <div class="info-content">
+                <h4>${studentName} - Coches par matière</h4>
+                <div class="empty-state-small">
+                    <i class="fas fa-smile text-success"></i>
+                    <p>Aucune coche enregistrée</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    let html = `
+        <div class="info-content">
+            <h4>${studentName} - Coches par matière</h4>
+            
+            <!-- Résumé global -->
+            <div class="sanctions-summary">
+                <div class="total-checks-card">
+                    <div class="checks-number">${totalChecks}</div>
+                    <div class="checks-label">Coches au total</div>
+                </div>
+            </div>
+    `;
+    
+    // Affichage des coches par discipline
+    if (Object.keys(sanctionsBySubject).length > 0) {
+        const subjects = Object.keys(sanctionsBySubject);
+        
+        html += `
+            <div class="sanctions-by-subject">
+                <h5>Coches par discipline</h5>
+        `;
+        
+        // Onglets si plusieurs disciplines
+        if (subjects.length > 1) {
+            html += `
+                <div class="sanctions-tabs">
+                    <ul class="nav nav-tabs" id="sanctionsTabs" role="tablist">
+            `;
+            
+            subjects.forEach((subject, index) => {
+                const isActive = index === 0 ? 'active' : '';
+                const tabId = `sanctions-${subject.replace(/\s+/g, '-').toLowerCase()}`;
+                html += `
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link ${isActive}" id="${tabId}-tab" data-bs-toggle="tab" 
+                                data-bs-target="#${tabId}" type="button" role="tab">
+                            ${subject} (${sanctionsBySubject[subject].total_checks})
+                        </button>
+                    </li>
+                `;
+            });
+            
+            html += `
+                    </ul>
+                    <div class="tab-content" id="sanctionsTabContent">
+            `;
+            
+            subjects.forEach((subject, index) => {
+                const isActive = index === 0 ? 'show active' : '';
+                const tabId = `sanctions-${subject.replace(/\s+/g, '-').toLowerCase()}`;
+                const subjectData = sanctionsBySubject[subject];
+                
+                html += `
+                    <div class="tab-pane fade ${isActive}" id="${tabId}" role="tabpanel">
+                        ${renderSubjectSanctions(subjectData)}
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        } else {
+            // Une seule discipline
+            const firstSubject = subjects[0];
+            html += renderSubjectSanctions(sanctionsBySubject[firstSubject]);
+        }
+        
+        html += `</div>`;
+    }
+    
+    html += `
+        </div>
+    `;
+    
+    return html;
+}
+
+function renderSubjectSanctions(subjectData) {
+    let html = `
+        <div class="subject-sanctions">
+            <div class="subject-total">
+                <strong>${subjectData.total_checks} coches</strong> en ${subjectData.subject_name}
+            </div>
+            <div class="templates-list">
+    `;
+    
+    subjectData.templates.forEach(template => {
+        html += `
+            <div class="template-item">
+                <div class="template-name">${template.template_name}</div>
+                <div class="template-count">
+                    <span class="check-count">${template.check_count}</span>
+                    <span class="check-label">coche${template.check_count > 1 ? 's' : ''}</span>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    return html;
+}
+
+function showChildTeachers(studentId, studentName) {
+    console.log('showChildTeachers called:', studentId, studentName);
+    const panel = document.getElementById('teachers-panel');
+    const title = document.getElementById('teachers-panel-title');
+    const content = document.getElementById('teachers-panel-content');
+    
+    console.log('Teachers panel element:', panel);
+    
+    title.textContent = `Enseignants de ${studentName}`;
+    
+    // Afficher le panel
+    console.log('Adding show class to teachers panel');
+    panel.classList.add('show');
+    panel.style.display = 'block';
+    
+    // Charger le contenu
+    content.innerHTML = '<div class="loading">Chargement des enseignants...</div>';
+    
+    // Fetch des données des enseignants
+    fetch(`/parent/student/${studentId}/teachers`, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(response => {
+            console.log('Teachers response status:', response.status);
+            if (!response.ok) {
+                return response.text().then(text => {
+                    console.error('Teachers response error:', text);
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Teachers data received:', data);
+            content.innerHTML = renderTeachersInfo(data, studentName);
+        })
+        .catch(error => {
+            console.error('Error fetching teachers:', error);
+            content.innerHTML = '<div class="error">Erreur lors du chargement des enseignants</div>';
+        });
+}
+
+function closeTeachersPanel() {
+    const panel = document.getElementById('teachers-panel');
+    panel.classList.remove('show');
+    setTimeout(() => {
+        panel.style.display = 'none';
+    }, 300);
+}
+
+function renderTeachersInfo(data, studentName) {
+    if (data.error) {
+        return `<div class="error">${data.error}</div>`;
+    }
+    
+    const teachers = data.teachers || [];
+    
+    if (teachers.length === 0) {
+        return `
+            <div class="info-content">
+                <h4>${studentName} - Enseignants</h4>
+                <div class="empty-state-small">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                    <p>Aucun enseignant trouvé</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    let html = `
+        <div class="info-content">
+            <h4>${studentName} - Enseignants</h4>
+            <div class="teachers-list">
+    `;
+    
+    teachers.forEach(teacher => {
+        // Générer les initiales pour l'avatar
+        let initials = teacher.name.split(' ')
+            .map(name => name.charAt(0).toUpperCase())
+            .slice(0, 2)
+            .join('');
+        
+        html += `
+            <div class="teacher-item">
+                <div class="teacher-header">
+                    <div class="teacher-avatar">
+                        ${initials}
+                    </div>
+                    <div class="teacher-info">
+                        <h4>${teacher.name}</h4>
+                        <span class="teacher-role">${teacher.role}</span>
+                    </div>
+                </div>
+                <div class="teacher-details">
+                    <div class="teacher-detail">
+                        <i class="fas fa-book"></i>
+                        <span>Matière: ${teacher.subject}</span>
+                    </div>
+                    <div class="teacher-detail">
+                        <i class="fas fa-users"></i>
+                        <span>Classe: ${teacher.classroom_name}</span>
+                    </div>
+                    <div class="teacher-detail">
+                        <i class="fas fa-envelope"></i>
+                        <a href="mailto:${teacher.email}" class="teacher-email">${teacher.email}</a>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    return html;
+}
+</script>
+{% endblock %}

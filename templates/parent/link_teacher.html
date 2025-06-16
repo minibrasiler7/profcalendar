@@ -1,0 +1,212 @@
+{% extends "parent/base.html" %}
+
+{% block title %}Lier à un enseignant - TeacherPlanner{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <i class="fas fa-link auth-icon"></i>
+            <h1 class="auth-title">Liaison avec l'enseignant</h1>
+            <p class="auth-subtitle">Entrez les informations de l'enseignant de votre enfant</p>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <div class="info-box">
+            <i class="fas fa-info-circle"></i>
+            <div>
+                <strong>Informations nécessaires :</strong>
+                <ul>
+                    <li>Le nom d'utilisateur ou l'email de l'enseignant</li>
+                    <li>Le code de classe fourni par l'enseignant</li>
+                    <li>Votre email doit correspondre à celui du dossier scolaire</li>
+                </ul>
+            </div>
+        </div>
+        
+        <form method="POST" action="{{ url_for('parent_auth.link_teacher') }}" class="auth-form">
+            <div class="form-group">
+                <label for="teacher_name" class="form-label">Nom d'utilisateur de l'enseignant</label>
+                <div class="input-group">
+                    <i class="fas fa-chalkboard-teacher input-icon"></i>
+                    <input type="text" id="teacher_name" name="teacher_name" class="form-control" 
+                           placeholder="Nom d'utilisateur ou email" required>
+                </div>
+                <small class="form-text text-muted">Entrez le nom d'utilisateur ou l'email de l'enseignant</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="class_code" class="form-label">Code de classe</label>
+                <div class="input-group">
+                    <i class="fas fa-key input-icon"></i>
+                    <input type="text" id="class_code" name="class_code" class="form-control" 
+                           placeholder="Code fourni par l'enseignant" required style="text-transform: uppercase;">
+                </div>
+                <small class="form-text text-muted">Code unique fourni par l'enseignant (ex: ABC123)</small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-block">Valider la liaison</button>
+            </div>
+        </form>
+        
+        <div class="auth-footer">
+            <p><a href="{{ url_for('parent_auth.logout') }}">Se déconnecter</a></p>
+        </div>
+    </div>
+</div>
+
+<style>
+.auth-container {
+    max-width: 500px;
+    margin: 4rem auto;
+}
+
+.auth-card {
+    background-color: var(--white);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-lg);
+    padding: 3rem;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.auth-icon {
+    font-size: 3rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.auth-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--dark-color);
+    margin-bottom: 0.5rem;
+}
+
+.auth-subtitle {
+    color: var(--gray-color);
+}
+
+.info-box {
+    background-color: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.info-box i {
+    color: #1976d2;
+    font-size: 1.25rem;
+    margin-top: 0.125rem;
+}
+
+.info-box ul {
+    margin: 0.5rem 0 0 0;
+    padding-left: 1.5rem;
+}
+
+.info-box li {
+    margin-bottom: 0.25rem;
+}
+
+.auth-form {
+    margin-bottom: 2rem;
+}
+
+.input-group {
+    position: relative;
+}
+
+.input-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-color);
+}
+
+.input-group .form-control {
+    padding-left: 3rem;
+}
+
+.form-text {
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.text-muted {
+    color: var(--gray-color);
+}
+
+.btn-block {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.auth-footer {
+    text-align: center;
+    color: var(--gray-color);
+}
+
+.auth-footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+
+.alert {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+}
+
+.alert-danger {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.alert-info {
+    color: #0c5460;
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+}
+</style>
+
+<script>
+// Convertir automatiquement le code en majuscules
+document.getElementById('class_code').addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord - {{ student.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .student-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+
+    .student-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 2rem;
+    }
+
+    .student-avatar {
+        width: 80px;
+        height: 80px;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: bold;
+        margin-right: 1.5rem;
+    }
+
+    .student-details h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .student-details p {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+
+    .dashboard-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 2rem;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .dashboard-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .card-icon {
+        width: 50px;
+        height: 50px;
+        background-color: #f0f4ff;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1.5rem;
+        color: #667eea;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #2d3748;
+        margin: 0;
+    }
+
+    .grades-summary {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .subject-grade {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background-color: #f7fafc;
+        border-radius: 8px;
+        transition: background-color 0.2s;
+    }
+
+    .subject-grade:hover {
+        background-color: #edf2f7;
+    }
+
+    .subject-name {
+        font-weight: 500;
+        color: #4a5568;
+    }
+
+    .subject-average {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: #2d3748;
+    }
+
+    .recent-files {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .file-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        background-color: #f7fafc;
+        border-radius: 8px;
+        transition: background-color 0.2s;
+        text-decoration: none;
+        color: inherit;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    .file-item:hover {
+        background-color: #edf2f7;
+    }
+
+    .file-icon {
+        width: 40px;
+        height: 40px;
+        background-color: #e6f2ff;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        color: #3182ce;
+        flex-shrink: 0; /* Empêche l'icône de rétrécir */
+    }
+
+    .file-details {
+        flex: 1;
+        min-width: 0; /* Permet à flex-shrink de fonctionner */
+        overflow: hidden;
+    }
+
+    .file-name {
+        font-weight: 500;
+        color: #2d3748;
+        margin-bottom: 0.25rem;
+        /* Troncature du texte */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 100%;
+        display: block;
+    }
+
+    .file-date {
+        font-size: 0.875rem;
+        color: #718096;
+    }
+
+    .quick-links {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .quick-link {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        background-color: white;
+        border-radius: 10px;
+        text-decoration: none;
+        color: #4a5568;
+        transition: all 0.2s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .quick-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        color: #667eea;
+    }
+
+    .quick-link i {
+        font-size: 1.5rem;
+        margin-right: 1rem;
+        color: #667eea;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #718096;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .navbar-student {
+        background-color: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        padding: 1rem 0;
+        margin-bottom: 0;
+    }
+
+    .navbar-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .navbar-links {
+        display: flex;
+        gap: 2rem;
+    }
+
+    .navbar-links a {
+        color: #4a5568;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s;
+    }
+
+    .navbar-links a:hover,
+    .navbar-links a.active {
+        color: #667eea;
+    }
+
+    .logout-btn {
+        background-color: #f7fafc;
+        color: #4a5568;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .logout-btn:hover {
+        background-color: #edf2f7;
+        color: #2d3748;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Navigation -->
+<nav class="navbar-student">
+    <div class="navbar-content">
+        <div class="navbar-links">
+            <a href="{{ url_for('student_auth.dashboard') }}" class="active">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+            <a href="{{ url_for('student_auth.grades') }}">
+                <i class="fas fa-chart-line"></i> Notes
+            </a>
+            <a href="{{ url_for('student_auth.files') }}">
+                <i class="fas fa-folder"></i> Fichiers
+            </a>
+            <a href="{{ url_for('student_auth.teachers') }}">
+                <i class="fas fa-chalkboard-teacher"></i> Enseignants
+            </a>
+        </div>
+        <a href="{{ url_for('student_auth.logout') }}" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i> Déconnexion
+        </a>
+    </div>
+</nav>
+
+<!-- Header -->
+<div class="student-header">
+    <div class="student-info">
+        <div style="display: flex; align-items: center;">
+            <div class="student-avatar">
+                {{ student.initials() }}
+            </div>
+            <div class="student-details">
+                <h1>Bonjour {{ student.first_name }} !</h1>
+                <p>{{ student.classroom.name }} - {{ student.classroom.subject }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Content -->
+<div class="dashboard-container">
+    <div class="dashboard-grid">
+        <!-- Notes récentes -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fas fa-star"></i>
+                </div>
+                <h2 class="card-title">Moyennes par matière</h2>
+            </div>
+            <div class="grades-summary">
+                {% if grades_by_subject %}
+                    {% for subject, data in grades_by_subject.items() %}
+                        <div class="subject-grade">
+                            <span class="subject-name">{{ subject }}</span>
+                            <span class="subject-average">
+                                {% if data.count > 0 %}
+                                    {{ "%.1f"|format(data.average) }}
+                                    {% if data.grades %}
+                                        /{{ data.grades[0].evaluation.max_points|int }}
+                                    {% endif %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                                <small>({{ data.count }} note{{ 's' if data.count > 1 else '' }})</small>
+                            </span>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-chart-line"></i>
+                        <p>Aucune note disponible</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Fichiers récents -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <h2 class="card-title">Fichiers récents</h2>
+            </div>
+            <div class="recent-files">
+                {% if class_files[:5] %}
+                    {% for file in class_files[:5] %}
+                        <a href="{{ url_for('student_auth.preview_file', file_id=file.id) }}" class="file-item" target="_blank">
+                            <div class="file-icon">
+                                <i class="fas fa-file-pdf"></i>
+                            </div>
+                            <div class="file-details">
+                                <div class="file-name" title="{{ file.original_filename }}">{{ file.original_filename }}</div>
+                                <div class="file-date">{{ file.uploaded_at.strftime('%d/%m/%Y') }}</div>
+                            </div>
+                        </a>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-folder-open"></i>
+                        <p>Aucun fichier disponible</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Liens rapides -->
+    <div class="quick-links">
+        <a href="{{ url_for('student_auth.grades') }}" class="quick-link">
+            <i class="fas fa-chart-line"></i>
+            <span>Voir toutes mes notes</span>
+        </a>
+        <a href="{{ url_for('student_auth.files') }}" class="quick-link">
+            <i class="fas fa-folder"></i>
+            <span>Accéder aux fichiers</span>
+        </a>
+    </div>
+</div>
+{% endblock %}

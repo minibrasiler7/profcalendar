@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+
+{% block title %}Mes Fichiers - {{ student.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .student-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+
+    .student-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 2rem;
+    }
+
+    .student-avatar {
+        width: 80px;
+        height: 80px;
+        background-color: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: bold;
+        margin-right: 1.5rem;
+    }
+
+    .student-details h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .student-details p {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+
+    .files-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 2rem;
+    }
+
+    .navbar-student {
+        background-color: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        padding: 1rem 0;
+        margin-bottom: 0;
+    }
+
+    .navbar-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .navbar-links {
+        display: flex;
+        gap: 2rem;
+    }
+
+    .navbar-links a {
+        color: #4a5568;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s;
+    }
+
+    .navbar-links a:hover,
+    .navbar-links a.active {
+        color: #667eea;
+    }
+
+    .logout-btn {
+        background-color: #f7fafc;
+        color: #4a5568;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .logout-btn:hover {
+        background-color: #edf2f7;
+        color: #2d3748;
+    }
+
+    .files-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .file-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #e2e8f0;
+    }
+
+    .file-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .file-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .file-icon {
+        width: 50px;
+        height: 50px;
+        background-color: #667eea;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        margin-right: 1rem;
+    }
+
+    .file-info h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: #2d3748;
+        word-break: break-word;
+    }
+
+    .file-info p {
+        margin: 0.25rem 0 0 0;
+        color: #718096;
+        font-size: 0.875rem;
+    }
+
+    .file-details {
+        margin-bottom: 1rem;
+    }
+
+    .file-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.875rem;
+        color: #718096;
+        margin-bottom: 0.5rem;
+    }
+
+    .shared-badge {
+        background-color: #e6f7ff;
+        color: #0066cc;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .teacher-message {
+        background-color: #f0f4ff;
+        border-left: 4px solid #667eea;
+        padding: 0.75rem;
+        margin: 1rem 0;
+        border-radius: 0 8px 8px 0;
+    }
+
+    .teacher-message-label {
+        font-size: 0.75rem;
+        color: #667eea;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .teacher-message-content {
+        color: #4a5568;
+        font-size: 0.875rem;
+    }
+
+    .file-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-preview:hover {
+        background-color: #5a67d8 !important;
+        color: white !important;
+    }
+
+    .btn-download {
+        flex: 1;
+        background-color: #667eea;
+        color: white;
+        padding: 0.75rem;
+        border-radius: 8px;
+        text-decoration: none;
+        text-align: center;
+        font-weight: 500;
+        transition: background-color 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn-download:hover {
+        background-color: #5a67d8;
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #718096;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .empty-state h3 {
+        margin-bottom: 0.5rem;
+        color: #4a5568;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Navigation -->
+<nav class="navbar-student">
+    <div class="navbar-content">
+        <div class="navbar-links">
+            <a href="{{ url_for('student_auth.dashboard') }}">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+            <a href="{{ url_for('student_auth.grades') }}">
+                <i class="fas fa-chart-line"></i> Notes
+            </a>
+            <a href="{{ url_for('student_auth.files') }}" class="active">
+                <i class="fas fa-folder"></i> Fichiers
+            </a>
+            <a href="{{ url_for('student_auth.teachers') }}">
+                <i class="fas fa-chalkboard-teacher"></i> Enseignants
+            </a>
+        </div>
+        <a href="{{ url_for('student_auth.logout') }}" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i> Déconnexion
+        </a>
+    </div>
+</nav>
+
+<!-- Header -->
+<div class="student-header">
+    <div class="student-info">
+        <div style="display: flex; align-items: center;">
+            <div class="student-avatar">
+                {{ student.initials() }}
+            </div>
+            <div class="student-details">
+                <h1>Mes Fichiers</h1>
+                <p>{{ student.classroom.name }} - {{ student.classroom.subject }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Content -->
+<div class="files-container">
+    {% if shared_files %}
+        <div class="files-grid">
+            {% for share, file in shared_files %}
+            <div class="file-card">
+                <div class="file-header">
+                    <div class="file-icon">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div class="file-info">
+                        <h3>{{ file.original_filename }}</h3>
+                        <p>{{ file.file_size if file.file_size else 'Taille inconnue' }}</p>
+                    </div>
+                </div>
+                
+                <div class="file-details">
+                    <div class="file-meta">
+                        <span><i class="fas fa-calendar"></i> {{ share.shared_at.strftime('%d/%m/%Y à %H:%M') }}</span>
+                        <span class="shared-badge">
+                            <i class="fas fa-share"></i> Partagé par {{ share.teacher.username }}
+                        </span>
+                    </div>
+                    
+                    {% if share.message %}
+                    <div class="teacher-message">
+                        <div class="teacher-message-label">Message de l'enseignant :</div>
+                        <div class="teacher-message-content">{{ share.message }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="file-actions">
+                    <a href="{{ url_for('student_auth.preview_file', file_id=file.id) }}" class="btn-preview" target="_blank" style="flex: 1; background-color: #667eea; color: white; padding: 0.75rem; border-radius: 8px; text-decoration: none; text-align: center; font-weight: 500; transition: background-color 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-right: 0.5rem;">
+                        <i class="fas fa-eye"></i> Ouvrir
+                    </a>
+                    <a href="{{ url_for('student_auth.download_file', file_id=file.id) }}" class="btn-download" style="flex: 0 0 auto; background-color: #10b981; color: white; padding: 0.75rem; border-radius: 8px; text-decoration: none; text-align: center; font-weight: 500; transition: background-color 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                        <i class="fas fa-download"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="fas fa-folder-open"></i>
+            <h3>Aucun fichier partagé</h3>
+            <p>Vos enseignants n'ont encore partagé aucun fichier avec vous.</p>
+            <p>Les fichiers qui vous seront spécifiquement attribués apparaîtront ici.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

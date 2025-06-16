@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}Rejoindre un Maître de Classe - TeacherPlanner{% endblock %}
+
+{% block extra_css %}
+<style>
+.join-teacher-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.join-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.join-header h1 {
+    margin: 0 0 1rem 0;
+    color: var(--dark-color);
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.join-header h1 i {
+    color: var(--primary-color);
+    margin-right: 0.5rem;
+}
+
+.join-subtitle {
+    color: var(--gray-color);
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.join-form-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+}
+
+.form-container {
+    background: var(--white);
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+}
+
+.join-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--dark-color);
+    margin: 0;
+}
+
+.form-label i {
+    color: var(--primary-color);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.form-text {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+    margin: 0;
+}
+
+.code-input {
+    font-family: monospace;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    text-align: center;
+    justify-content: center;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+    flex: 1;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+    background: var(--gray-color);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: var(--dark-color);
+    color: white;
+    text-decoration: none;
+}
+
+.info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.info-card {
+    background: var(--white);
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.info-card h3 {
+    margin: 0 0 1rem 0;
+    color: var(--dark-color);
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-card h3 i {
+    color: var(--primary-color);
+}
+
+.info-card ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.info-card li {
+    margin-bottom: 0.75rem;
+    color: var(--gray-color);
+    line-height: 1.5;
+}
+
+.steps-card {
+    background: linear-gradient(135deg, var(--light-gray), #f1f5f9);
+}
+
+.steps-list {
+    list-style: none;
+    padding: 0;
+    counter-reset: step-counter;
+}
+
+.steps-list li {
+    counter-increment: step-counter;
+    position: relative;
+    padding-left: 3rem;
+    margin-bottom: 1rem;
+    color: var(--dark-color);
+}
+
+.steps-list li::before {
+    content: counter(step-counter);
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: var(--primary-color);
+    color: white;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .join-teacher-container {
+        padding: 1rem;
+    }
+    
+    .join-form-section {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .join-header h1 {
+        font-size: 2rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="join-teacher-container">
+    <div class="join-header">
+        <h1>
+            <i class="fas fa-handshake"></i>
+            Rejoindre un Maître de Classe
+        </h1>
+        <p class="join-subtitle">
+            Utilisez le code d'accès fourni par le maître de classe pour établir une collaboration
+        </p>
+    </div>
+
+    <div class="join-form-section">
+        <div class="form-container">
+            <form method="POST" class="join-form">
+                <div class="form-group">
+                    <label for="access_code" class="form-label">
+                        <i class="fas fa-key"></i>
+                        Code d'Accès
+                    </label>
+                    <input 
+                        type="text" 
+                        id="access_code" 
+                        name="access_code" 
+                        class="form-control code-input" 
+                        placeholder="Ex: ABC12345"
+                        required
+                        maxlength="20"
+                    >
+                    <small class="form-text">
+                        Saisissez le code d'accès fourni par le maître de classe
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="master_teacher_name" class="form-label">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        Nom du Maître de Classe
+                    </label>
+                    <input 
+                        type="text" 
+                        id="master_teacher_name" 
+                        name="master_teacher_name" 
+                        class="form-control" 
+                        placeholder="Nom d'utilisateur ou email"
+                        required
+                    >
+                    <small class="form-text">
+                        Pour vérification, saisissez le nom d'utilisateur ou l'email du maître de classe
+                    </small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-link"></i>
+                        Établir la Collaboration
+                    </button>
+                    <a href="{{ url_for('collaboration.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i>
+                        Retour
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="info-section">
+            <div class="info-card steps-card">
+                <h3>
+                    <i class="fas fa-list-ol"></i>
+                    Comment ça fonctionne
+                </h3>
+                <ol class="steps-list">
+                    <li>Le maître de classe génère un code d'accès et vous le transmet</li>
+                    <li>Vous saisissez le code et le nom du maître de classe</li>
+                    <li>Le système vérifie vos informations et établit la collaboration</li>
+                    <li>Vous pouvez ensuite choisir les classes à partager</li>
+                    <li>Les élèves et configurations sont copiés dans vos classes</li>
+                </ol>
+            </div>
+
+            <div class="info-card">
+                <h3>
+                    <i class="fas fa-info-circle"></i>
+                    Avantages de la Collaboration
+                </h3>
+                <ul>
+                    <li>Accès aux listes d'élèves du maître de classe</li>
+                    <li>Partage des sanctions et règles de classe</li>
+                    <li>Vue consolidée pour les parents</li>
+                    <li>Gestion simplifiée des absences et notes</li>
+                    <li>Coordination entre enseignants facilitée</li>
+                </ul>
+            </div>
+
+            <div class="info-card">
+                <h3>
+                    <i class="fas fa-shield-alt"></i>
+                    Sécurité
+                </h3>
+                <ul>
+                    <li>Codes d'accès sécurisés et temporaires</li>
+                    <li>Vérification du nom du maître de classe</li>
+                    <li>Permissions limitées selon votre rôle</li>
+                    <li>Possibilité de terminer la collaboration</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Convertir automatiquement le code d'accès en majuscules
+document.getElementById('access_code').addEventListener('input', function(e) {
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+});
+
+// Validation du formulaire
+document.querySelector('.join-form').addEventListener('submit', function(e) {
+    const accessCode = document.getElementById('access_code').value.trim();
+    const teacherName = document.getElementById('master_teacher_name').value.trim();
+    
+    if (!accessCode || !teacherName) {
+        e.preventDefault();
+        alert('Veuillez remplir tous les champs requis');
+        return;
+    }
+    
+    if (accessCode.length < 6) {
+        e.preventDefault();
+        alert('Le code d\'accès doit contenir au moins 6 caractères');
+        return;
+    }
+});
+</script>
+{% endblock %}

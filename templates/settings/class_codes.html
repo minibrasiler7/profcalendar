@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block title %}Codes de classe - TeacherPlanner{% endblock %}
+
+{% block content %}
+<div class="class-codes-container">
+    <div class="page-header">
+        <h1>
+            <i class="fas fa-key"></i>
+            Codes de classe pour les parents
+        </h1>
+        <p class="subtitle">Générez des codes d'accès pour permettre aux parents de se connecter à vos classes</p>
+    </div>
+
+    <!-- Section génération de nouveaux codes -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>
+                <i class="fas fa-plus-circle"></i>
+                Générer un nouveau code
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label for="classroom-select">Choisir une classe :</label>
+                <select id="classroom-select" class="form-control">
+                    <option value="">-- Sélectionner une classe --</option>
+                    {% for classroom in classrooms %}
+                        <option value="{{ classroom.id }}">{{ classroom.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="button" id="generate-code-btn" class="btn btn-primary" disabled>
+                <i class="fas fa-key"></i>
+                Générer le code
+            </button>
+        </div>
+    </div>
+
+    <!-- Section codes existants -->
+    <div class="card">
+        <div class="card-header">
+            <h3>
+                <i class="fas fa-list"></i>
+                Codes existants
+            </h3>
+        </div>
+        <div class="card-body">
+            {% if codes %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Classe</th>
+                                <th>Code</th>
+                                <th>Statut</th>
+                                <th>Créé le</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="codes-table">
+                            {% for code in codes %}
+                                <tr id="code-row-{{ code.id }}">
+                                    <td>
+                                        <strong>{{ code.classroom.name }}</strong>
+                                    </td>
+                                    <td>
+                                        <code class="code-display">{{ code.code }}</code>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary ml-2" onclick="copyCode('{{ code.code }}')">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </td>
+                                    <td>
+                                        {% if code.is_active %}
+                                            <span class="badge badge-success">
+                                                <i class="fas fa-check-circle"></i>
+                                                Actif
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">
+                                                <i class="fas fa-times-circle"></i>
+                                                Inactif
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ code.created_at.strftime('%d/%m/%Y à %H:%M') }}</td>
+                                    <td>
+                                        {% if code.is_active %}
+                                            <button type="button" class="btn btn-sm btn-warning" onclick="deactivateCode({{ code.id }})">
+                                                <i class="fas fa-ban"></i>
+                                                Désactiver
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <h4>Aucun code généré</h4>
+                    <p>Vous n'avez pas encore généré de codes pour vos classes. Utilisez le formulaire ci-dessus pour créer votre premier code d'accès parent.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Informations d'utilisation -->
+    <div class="info-card mt-4">
+        <h4>
+            <i class="fas fa-info-circle"></i>
+            Comment ça marche ?
+        </h4>
+        <ul>
+            <li>Générez un code unique pour chaque classe</li>
+            <li>Donnez ce code aux parents avec votre nom complet</li>
+            <li>Les parents s'inscrivent sur la plateforme avec l'email renseigné dans le dossier scolaire</li>
+            <li>Lors de leur première connexion, ils saisissent votre nom et le code de classe</li>
+            <li>Le système lie automatiquement les enfants dont l'email parent correspond</li>
+            <li>Vous pouvez désactiver un code à tout moment si nécessaire</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+.class-codes-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.page-header {
+    margin-bottom: 3rem;
+    text-align: center;
+}
+
+.page-header h1 {
+    color: var(--dark-color);
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.page-header h1 i {
+    color: var(--primary-color);
+    margin-right: 0.5rem;
+}
+
+.subtitle {
+    color: var(--gray-color);
+    font-size: 1.1rem;
+}
+
+.card {
+    background: var(--white);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    margin-bottom: 2rem;
+}
+
+.card-header {
+    background: var(--light-gray);
+    border-radius: 1rem 1rem 0 0;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.card-header h3 {
+    margin: 0;
+    color: var(--dark-color);
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.card-header h3 i {
+    color: var(--primary-color);
+    margin-right: 0.5rem;
+}
+
+.card-body {
+    padding: 2rem;
+}
+
+.code-display {
+    background-color: var(--light-gray);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--gray-color);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state h4 {
+    color: var(--dark-color);
+    margin-bottom: 1rem;
+}
+
+.info-card {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 1rem;
+    padding: 2rem;
+}
+
+.info-card h4 {
+    color: #1976d2;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.info-card h4 i {
+    margin-right: 0.5rem;
+}
+
+.info-card ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.info-card li {
+    margin-bottom: 0.5rem;
+    color: #1565c0;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.badge-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.badge-secondary {
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+
+@media (max-width: 768px) {
+    .class-codes-container {
+        padding: 1rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const classroomSelect = document.getElementById('classroom-select');
+    const generateBtn = document.getElementById('generate-code-btn');
+    
+    // Activer/désactiver le bouton selon la sélection
+    classroomSelect.addEventListener('change', function() {
+        generateBtn.disabled = !this.value;
+    });
+    
+    // Générer un nouveau code
+    generateBtn.addEventListener('click', function() {
+        const classroomId = classroomSelect.value;
+        if (!classroomId) return;
+        
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération...';
+        
+        fetch('/settings/generate-class-code', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                classroom_id: parseInt(classroomId)
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Code généré avec succès : ' + data.code);
+                location.reload(); // Recharger pour afficher le nouveau code
+            } else {
+                alert('Erreur : ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la génération du code');
+        })
+        .finally(() => {
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-key"></i> Générer le code';
+        });
+    });
+});
+
+function copyCode(code) {
+    navigator.clipboard.writeText(code).then(function() {
+        // Feedback visuel
+        const btn = event.target.closest('button');
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i>';
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalContent;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-secondary');
+        }, 2000);
+    }).catch(function(err) {
+        alert('Erreur lors de la copie du code');
+    });
+}
+
+function deactivateCode(codeId) {
+    if (!confirm('Êtes-vous sûr de vouloir désactiver ce code ? Les parents ne pourront plus l\'utiliser.')) {
+        return;
+    }
+    
+    fetch(`/settings/deactivate-class-code/${codeId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Code désactivé avec succès');
+            location.reload();
+        } else {
+            alert('Erreur : ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la désactivation du code');
+    });
+}
+</script>
+{% endblock %}
