@@ -9,7 +9,10 @@ class Planning(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    classroom_id = db.Column(db.Integer, db.ForeignKey('classrooms.id'), nullable=False)
+    
+    # Classe traditionnelle OU groupe mixte (l'un des deux doit être défini)
+    classroom_id = db.Column(db.Integer, db.ForeignKey('classrooms.id'), nullable=True)
+    mixed_group_id = db.Column(db.Integer, db.ForeignKey('mixed_groups.id'), nullable=True)
 
     # Date spécifique
     date = db.Column(db.Date, nullable=False)
@@ -21,7 +24,7 @@ class Planning(db.Model):
     title = db.Column(db.String(200))
     description = db.Column(db.Text)
     
-    # Groupe spécifique (optionnel, si null = classe entière)
+    # Groupe spécifique (optionnel, si null = classe entière ou groupe mixte entier)
     group_id = db.Column(db.Integer, db.ForeignKey('student_groups.id'), nullable=True)
 
     # Nouveau champ pour stocker l'état des checkboxes (JSON)
@@ -34,9 +37,12 @@ class Planning(db.Model):
     # Relations
     user = db.relationship('User', backref=db.backref('plannings', lazy='dynamic'))
     group = db.relationship('StudentGroup', backref=db.backref('plannings', lazy='dynamic'))
+    mixed_group = db.relationship('MixedGroup', backref=db.backref('plannings', lazy='dynamic'))
 
     __table_args__ = (
         db.UniqueConstraint('user_id', 'date', 'period_number', name='_user_date_period_uc'),
+        db.CheckConstraint('(classroom_id IS NOT NULL AND mixed_group_id IS NULL) OR (classroom_id IS NULL AND mixed_group_id IS NOT NULL)', 
+                          name='_classroom_or_mixed_group_planning'),
     )
 
     def get_checklist_states(self):
@@ -123,5 +129,45 @@ class Planning(db.Model):
 
         return items
 
+    def get_display_name(self):
+        """Retourne le nom à afficher (classe ou groupe mixte)"""
+        if self.classroom_id:
+            return self.classroom.name
+        elif self.mixed_group_id:
+            return self.mixed_group.name
+        return "Non défini"
+    
+    def get_subject(self):
+        """Retourne la matière enseignée"""
+        if self.classroom_id:
+            return self.classroom.subject
+        elif self.mixed_group_id:
+            return self.mixed_group.subject
+        return "Non défini"
+    
+    def get_students(self):
+        """Retourne la liste des élèves concernés par cette planification"""
+        if self.group_id:
+            # Si un groupe spécifique est défini, on utilise ce groupe
+            return self.group.students.all()
+        elif self.classroom_id:
+            # Sinon, tous les élèves de la classe
+            return self.classroom.students.all()
+        elif self.mixed_group_id:
+            # Ou tous les élèves du groupe mixte
+            return self.mixed_group.get_students()
+        return []
+    
+    def is_mixed_group(self):
+        """Vérifie si cette planification concerne un groupe mixte"""
+        return self.mixed_group_id is not None
+    
+    def get_color(self):
+        """Retourne la couleur pour l'affichage"""
+        if self.mixed_group_id:
+            return self.mixed_group.color
+        return '#4a90e2'  # Couleur par défaut pour les classes
+
     def __repr__(self):
-        return f'<Planning {self.date} P{self.period_number} - {self.classroom.name}>'
+        name = self.get_display_name()
+        return f'<Planning {self.date} P{self.period_number} - {name}>'

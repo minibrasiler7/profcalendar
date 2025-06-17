@@ -19,12 +19,32 @@ function openPlanningModal(cell, fromAnnualView = false) {
     // Récupérer les données existantes
     getPlanningData(date, period).then(data => {
         if (data.success && data.planning) {
-            document.getElementById('modalClassroom').value = data.planning.classroom_id || '';
+            // Formatter l'ID de classe pour le modal
+            let modalClassroomValue = '';
+            if (data.planning.classroom_id) {
+                modalClassroomValue = `classroom_${data.planning.classroom_id}`;
+            } else if (data.planning.mixed_group_id) {
+                modalClassroomValue = `mixed_group_${data.planning.mixed_group_id}`;
+            } else {
+                // Si la planification n'a pas de classe associée, utiliser la classe par défaut de la cellule
+                const defaultClassroom = cell.dataset.defaultClassroom;
+                const defaultMixedGroup = cell.dataset.defaultMixedGroup;
+                
+                if (defaultClassroom) {
+                    modalClassroomValue = `classroom_${defaultClassroom}`;
+                } else if (defaultMixedGroup) {
+                    modalClassroomValue = `mixed_group_${defaultMixedGroup}`;
+                }
+            }
+            
+            console.log('Debug existing planning - setting modalClassroomValue:', modalClassroomValue);
+            console.log('Debug existing planning - planning data:', data.planning);
+            document.getElementById('modalClassroom').value = modalClassroomValue;
             document.getElementById('modalPlanningTitle').value = data.planning.title || '';
 
             // Charger les groupes pour la classe sélectionnée, puis définir le groupe
-            if (data.planning.classroom_id) {
-                loadGroupsForClass(data.planning.classroom_id).then(() => {
+            if (modalClassroomValue) {
+                loadGroupsForClass(modalClassroomValue).then(() => {
                     // Une fois les groupes chargés, définir la valeur du groupe
                     const groupSelect = document.getElementById('modalGroup');
                     if (groupSelect) {
@@ -43,8 +63,43 @@ function openPlanningModal(cell, fromAnnualView = false) {
                 }
             }
         } else {
-            // Réinitialiser le formulaire
-            document.getElementById('modalClassroom').value = '';
+            // Pré-sélectionner la classe par défaut si disponible
+            const defaultClassroom = cell.dataset.defaultClassroom;
+            const defaultMixedGroup = cell.dataset.defaultMixedGroup;
+            
+            // Debug: afficher les données de la cellule
+            console.log('Debug openPlanningModal - cell.dataset:', cell.dataset);
+            console.log('Debug openPlanningModal - defaultClassroom:', defaultClassroom);
+            console.log('Debug openPlanningModal - defaultMixedGroup:', defaultMixedGroup);
+            console.log('Debug openPlanningModal - schedule key:', cell.dataset.debugScheduleKey);
+            console.log('Debug openPlanningModal - has schedule:', cell.dataset.debugHasSchedule);
+            
+            if (defaultClassroom) {
+                // Format attendu : classroom_ID
+                const classroomValue = `classroom_${defaultClassroom}`;
+                console.log('Debug openPlanningModal - setting classroomValue:', classroomValue);
+                document.getElementById('modalClassroom').value = classroomValue;
+                // Charger les groupes pour cette classe
+                loadGroupsForClass(classroomValue);
+            } else if (defaultMixedGroup) {
+                // Format attendu : mixed_group_ID
+                const mixedGroupValue = `mixed_group_${defaultMixedGroup}`;
+                console.log('Debug openPlanningModal - setting mixedGroupValue:', mixedGroupValue);
+                
+                // Vérifier si cette valeur existe dans le select
+                const modalSelect = document.getElementById('modalClassroom');
+                const option = modalSelect.querySelector(`option[value="${mixedGroupValue}"]`);
+                console.log('Debug openPlanningModal - option found for mixed group:', option);
+                if (option) {
+                    console.log('Debug openPlanningModal - option text:', option.textContent);
+                }
+                
+                modalSelect.value = mixedGroupValue;
+            } else {
+                console.log('Debug openPlanningModal - no default class, resetting to empty');
+                document.getElementById('modalClassroom').value = '';
+            }
+            
             document.getElementById('modalPlanningTitle').value = '';
             const modalDesc = document.getElementById('modalDescription');
             if (modalDesc) {
@@ -579,8 +634,8 @@ async function saveDayPlanning(date, buttonElement) {
     } else {
         showNotification('success', 'Toutes les planifications ont été enregistrées');
         modal.remove();
-        // Recharger la page pour afficher les changements
-        location.reload();
+        // Mettre à jour les vues pour tous les créneaux sauvegardés
+        updateAllViewsAfterDaySave();
     }
 }
 
@@ -638,7 +693,8 @@ async function savePlanning() {
             body: JSON.stringify({
                 date: date,
                 period_number: parseInt(period),
-                classroom_id: classroomId ? parseInt(classroomId) : null,
+                classroom_id: classroomId && classroomId.startsWith('classroom_') ? parseInt(classroomId.split('_')[1]) : null,
+                mixed_group_id: classroomId && classroomId.startsWith('mixed_group_') ? parseInt(classroomId.split('_')[2]) : null,
                 title: title,
                 description: description,
                 checklist_states: checklistStates,
@@ -660,7 +716,8 @@ async function savePlanning() {
                     body: JSON.stringify({
                         start_date: date,
                         period_number: parseInt(period),
-                        classroom_id: parseInt(classroomId),
+                        classroom_id: classroomId && classroomId.startsWith('classroom_') ? parseInt(classroomId.split('_')[1]) : null,
+                        mixed_group_id: classroomId && classroomId.startsWith('mixed_group_') ? parseInt(classroomId.split('_')[2]) : null,
                         title: title,
                         description: description,
                         checklist_states: checklistStates,
@@ -678,8 +735,9 @@ async function savePlanning() {
                 }
             }
             
-            // Recharger la page pour afficher les changements
-            location.reload();
+            // Mettre à jour les vues sans recharger la page
+            updateViewsAfterSave(date, period, classroomId, title, description);
+            showNotification('success', 'Planification enregistrée!');
         } else {
             showNotification('error', result.message || 'Erreur lors de la sauvegarde');
         }
@@ -768,4 +826,139 @@ function exportPlannings(format) {
 // Import des planifications (pour une future amélioration)
 function importPlannings() {
     // Importer depuis un fichier
+}
+
+// Mettre à jour les vues après sauvegarde d'une planification
+function updateViewsAfterSave(date, period, classroomId, title, description) {
+    console.log('🔄 updateViewsAfterSave called with:', { date, period, classroomId, title, description });
+    
+    // Fermer le modal
+    closePlanningModal();
+    
+    // 1. Mettre à jour la cellule de la vue hebdomadaire
+    updateWeeklyCellAfterSave(date, period, classroomId, title, description);
+    
+    // 2. Mettre à jour la vue annuelle si nécessaire
+    updateAnnualViewAfterSave(date, classroomId);
+}
+
+// Mettre à jour la cellule hebdomadaire
+function updateWeeklyCellAfterSave(date, period, classroomId, title, description) {
+    const cell = document.querySelector(`[data-date="${date}"][data-period="${period}"]`);
+    if (!cell) return;
+    
+    // Vider le contenu actuel
+    cell.innerHTML = '';
+    
+    if (classroomId) {
+        // Parser l'ID pour obtenir les informations de classe
+        let type, numericId, classroomData;
+        
+        if (classroomId.startsWith('mixed_group_')) {
+            type = 'mixed_group';
+            numericId = parseInt(classroomId.split('_')[2]);
+        } else if (classroomId.startsWith('classroom_')) {
+            type = 'classroom';
+            numericId = parseInt(classroomId.split('_')[1]);
+        }
+        
+        // Trouver les données de la classe/groupe dans la variable globale
+        if (window.classroomsData) {
+            classroomData = window.classroomsData.find(c => c.id === numericId && c.type === type);
+        }
+        
+        if (classroomData) {
+            // Créer le bloc de classe
+            const classBlock = document.createElement('div');
+            classBlock.className = 'class-block planned';
+            classBlock.style.backgroundColor = classroomData.color;
+            
+            let content = `
+                <div class="class-name">${type === 'mixed_group' ? '<i class="fas fa-users"></i> ' : ''}${classroomData.name}</div>
+                <div class="class-subject">${classroomData.subject}</div>
+            `;
+            
+            if (title) {
+                content += `<div class="planning-title">${title}</div>`;
+            }
+            
+            classBlock.innerHTML = content;
+            cell.appendChild(classBlock);
+        }
+    }
+}
+
+// Mettre à jour la vue annuelle
+function updateAnnualViewAfterSave(date, classroomId) {
+    console.log('🔄 updateAnnualViewAfterSave called:', { date, classroomId });
+    
+    const annualDay = document.querySelector(`[data-date="${date}"].annual-day`);
+    console.log('📅 Annual day element found:', annualDay);
+    
+    if (!annualDay) {
+        console.log('❌ No annual day element found for date:', date);
+        return;
+    }
+    
+    console.log('🏫 Selected classroom ID:', window.selectedClassroomId);
+    console.log('💾 Saved classroom ID:', classroomId);
+    
+    // Vérifier si cette date a maintenant des planifications pour la classe actuellement sélectionnée
+    checkDayHasPlanning(date, window.selectedClassroomId).then(hasPlanning => {
+        console.log('📊 Day has planning result for selected class:', hasPlanning);
+        
+        if (hasPlanning) {
+            console.log('✅ Adding has-class to annual day');
+            annualDay.classList.add('has-class');
+            annualDay.setAttribute('data-has-class', 'true');
+        } else {
+            console.log('❌ Removing has-class from annual day');
+            annualDay.classList.remove('has-class');
+            annualDay.setAttribute('data-has-class', 'false');
+        }
+        
+        // Toujours réappliquer la couleur pour la classe sélectionnée
+        console.log('🎨 Reapplying classroom color for selected class');
+        applyClassroomColor();
+    }).catch(error => {
+        console.error('❌ Error in checkDayHasPlanning:', error);
+    });
+}
+
+// Vérifier si un jour a des planifications pour la classe sélectionnée
+async function checkDayHasPlanning(date, classroomIdToCheck = null) {
+    const targetClassroomId = classroomIdToCheck || window.selectedClassroomId;
+    console.log('🔍 checkDayHasPlanning called:', { date, targetClassroomId });
+    
+    if (!targetClassroomId) {
+        console.log('❌ No classroom ID to check');
+        return false;
+    }
+    
+    try {
+        const url = `/planning/check_day_planning/${date}/${targetClassroomId}`;
+        console.log('📡 Fetching:', url);
+        
+        const response = await fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        console.log('📡 Response status:', response.status);
+        const data = await response.json();
+        console.log('📡 Response data:', data);
+        
+        return data.success && data.has_planning;
+    } catch (error) {
+        console.error('❌ Erreur lors de la vérification des planifications:', error);
+        return false;
+    }
+}
+
+// Mettre à jour toutes les vues après sauvegarde journalière
+function updateAllViewsAfterDaySave() {
+    // Pour la sauvegarde journalière, on recharge pour l'instant
+    // car plusieurs créneaux peuvent être modifiés
+    location.reload();
 }

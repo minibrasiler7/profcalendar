@@ -1149,13 +1149,22 @@ if (typeof pdfjsLib !== 'undefined') {
                             </td>
                             {% for date in week_dates %}
                             {% set i = loop.index0 %}
+                            {% set planning_key = date.strftime('%Y-%m-%d') + '_' + period.number|string %}
+                            {% set schedule_key = i|string + '_' + period.number|string %}
                             <td class="schedule-cell {% if date == today %}today{% endif %}"
                                 data-date="{{ date.strftime('%Y-%m-%d') }}"
                                 data-period="{{ period.number }}"
+                                {% if schedule_key in schedule_grid %}
+                                    {% set schedule = schedule_grid[schedule_key] %}
+                                    {% if schedule.classroom_id %}
+                                        data-default-classroom="{{ schedule.classroom_id }}"
+                                    {% elif schedule.mixed_group_id %}
+                                        data-default-mixed-group="{{ schedule.mixed_group_id }}"
+                                    {% endif %}
+                                {% endif %}
+                                data-debug-schedule-key="{{ schedule_key }}"
+                                data-debug-has-schedule="{{ schedule_key in schedule_grid }}"
                                 onclick="openPlanningModal(this)">
-
-                                {% set planning_key = date.strftime('%Y-%m-%d') + '_' + period.number|string %}
-                                {% set schedule_key = i|string + '_' + period.number|string %}
                                 {% set holiday_info = holidays_info[date.strftime('%Y-%m-%d')] %}
 
                                 {% if holiday_info.is_holiday %}
@@ -1167,9 +1176,15 @@ if (typeof pdfjsLib !== 'undefined') {
                                     {% if planning_key in planning_grid %}
                                         <!-- Planification spécifique -->
                                         {% set planning = planning_grid[planning_key] %}
+                                        {% if planning.classroom_id %}
                                         <div class="class-block planned" style="background-color: {{ planning.classroom.color }};">
                                             <div class="class-name">{{ planning.classroom.name }}</div>
                                             <div class="class-subject">{{ planning.classroom.subject }}</div>
+                                        {% elif planning.mixed_group_id %}
+                                        <div class="class-block planned" style="background-color: {{ planning.mixed_group.color }};">
+                                            <div class="class-name"><i class="fas fa-users"></i> {{ planning.mixed_group.name }}</div>
+                                            <div class="class-subject">{{ planning.mixed_group.subject }}</div>
+                                        {% endif %}
                                             {% if planning.title %}
                                             <div class="planning-title">
                                                 {{ planning.title }}
@@ -1196,10 +1211,17 @@ if (typeof pdfjsLib !== 'undefined') {
                                     {% elif schedule_key in schedule_grid %}
                                         <!-- Horaire type -->
                                         {% set schedule = schedule_grid[schedule_key] %}
-                                        <div class="class-block" style="background-color: {{ schedule.classroom.color }}; opacity: 0.7;">
-                                            <div class="class-name">{{ schedule.classroom.name }}</div>
-                                            <div class="class-subject">{{ schedule.classroom.subject }}</div>
-                                        </div>
+                                        {% if schedule.classroom_id %}
+                                            <div class="class-block" style="background-color: {{ schedule.classroom.color }}; opacity: 0.7;">
+                                                <div class="class-name">{{ schedule.classroom.name }}</div>
+                                                <div class="class-subject">{{ schedule.classroom.subject }}</div>
+                                            </div>
+                                        {% elif schedule.mixed_group_id %}
+                                            <div class="class-block" style="background-color: {{ schedule.mixed_group.color }}; opacity: 0.7;">
+                                                <div class="class-name"><i class="fas fa-users"></i> {{ schedule.mixed_group.name }}</div>
+                                                <div class="class-subject">{{ schedule.mixed_group.subject }}</div>
+                                            </div>
+                                        {% endif %}
                                     {% endif %}
                                 {% endif %}
                             </td>
@@ -1217,13 +1239,18 @@ if (typeof pdfjsLib !== 'undefined') {
                 <i class="fas fa-calendar-alt"></i> Vue annuelle
             </h3>
 
-            <!-- Onglets des classes -->
+            <!-- Onglets des classes et groupes mixtes -->
             <div class="class-tabs">
-                {% for classroom in classrooms %}
-                <button class="tab-btn {% if classroom.id == selected_classroom_id %}active{% endif %}"
-                        onclick="selectClassroom({{ classroom.id }})"
-                        style="border-bottom-color: {{ classroom.color }};">
-                    {{ classroom.name }}
+                {% for item in classrooms_json %}
+                {% set item_key = item.type + '_' + item.id|string %}
+                <button class="tab-btn {% if item_key == selected_classroom_id %}active{% endif %}"
+                        data-classroom-id="{{ item_key|e }}"
+                        style="border-bottom-color: {{ item.color }};"
+                        onclick="switchClassroomTab('{{ item_key|e }}', this)">
+                    {% if item.type == 'mixed_group' %}
+                        <i class="fas fa-users" style="margin-right: 0.25rem;"></i>
+                    {% endif %}
+                    {{ item.name|e }}
                 </button>
                 {% endfor %}
             </div>
@@ -1231,8 +1258,14 @@ if (typeof pdfjsLib !== 'undefined') {
             <!-- Calendrier annuel -->
             <div class="annual-calendar">
                 {% if selected_classroom_id and selected_classroom_id in annual_data %}
-                    {% set selected_classroom = classrooms | selectattr('id', 'equalto', selected_classroom_id) | first %}
-                    <div class="annual-grid" data-classroom-color="{{ selected_classroom.color if selected_classroom else '#4F46E5' }}">
+                    {% if selected_classroom_id.startswith('mixed_group_') %}
+                        {% set item_id = selected_classroom_id.split('_')[2]|int %}
+                        {% set selected_item = classrooms_json | selectattr('type', 'equalto', 'mixed_group') | selectattr('id', 'equalto', item_id) | first %}
+                    {% else %}
+                        {% set item_id = selected_classroom_id.split('_')[1]|int %}
+                        {% set selected_item = classrooms_json | selectattr('type', 'equalto', 'classroom') | selectattr('id', 'equalto', item_id) | first %}
+                    {% endif %}
+                    <div class="annual-grid" data-classroom-color="{{ selected_item.color if selected_item else '#4F46E5' }}">
                         {% for week in annual_data[selected_classroom_id] %}
                         <div class="annual-week {% if week.start_date <= today and today <= week.dates[4] %}current-week{% endif %} {% if week.is_holiday %}holiday-week{% endif %}">
                             <div class="week-info">
@@ -1358,9 +1391,9 @@ if (typeof pdfjsLib !== 'undefined') {
                 <label class="form-label">Classe</label>
                 <select id="modalClassroom" class="form-control" onchange="loadGroupsForClass(this.value)">
                     <option value="">-- Sélectionner une classe --</option>
-                    {% for classroom in classrooms %}
-                    <option value="{{ classroom.id }}" data-color="{{ classroom.color }}">
-                        {{ classroom.name }} - {{ classroom.subject }}
+                    {% for item in classrooms_json %}
+                    <option value="{{ item.type }}_{{ item.id }}" data-color="{{ item.color }}" data-type="{{ item.type }}">
+                        {% if item.type == 'mixed_group' %}👥 {% endif %}{{ item.name }} - {{ item.subject }}
                     </option>
                     {% endfor %}
                 </select>
@@ -1551,9 +1584,9 @@ if (typeof pdfjsLib !== 'undefined') {
                 <label class="form-label">Classe sélectionnée</label>
                 <select id="dayModalClassroom" class="form-control" disabled>
                     <option value="">-- Classe prédéfinie --</option>
-                    {% for classroom in classrooms %}
-                    <option value="{{ classroom.id }}" data-color="{{ classroom.color }}">
-                        {{ classroom.name }} - {{ classroom.subject }}
+                    {% for item in classrooms_json %}
+                    <option value="{{ item.type }}_{{ item.id }}" data-color="{{ item.color }}" data-type="{{ item.type }}">
+                        {% if item.type == 'mixed_group' %}👥 {% endif %}{{ item.name }} - {{ item.subject }}
                     </option>
                     {% endfor %}
                 </select>
@@ -1697,12 +1730,16 @@ if (typeof pdfjsLib !== 'undefined') {
 <script src="{{ url_for('static', filename='js/planning.js') }}"></script>
 <script>
 const currentWeek = '{{ current_week.strftime("%Y-%m-%d") }}';
-const selectedClassroomId = {{ selected_classroom_id or 'null' }};
+const selectedClassroomId = {{ selected_classroom_id|tojson if selected_classroom_id else 'null' }};
 const periodsData = {{ periods_json | tojson }};
 const classrooms = {{ classrooms_json | tojson }};
 const scheduleGrid = {{ schedule_grid_json | tojson }};
 let currentPlanningCell = null;
 let isExtendedView = false;
+
+// Variables globales pour les mises à jour dynamiques
+window.selectedClassroomId = selectedClassroomId;
+window.classroomsData = classrooms;
 
 // Gérer le clic sur une case de la vue annuelle
 function handleAnnualDayClick(element, dateStr) {
@@ -1790,14 +1827,97 @@ function toggleViewMode() {
 
 // Appliquer la couleur de la classe sélectionnée
 function applyClassroomColor() {
-    const selectedClassroom = {{ classrooms_json | tojson }}.find(c => c.id === selectedClassroomId);
-    if (selectedClassroom && selectedClassroom.color) {
+    console.log('🎨 applyClassroomColor called with selectedClassroomId:', selectedClassroomId);
+    
+    // Debug: afficher les données annuelles pour la classe sélectionnée
+    const annualDataForClass = {{ annual_data | tojson }}[selectedClassroomId];
+    console.log('📊 Annual data for selected class:', annualDataForClass);
+    
+    // Debug: chercher la semaine qui contient 2025-06-18
+    if (annualDataForClass) {
+        const targetDate = '2025-06-18';
+        console.log('🔍 Looking for week containing:', targetDate);
+        
+        // Debug: afficher les dates de quelques semaines
+        annualDataForClass.slice(0, 3).forEach((week, index) => {
+            console.log(`📅 Week ${index} dates:`, week.dates);
+            console.log(`📅 Week ${index} has_class:`, week.has_class);
+        });
+        
+        const targetWeek = annualDataForClass.find(week => 
+            week.dates && week.dates.some(date => date === targetDate)
+        );
+        if (targetWeek) {
+            console.log('🔍 Week containing 2025-06-18:', targetWeek);
+            console.log('📅 has_class array:', targetWeek.has_class);
+            console.log('📝 plannings:', targetWeek.plannings);
+        } else {
+            console.log('❌ No week found containing 2025-06-18');
+            
+            // Debug: chercher avec différents formats de date
+            const targetWeekAlt = annualDataForClass.find(week => 
+                week.dates && week.dates.some(date => {
+                    // Essayer de convertir la date si c'est un objet
+                    const dateStr = typeof date === 'string' ? date : (date.toString ? date.toString() : JSON.stringify(date));
+                    return dateStr.includes('2025-06-18') || dateStr.includes('18');
+                })
+            );
+            if (targetWeekAlt) {
+                console.log('🔍 Found week with alternative search:', targetWeekAlt);
+            }
+        }
+    }
+    
+    if (!selectedClassroomId) {
+        console.log('❌ No selectedClassroomId');
+        return;
+    }
+    
+    // Parser l'ID pour extraire le type et l'ID
+    let type, numericId;
+    if (selectedClassroomId.startsWith('mixed_group_')) {
+        type = 'mixed_group';
+        numericId = parseInt(selectedClassroomId.split('_')[2]);
+    } else if (selectedClassroomId.startsWith('classroom_')) {
+        type = 'classroom';
+        numericId = parseInt(selectedClassroomId.split('_')[1]);
+    } else {
+        // Format ancien (ID numérique direct)
+        type = 'classroom';
+        numericId = parseInt(selectedClassroomId);
+    }
+    
+    const selectedItem = {{ classrooms_json | tojson }}.find(c => 
+        c.id === numericId && c.type === type
+    );
+    
+    console.log('🏫 Found selectedItem:', selectedItem);
+    
+    if (selectedItem && selectedItem.color) {
+        console.log('🎨 Applying color:', selectedItem.color);
         const annualGrid = document.querySelector('.annual-grid');
         if (annualGrid) {
             // Appliquer la couleur comme variable CSS
-            annualGrid.style.setProperty('--classroom-color', selectedClassroom.color);
+            annualGrid.style.setProperty('--classroom-color', selectedItem.color);
+            console.log('✅ Color applied to annual grid');
+        } else {
+            console.log('❌ Annual grid not found');
         }
+    } else {
+        console.log('❌ No selectedItem or color');
     }
+}
+
+// Changer d'onglet de classe dans la vue annuelle
+function switchClassroomTab(classroomId, buttonElement) {
+    console.log('🔄 Switching to classroom:', classroomId);
+    
+    // Mettre à jour l'URL pour recharger avec la nouvelle classe
+    const currentUrl = new URL(window.location);
+    currentUrl.searchParams.set('classroom', classroomId);
+    
+    // Recharger la page avec la nouvelle classe sélectionnée
+    window.location.href = currentUrl.toString();
 }
 
 // Initialiser les données de planification au chargement
@@ -1810,9 +1930,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (savedViewMode === 'extended' && !isExtendedView) {
         toggleViewMode();
     }
+    
+    // Gestionnaire pour les onglets de classe
+    document.querySelectorAll('.tab-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const classroomId = this.getAttribute('data-classroom-id');
+            if (classroomId) {
+                selectClassroom(classroomId);
+            }
+        });
+    });
 });
-
-<!-- Ajoutez ce script dans calendar_view.html après le script existant dans le bloc extra_js -->
 
 
 // Ajout des styles CSS inline pour les éléments de période passée
@@ -3055,16 +3183,41 @@ async function loadDayScheduleSlots(dateStr, classroomId, existingPlannings) {
         // Filtrer les horaires pour cette classe et ce jour
         const todaySchedules = [];
         
-        // Parcourir seulement les périodes où cette classe a cours
+        // Parcourir toutes les périodes
         periods.forEach(period => {
-            // Vérifier si cette classe a cours à cette période ce jour
+            // Vérifier si cette classe a cours à cette période ce jour dans l'horaire type
             const scheduleKey = `${weekday}_${period.number}`;
             const schedule = scheduleGrid[scheduleKey];
             
-            // Ne créer un créneau que si cette classe a cours
-            if (schedule && schedule.classroom_id == classroomId) {
-                const existingPlanning = existingPlannings[period.number];
-                
+            // Parser l'ID de classe pour la comparaison
+            let targetId, targetType;
+            if (classroomId.startsWith('mixed_group_')) {
+                targetId = parseInt(classroomId.split('_')[2]);
+                targetType = 'mixed_group';
+            } else if (classroomId.startsWith('classroom_')) {
+                targetId = parseInt(classroomId.split('_')[1]);
+                targetType = 'classroom';
+            } else {
+                // Format ancien (ID numérique direct)
+                targetId = parseInt(classroomId);
+                targetType = 'classroom';
+            }
+            
+            // Vérifier si l'horaire type correspond
+            const scheduleMatches = schedule && (
+                (schedule.classroom_id == targetId && targetType === 'classroom') ||
+                (schedule.mixed_group_id == targetId && targetType === 'mixed_group')
+            );
+            
+            // Vérifier s'il y a une planification existante pour cette période
+            const existingPlanning = existingPlannings[period.number];
+            const hasExistingPlanning = existingPlanning && (
+                (existingPlanning.classroom_id == targetId && targetType === 'classroom') ||
+                (existingPlanning.mixed_group_id == targetId && targetType === 'mixed_group')
+            );
+            
+            // Créer un créneau s'il y a soit un horaire type, soit une planification existante
+            if (scheduleMatches || hasExistingPlanning) {
                 todaySchedules.push({
                     period_number: period.number,
                     period_start: period.start,
@@ -3096,11 +3249,27 @@ function renderDayScheduleSlots(scheduleSlots, dateStr, classroomId) {
     const now = new Date();
     const isPastDate = (now - targetDate) > (24 * 60 * 60 * 1000);
     
-    // Récupérer les informations de la classe
-    const classroom = classrooms.find(c => c.id == classroomId);
-    const classroomColor = classroom ? classroom.color : '#4F46E5';
-    const classroomName = classroom ? classroom.name : 'Classe inconnue';
-    const classroomSubject = classroom ? classroom.subject : '';
+    // Récupérer les informations de la classe ou du groupe mixte
+    let selectedItem = null;
+    if (classroomId) {
+        let type, numericId;
+        if (classroomId.startsWith('mixed_group_')) {
+            type = 'mixed_group';
+            numericId = parseInt(classroomId.split('_')[2]);
+        } else if (classroomId.startsWith('classroom_')) {
+            type = 'classroom';
+            numericId = parseInt(classroomId.split('_')[1]);
+        } else {
+            // Format ancien (ID numérique direct)
+            type = 'classroom';
+            numericId = parseInt(classroomId);
+        }
+        selectedItem = classrooms.find(c => c.id === numericId && c.type === type);
+    }
+    
+    const classroomColor = selectedItem ? selectedItem.color : '#4F46E5';
+    const classroomName = selectedItem ? selectedItem.name : 'Classe inconnue';
+    const classroomSubject = selectedItem ? selectedItem.subject : '';
     
     let html = '<div class="day-schedules-list">';
     
@@ -3109,11 +3278,11 @@ function renderDayScheduleSlots(scheduleSlots, dateStr, classroomId) {
         const hasPlanning = planning !== null;
         
         html += `
-            <div class="day-schedule-slot" style="border-left: 4px solid ${classroomColor}">
+            <div class="day-schedule-slot" style="border-left: 4px solid ${classroomColor}" onclick="editDaySlot(${slot.period_number}, '${dateStr}', '${classroomId}')">
                 <div class="slot-header">
                     <div class="slot-period">Période ${slot.period_number}</div>
                     <div class="slot-time">${slot.period_start} - ${slot.period_end}</div>
-                    ${!isPastDate ? `<button class="btn-edit-slot" onclick="editDaySlot(${slot.period_number}, '${dateStr}', ${classroomId})" title="Modifier ce créneau">
+                    ${!isPastDate ? `<button class="btn-edit-slot" onclick="event.stopPropagation(); editDaySlot(${slot.period_number}, '${dateStr}', '${classroomId}')" title="Modifier ce créneau">
                         <i class="fas fa-edit"></i>
                     </button>` : ''}
                 </div>

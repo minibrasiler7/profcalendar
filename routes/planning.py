@@ -109,9 +109,19 @@ def get_day_plannings(date_str):
             date=planning_date
         )
         
-        # Filtrer par classe si spécifié
+        # Filtrer par classe ou groupe mixte si spécifié
         if classroom_id and classroom_id != '':
-            query = query.filter_by(classroom_id=int(classroom_id))
+            if classroom_id.startswith('mixed_group_'):
+                # Extraire l'ID du groupe mixte : mixed_group_1 -> 1
+                mixed_group_id = int(classroom_id.split('_')[2])
+                query = query.filter_by(mixed_group_id=mixed_group_id)
+            elif classroom_id.startswith('classroom_'):
+                # Extraire l'ID de la classe : classroom_21 -> 21
+                class_id = int(classroom_id.split('_')[1])
+                query = query.filter_by(classroom_id=class_id)
+            else:
+                # Format ancien (ID numérique direct)
+                query = query.filter_by(classroom_id=int(classroom_id))
         
         # Récupérer les planifications
         plannings = query.all()
@@ -127,7 +137,7 @@ def get_day_plannings(date_str):
             period_info = periods_dict.get(planning.period_number)
             
             try:
-                # Récupérer les informations de classe avec gestion d'erreur
+                # Récupérer les informations de classe ou groupe mixte avec gestion d'erreur
                 classroom_name = ''
                 classroom_subject = ''
                 classroom_color = '#4F46E5'
@@ -136,6 +146,10 @@ def get_day_plannings(date_str):
                     classroom_name = planning.classroom.name or ''
                     classroom_subject = planning.classroom.subject or ''
                     classroom_color = planning.classroom.color or '#4F46E5'
+                elif planning.mixed_group:
+                    classroom_name = planning.mixed_group.name or ''
+                    classroom_subject = planning.mixed_group.subject or ''
+                    classroom_color = planning.mixed_group.color or '#4F46E5'
                 
                 result.append({
                     'id': planning.id,
@@ -143,12 +157,14 @@ def get_day_plannings(date_str):
                     'period_start': period_info['start'].strftime('%H:%M') if period_info else '',
                     'period_end': period_info['end'].strftime('%H:%M') if period_info else '',
                     'classroom_id': planning.classroom_id,
+                    'mixed_group_id': planning.mixed_group_id,
                     'classroom_name': classroom_name,
                     'classroom_subject': classroom_subject,
                     'classroom_color': classroom_color,
                     'title': planning.title or '',
                     'description': planning.description or '',
-                    'group_id': planning.group_id
+                    'group_id': planning.group_id,
+                    'type': 'mixed_group' if planning.mixed_group_id else 'classroom'
                 })
             except Exception as plan_error:
                 print(f"Erreur lors du traitement de la planification {planning.id}: {plan_error}")
@@ -164,12 +180,16 @@ def get_day_plannings(date_str):
             'plannings': result
         })
         
-    except ValueError:
+    except ValueError as e:
+        print(f"❌ Erreur ValueError dans get_day_plannings: {e}")
         return jsonify({
             'success': False,
             'error': 'Format de date invalide'
         }), 400
     except Exception as e:
+        print(f"❌ Erreur dans get_day_plannings: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)
@@ -295,6 +315,10 @@ def dashboard():
         Planning.user_id == current_user.id,
         Planning.date >= week_dates[0],
         Planning.date <= week_dates[4]
+    ).options(
+        db.joinedload(Planning.classroom),
+        db.joinedload(Planning.mixed_group),
+        db.joinedload(Planning.group)
     ).all()
 
     # Chercher le cours actuel ou le prochain
@@ -336,14 +360,29 @@ def calendar_view():
 
     # Récupérer toutes les données nécessaires
     classrooms = current_user.classrooms.all()
+    
+    # Récupérer aussi les groupes mixtes
+    from models.mixed_group import MixedGroup
+    mixed_groups = MixedGroup.query.filter_by(teacher_id=current_user.id, is_active=True).all()
 
     # Convertir les classrooms en dictionnaires pour JSON
     classrooms_dict = [{
         'id': c.id,
         'name': c.name,
         'subject': c.subject,
-        'color': c.color
+        'color': c.color,
+        'type': 'classroom'
     } for c in classrooms]
+    
+    # Ajouter les groupes mixtes
+    for group in mixed_groups:
+        classrooms_dict.append({
+            'id': group.id,
+            'name': group.name,
+            'subject': group.subject,
+            'color': group.color,
+            'type': 'mixed_group'
+        })
 
     periods = calculate_periods(current_user)
     schedules = current_user.schedules.all()
@@ -363,20 +402,15 @@ def calendar_view():
         key = f"{schedule.weekday}_{schedule.period_number}"
         schedule_grid[key] = schedule
 
-    # Récupérer les plannings de la semaine
+    # Récupérer les plannings de la semaine (pour toutes les classes et groupes mixtes)
     week_plannings = Planning.query.filter(
         Planning.user_id == current_user.id,
         Planning.date >= week_dates[0],
         Planning.date <= week_dates[4]
-    ).all()
-    # Ajouter cette section dans la fonction calendar_view après la récupération des plannings
-# (vers la ligne 160 du fichier routes/planning.py)
-
-    # Récupérer les plannings de la semaine
-    week_plannings = Planning.query.filter(
-        Planning.user_id == current_user.id,
-        Planning.date >= week_dates[0],
-        Planning.date <= week_dates[4]
+    ).options(
+        db.joinedload(Planning.classroom),
+        db.joinedload(Planning.mixed_group),
+        db.joinedload(Planning.group)
     ).all()
 
     # Organiser les plannings par date et période avec les infos de checklist
@@ -427,22 +461,41 @@ def calendar_view():
             'name': holiday_name
         }
 
-    # Générer les données annuelles pour chaque classe
+    # Générer les données annuelles pour chaque classe et groupe mixte
     annual_data = {}
     for classroom in classrooms:
-        annual_data[classroom.id] = generate_annual_calendar(classroom)
+        annual_data[f"classroom_{classroom.id}"] = generate_annual_calendar(classroom, 'classroom')
+    
+    for group in mixed_groups:
+        annual_data[f"mixed_group_{group.id}"] = generate_annual_calendar(group, 'mixed_group')
 
     # Sélectionner la première classe par défaut
-    selected_classroom_id = request.args.get('classroom', classrooms[0].id if classrooms else None)
+    default_id = f"classroom_{classrooms[0].id}" if classrooms else (f"mixed_group_{mixed_groups[0].id}" if mixed_groups else None)
+    selected_classroom_id = request.args.get('classroom', default_id)
 
     # Créer une version JSON-serializable de schedule_grid
     schedule_grid_json = {}
     for key, schedule in schedule_grid.items():
-        schedule_grid_json[key] = {
-            'classroom_id': schedule.classroom_id,
-            'weekday': schedule.weekday,
-            'period_number': schedule.period_number
-        }
+        if schedule.classroom_id:
+            schedule_grid_json[key] = {
+                'classroom_id': schedule.classroom_id,
+                'weekday': schedule.weekday,
+                'period_number': schedule.period_number,
+                'classroom_name': schedule.classroom.name,
+                'classroom_subject': schedule.classroom.subject,
+                'classroom_color': schedule.classroom.color,
+                'type': 'classroom'
+            }
+        elif schedule.mixed_group_id:
+            schedule_grid_json[key] = {
+                'mixed_group_id': schedule.mixed_group_id,
+                'weekday': schedule.weekday,
+                'period_number': schedule.period_number,
+                'classroom_name': schedule.mixed_group.name,
+                'classroom_subject': schedule.mixed_group.subject,
+                'classroom_color': schedule.mixed_group.color,
+                'type': 'mixed_group'
+            }
 
     return render_template('planning/calendar_view.html',
                          week_dates=week_dates,
@@ -456,7 +509,7 @@ def calendar_view():
                          planning_grid=planning_grid,
                          annual_data=annual_data,
                          holidays_info=holidays_info,
-                         selected_classroom_id=int(selected_classroom_id) if selected_classroom_id else None,
+                         selected_classroom_id=selected_classroom_id,
                          days=['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'],
                          today=date_type.today())
 
@@ -465,8 +518,64 @@ def calculate_periods(user):
     from routes.schedule import calculate_periods as calc_periods
     return calc_periods(user)
 
-def generate_annual_calendar(classroom):
-    """Génère les données du calendrier annuel pour une classe"""
+@planning_bp.route('/check_day_planning/<date>/<classroom_id>')
+@login_required
+def check_day_planning(date, classroom_id):
+    """Vérifie si un jour a des planifications pour la classe sélectionnée"""
+    try:
+        print(f"🔍 check_day_planning called: date={date}, classroom_id={classroom_id}")
+        date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+        
+        # Parser l'ID de classe
+        if classroom_id.startswith('classroom_'):
+            actual_classroom_id = int(classroom_id.split('_')[1])
+            mixed_group_id = None
+            print(f"📚 Checking for classroom: {actual_classroom_id}")
+        elif classroom_id.startswith('mixed_group_'):
+            actual_classroom_id = None
+            mixed_group_id = int(classroom_id.split('_')[2])
+            print(f"👥 Checking for mixed group: {mixed_group_id}")
+        else:
+            print(f"❌ Invalid classroom_id format: {classroom_id}")
+            return jsonify({'success': False, 'message': 'Format d\'ID invalide'})
+        
+        # Vérifier s'il y a des planifications pour cette classe ce jour-là
+        query = Planning.query.filter_by(
+            user_id=current_user.id,
+            date=date_obj
+        )
+        
+        if actual_classroom_id:
+            query = query.filter_by(classroom_id=actual_classroom_id)
+            print(f"🔎 Querying with classroom_id={actual_classroom_id}")
+        elif mixed_group_id:
+            query = query.filter_by(mixed_group_id=mixed_group_id)
+            print(f"🔎 Querying with mixed_group_id={mixed_group_id}")
+        
+        # Debug: afficher la requête SQL générée
+        print(f"🗄️ SQL Query: {query}")
+        
+        result = query.first()
+        has_planning = result is not None
+        
+        print(f"📊 Query result: {result}")
+        print(f"✅ Has planning: {has_planning}")
+        
+        return jsonify({
+            'success': True,
+            'has_planning': has_planning
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        })
+
+def generate_annual_calendar(item, item_type='classroom'):
+    """Génère les données du calendrier annuel pour une classe ou un groupe mixte"""
+    print(f"🗓️ generate_annual_calendar called for {item_type}: {item.name} (ID: {item.id})")
+    
     # Calculer toutes les semaines de l'année scolaire
     start_date = current_user.school_year_start
     end_date = current_user.school_year_end
@@ -474,12 +583,24 @@ def generate_annual_calendar(classroom):
     # Récupérer toutes les vacances
     holidays = current_user.holidays.all()
 
-    # Récupérer tous les plannings pour cette classe
-    all_plannings = Planning.query.filter_by(
-        user_id=current_user.id,
-        classroom_id=classroom.id
-    ).all()
-
+    # Récupérer tous les plannings pour cette classe ou ce groupe mixte
+    if item_type == 'mixed_group':
+        all_plannings = Planning.query.filter_by(
+            user_id=current_user.id,
+            mixed_group_id=item.id
+        ).all()
+        print(f"👥 Found {len(all_plannings)} plannings for mixed group {item.id}")
+    else:
+        all_plannings = Planning.query.filter_by(
+            user_id=current_user.id,
+            classroom_id=item.id
+        ).all()
+        print(f"📚 Found {len(all_plannings)} plannings for classroom {item.id}")
+    
+    # Debug: afficher les plannings trouvés
+    for planning in all_plannings:
+        print(f"  📝 Planning: {planning.date} P{planning.period_number} - {planning.title}")
+    
     # Organiser les plannings par date
     plannings_by_date = {}
     for planning in all_plannings:
@@ -490,6 +611,8 @@ def generate_annual_calendar(classroom):
             'title': planning.title or f'P{planning.period_number}',
             'period': planning.period_number
         })
+    
+    print(f"📅 Plannings by date: {plannings_by_date}")
 
     weeks = []
     current_date = start_date
@@ -548,18 +671,31 @@ def generate_annual_calendar(classroom):
             if not is_school_year(date_to_check, current_user) or holiday_name:
                 continue
 
-            # Vérifier dans l'horaire type si cette classe a cours ce jour
+            # Vérifier dans l'horaire type si cette classe/groupe mixte a cours ce jour
             weekday = i
-            has_schedule = Schedule.query.filter_by(
-                user_id=current_user.id,
-                classroom_id=classroom.id,
-                weekday=weekday
-            ).first() is not None
+            if item_type == 'mixed_group':
+                has_schedule = Schedule.query.filter_by(
+                    user_id=current_user.id,
+                    mixed_group_id=item.id,
+                    weekday=weekday
+                ).first() is not None
+            else:
+                has_schedule = Schedule.query.filter_by(
+                    user_id=current_user.id,
+                    classroom_id=item.id,
+                    weekday=weekday
+                ).first() is not None
 
-            week_info['has_class'][i] = has_schedule
+            # Vérifier s'il y a des planifications spécifiques pour ce jour
+            has_planning = date_str in plannings_by_date
+            
+            # Un jour a des cours s'il y a soit un horaire type, soit une planification spécifique
+            week_info['has_class'][i] = has_schedule or has_planning
+            
+            print(f"    📅 {date_str} (day {i}): has_schedule={has_schedule}, has_planning={has_planning}, final={has_schedule or has_planning}")
 
             # Ajouter les plannings pour ce jour
-            if date_str in plannings_by_date:
+            if has_planning:
                 week_info['plannings'][date_str] = plannings_by_date[date_str]
 
         weeks.append(week_info)
@@ -578,6 +714,7 @@ def save_planning():
         date_str = data.get('date')
         period_number = data.get('period_number')
         classroom_id = data.get('classroom_id')
+        mixed_group_id = data.get('mixed_group_id')  # Nouveau : gérer les groupes mixtes
         title = data.get('title', '')
         description = data.get('description', '')
         checklist_states = data.get('checklist_states', {})  # Récupérer les états des checkboxes
@@ -586,11 +723,16 @@ def save_planning():
         # Convertir la date
         planning_date = datetime.strptime(date_str, '%Y-%m-%d').date()
 
-        # Vérifier la classe
+        # Vérifier la classe ou le groupe mixte
         if classroom_id:
             classroom = Classroom.query.filter_by(id=classroom_id, user_id=current_user.id).first()
             if not classroom:
                 return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+        elif mixed_group_id:
+            from models.mixed_group import MixedGroup
+            mixed_group = MixedGroup.query.filter_by(id=mixed_group_id, teacher_id=current_user.id).first()
+            if not mixed_group:
+                return jsonify({'success': False, 'message': 'Groupe mixte non trouvé'}), 404
 
         # Vérifier le groupe si spécifié
         if group_id:
@@ -610,10 +752,11 @@ def save_planning():
             period_number=period_number
         ).first()
 
-        if classroom_id and (title or description):
+        if (classroom_id or mixed_group_id) and (title or description):
             if existing:
                 # Mettre à jour
                 existing.classroom_id = classroom_id
+                existing.mixed_group_id = mixed_group_id
                 existing.title = title
                 existing.description = description
                 existing.group_id = group_id  # Sauvegarder l'ID du groupe
@@ -623,6 +766,7 @@ def save_planning():
                 planning = Planning(
                     user_id=current_user.id,
                     classroom_id=classroom_id,
+                    mixed_group_id=mixed_group_id,
                     date=planning_date,
                     period_number=period_number,
                     title=title,

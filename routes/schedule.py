@@ -76,14 +76,29 @@ def weekly_schedule():
         flash('Votre horaire type est déjà configuré. Vous pouvez le modifier ici.', 'info')
 
     classrooms = current_user.classrooms.all()
+    
+    # Récupérer aussi les groupes mixtes
+    from models.mixed_group import MixedGroup
+    mixed_groups = MixedGroup.query.filter_by(teacher_id=current_user.id, is_active=True).all()
 
     # Convertir les classrooms en dictionnaires pour JSON
     classrooms_dict = [{
         'id': c.id,
         'name': c.name,
         'subject': c.subject,
-        'color': c.color
+        'color': c.color,
+        'type': 'classroom'
     } for c in classrooms]
+    
+    # Ajouter les groupes mixtes
+    for group in mixed_groups:
+        classrooms_dict.append({
+            'id': group.id,
+            'name': group.name,
+            'subject': group.subject,
+            'color': group.color,
+            'type': 'mixed_group'
+        })
 
     periods = calculate_periods(current_user)
 
@@ -125,7 +140,13 @@ def save_schedule():
     try:
         weekday = data.get('weekday')
         period_number = data.get('period_number')
-        classroom_id = data.get('classroom_id')
+        classroom_id_param = data.get('classroom_id')
+        mixed_group_id_param = data.get('mixed_group_id')
+        item_type = data.get('type', 'classroom')  # 'classroom' ou 'mixed_group'
+        
+        # Initialiser les variables
+        classroom_id = None
+        mixed_group_id = None
 
         # Vérifier si un horaire existe déjà pour ce créneau
         existing = Schedule.query.filter_by(
@@ -134,11 +155,24 @@ def save_schedule():
             period_number=period_number
         ).first()
 
-        if classroom_id:
-            # Vérifier que la classe appartient à l'utilisateur
-            classroom = Classroom.query.filter_by(id=classroom_id, user_id=current_user.id).first()
-            if not classroom:
-                return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+        if classroom_id_param or mixed_group_id_param:
+            # Vérifier selon le type
+            if item_type == 'mixed_group' and mixed_group_id_param:
+                from models.mixed_group import MixedGroup
+                mixed_group = MixedGroup.query.filter_by(id=mixed_group_id_param, teacher_id=current_user.id).first()
+                if not mixed_group:
+                    return jsonify({'success': False, 'message': 'Groupe mixte non trouvé'}), 404
+                classroom_id = None
+                mixed_group_id = mixed_group_id_param
+            elif item_type == 'classroom' and classroom_id_param:
+                # Vérifier que la classe appartient à l'utilisateur
+                classroom = Classroom.query.filter_by(id=classroom_id_param, user_id=current_user.id).first()
+                if not classroom:
+                    return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
+                classroom_id = classroom_id_param
+                mixed_group_id = None
+            else:
+                return jsonify({'success': False, 'message': 'Paramètres invalides'}), 400
 
             # Calculer les heures de début et fin
             periods = calculate_periods(current_user)
@@ -149,6 +183,7 @@ def save_schedule():
             if existing:
                 # Mettre à jour
                 existing.classroom_id = classroom_id
+                existing.mixed_group_id = mixed_group_id
                 existing.start_time = period['start']
                 existing.end_time = period['end']
             else:
@@ -156,6 +191,7 @@ def save_schedule():
                 schedule = Schedule(
                     user_id=current_user.id,
                     classroom_id=classroom_id,
+                    mixed_group_id=mixed_group_id,
                     weekday=weekday,
                     period_number=period_number,
                     start_time=period['start'],
@@ -163,7 +199,7 @@ def save_schedule():
                 )
                 db.session.add(schedule)
         else:
-            # Supprimer l'horaire si pas de classe sélectionnée
+            # Supprimer l'horaire si pas de classe ou groupe mixte sélectionné
             if existing:
                 db.session.delete(existing)
 
@@ -183,8 +219,9 @@ def validate_schedule():
         flash('Veuillez ajouter au moins un cours dans votre horaire type.', 'warning')
         return redirect(url_for('schedule.weekly_schedule'))
 
-    # Marquer l'horaire comme complété
+    # Marquer l'horaire comme complété et s'assurer que le setup de base est aussi marqué comme complété
     current_user.schedule_completed = True
+    current_user.setup_completed = True
     db.session.commit()
 
     flash('Horaire type validé avec succès ! Vous pouvez maintenant accéder à votre calendrier.', 'success')
@@ -200,14 +237,29 @@ def view_schedule():
         return redirect(url_for('schedule.weekly_schedule'))
 
     classrooms = current_user.classrooms.all()
+    
+    # Récupérer aussi les groupes mixtes
+    from models.mixed_group import MixedGroup
+    mixed_groups = MixedGroup.query.filter_by(teacher_id=current_user.id, is_active=True).all()
 
     # Convertir les classrooms en dictionnaires pour JSON
     classrooms_dict = [{
         'id': c.id,
         'name': c.name,
         'subject': c.subject,
-        'color': c.color
+        'color': c.color,
+        'type': 'classroom'
     } for c in classrooms]
+    
+    # Ajouter les groupes mixtes
+    for group in mixed_groups:
+        classrooms_dict.append({
+            'id': group.id,
+            'name': group.name,
+            'subject': group.subject,
+            'color': group.color,
+            'type': 'mixed_group'
+        })
 
     periods = calculate_periods(current_user)
 
@@ -229,14 +281,26 @@ def view_schedule():
         key = f"{schedule.weekday}_{schedule.period_number}"
         schedule_grid[key] = schedule
         # Créer une version JSON-serializable pour JavaScript
-        schedule_grid_json[key] = {
-            'classroom_id': schedule.classroom_id,
-            'weekday': schedule.weekday,
-            'period_number': schedule.period_number,
-            'classroom_name': schedule.classroom.name,
-            'classroom_subject': schedule.classroom.subject,
-            'classroom_color': schedule.classroom.color
-        }
+        if schedule.classroom_id:
+            schedule_grid_json[key] = {
+                'classroom_id': schedule.classroom_id,
+                'weekday': schedule.weekday,
+                'period_number': schedule.period_number,
+                'classroom_name': schedule.classroom.name,
+                'classroom_subject': schedule.classroom.subject,
+                'classroom_color': schedule.classroom.color,
+                'type': 'classroom'
+            }
+        elif schedule.mixed_group_id:
+            schedule_grid_json[key] = {
+                'mixed_group_id': schedule.mixed_group_id,
+                'weekday': schedule.weekday,
+                'period_number': schedule.period_number,
+                'classroom_name': schedule.mixed_group.name,
+                'classroom_subject': schedule.mixed_group.subject,
+                'classroom_color': schedule.mixed_group.color,
+                'type': 'mixed_group'
+            }
 
     days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi']
 

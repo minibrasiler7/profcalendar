@@ -307,12 +307,24 @@
                              data-weekday="{{ day_index }}" 
                              data-period="{{ period.number }}"
                              {% if schedule %}
-                             style="background-color: {{ schedule.classroom.color }};"
-                             data-classroom-id="{{ schedule.classroom_id }}"
+                                 {% if schedule.classroom_id %}
+                                     style="background-color: {{ schedule.classroom.color }};"
+                                     data-classroom-id="{{ schedule.classroom_id }}"
+                                     data-type="classroom"
+                                 {% elif schedule.mixed_group_id %}
+                                     style="background-color: {{ schedule.mixed_group.color }};"
+                                     data-mixed-group-id="{{ schedule.mixed_group_id }}"
+                                     data-type="mixed_group"
+                                 {% endif %}
                              {% endif %}>
                             {% if schedule %}
-                                <div class="class-name">{{ schedule.classroom.name }}</div>
-                                <div class="class-subject">{{ schedule.classroom.subject }}</div>
+                                {% if schedule.classroom_id %}
+                                    <div class="class-name">{{ schedule.classroom.name }}</div>
+                                    <div class="class-subject">{{ schedule.classroom.subject }}</div>
+                                {% elif schedule.mixed_group_id %}
+                                    <div class="class-name"><i class="fas fa-users"></i> {{ schedule.mixed_group.name }}</div>
+                                    <div class="class-subject">{{ schedule.mixed_group.subject }}</div>
+                                {% endif %}
                             {% else %}
                                 <div class="empty-slot">Cliquez pour ajouter</div>
                             {% endif %}
@@ -321,12 +333,22 @@
                         <!-- Sélecteur de classe -->
                         <div class="class-selector" data-weekday="{{ day_index }}" data-period="{{ period.number }}">
                             <div class="class-options-container">
-                                {% for classroom in classrooms %}
-                                <div class="class-option" data-classroom-id="{{ classroom.id }}">
-                                    <div class="class-color-dot" style="background-color: {{ classroom.color }};"></div>
+                                {% for item in classrooms_json %}
+                                <div class="class-option" 
+                                     {% if item.type == 'classroom' %}
+                                         data-classroom-id="{{ item.id }}" data-type="classroom"
+                                     {% else %}
+                                         data-mixed-group-id="{{ item.id }}" data-type="mixed_group"
+                                     {% endif %}>
+                                    <div class="class-color-dot" style="background-color: {{ item.color }};"></div>
                                     <div class="class-option-info">
-                                        <div class="class-option-name">{{ classroom.name }}</div>
-                                        <div class="class-option-subject">{{ classroom.subject }}</div>
+                                        <div class="class-option-name">
+                                            {% if item.type == 'mixed_group' %}
+                                                <i class="fas fa-users" style="margin-right: 0.25rem;"></i>
+                                            {% endif %}
+                                            {{ item.name }}
+                                        </div>
+                                        <div class="class-option-subject">{{ item.subject }}</div>
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -344,10 +366,15 @@
     </div>
 
     <div class="legend">
-        {% for classroom in classrooms %}
+        {% for item in classrooms_json %}
         <div class="legend-item">
-            <div class="legend-color" style="background-color: {{ classroom.color }};"></div>
-            <span>{{ classroom.name }} - {{ classroom.subject }}</span>
+            <div class="legend-color" style="background-color: {{ item.color }};"></div>
+            <span>
+                {% if item.type == 'mixed_group' %}
+                    <i class="fas fa-users" style="margin-right: 0.25rem;"></i>
+                {% endif %}
+                {{ item.name }} - {{ item.subject }}
+            </span>
         </div>
         {% endfor %}
     </div>
@@ -407,11 +434,12 @@ function initializeScheduleSlots() {
         options.forEach(option => {
             option.addEventListener('click', function(e) {
                 e.stopPropagation();
-                const classroomId = this.dataset.classroomId;
+                const itemId = this.dataset.classroomId || this.dataset.mixedGroupId;
+                const itemType = this.dataset.type;
                 const weekday = selector.dataset.weekday;
                 const period = selector.dataset.period;
                 
-                selectClass(weekday, period, classroomId);
+                selectClass(weekday, period, itemId, itemType);
                 hideAllSelectors();
             });
         });
@@ -457,18 +485,18 @@ function hideAllSelectors() {
     });
 }
 
-function selectClass(weekday, period, classroomId) {
-    const classroom = classrooms.find(c => c.id == classroomId);
-    if (!classroom) return;
+function selectClass(weekday, period, itemId, itemType = 'classroom') {
+    const item = classrooms.find(c => c.id == itemId && c.type == itemType);
+    if (!item) return;
 
     // Mettre à jour l'interface
-    updateSlotUI(weekday, period, classroom);
+    updateSlotUI(weekday, period, item);
     
     // Marquer comme modifié
     pendingChanges.add(`${weekday}_${period}`);
     
     // Sauvegarder automatiquement
-    saveScheduleSlot(weekday, period, classroomId);
+    saveScheduleSlot(weekday, period, itemId, itemType);
 }
 
 function removeClass(weekday, period) {
@@ -482,27 +510,46 @@ function removeClass(weekday, period) {
     saveScheduleSlot(weekday, period, null);
 }
 
-function updateSlotUI(weekday, period, classroom) {
+function updateSlotUI(weekday, period, item) {
     const slot = document.querySelector(`.schedule-slot[data-weekday="${weekday}"][data-period="${period}"]`);
     if (!slot) return;
 
-    if (classroom) {
+    if (item) {
         slot.classList.add('has-class');
-        slot.style.backgroundColor = classroom.color;
-        slot.dataset.classroomId = classroom.id;
-        slot.innerHTML = `
-            <div class="class-name">${classroom.name}</div>
-            <div class="class-subject">${classroom.subject}</div>
-        `;
+        slot.style.backgroundColor = item.color;
+        
+        // Nettoyer les anciens attributs
+        slot.removeAttribute('data-classroom-id');
+        slot.removeAttribute('data-mixed-group-id');
+        slot.removeAttribute('data-type');
+        
+        // Ajouter les nouveaux attributs selon le type
+        if (item.type === 'mixed_group') {
+            slot.dataset.mixedGroupId = item.id;
+            slot.dataset.type = 'mixed_group';
+            slot.innerHTML = `
+                <div class="class-name"><i class="fas fa-users"></i> ${item.name}</div>
+                <div class="class-subject">${item.subject}</div>
+            `;
+        } else {
+            slot.dataset.classroomId = item.id;
+            slot.dataset.type = 'classroom';
+            slot.innerHTML = `
+                <div class="class-name">${item.name}</div>
+                <div class="class-subject">${item.subject}</div>
+            `;
+        }
     } else {
         slot.classList.remove('has-class');
         slot.style.backgroundColor = '';
         slot.removeAttribute('data-classroom-id');
+        slot.removeAttribute('data-mixed-group-id');
+        slot.removeAttribute('data-type');
         slot.innerHTML = '<div class="empty-slot">Cliquez pour ajouter</div>';
     }
 }
 
-async function saveScheduleSlot(weekday, period, classroomId) {
+async function saveScheduleSlot(weekday, period, itemId, itemType = 'classroom') {
     try {
         const response = await fetch('/schedule/save', {
             method: 'POST',
@@ -512,7 +559,9 @@ async function saveScheduleSlot(weekday, period, classroomId) {
             body: JSON.stringify({
                 weekday: parseInt(weekday),
                 period_number: parseInt(period),
-                classroom_id: classroomId ? parseInt(classroomId) : null
+                classroom_id: itemId && itemType === 'classroom' ? parseInt(itemId) : null,
+                mixed_group_id: itemId && itemType === 'mixed_group' ? parseInt(itemId) : null,
+                type: itemType
             })
         });
 

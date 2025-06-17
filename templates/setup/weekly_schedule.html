@@ -342,10 +342,15 @@
 
         <!-- Légende des classes -->
         <div class="legend">
-            {% for classroom in classrooms %}
+            {% for item in classrooms_json %}
             <div class="legend-item">
-                <div class="legend-color" style="background-color: {{ classroom.color }};"></div>
-                <span>{{ classroom.name }} - {{ classroom.subject }}</span>
+                <div class="legend-color" style="background-color: {{ item.color }};"></div>
+                <span>
+                    {% if item.type == 'mixed_group' %}
+                        <i class="fas fa-users" style="margin-right: 0.25rem;"></i>
+                    {% endif %}
+                    {{ item.name }} - {{ item.subject }}
+                </span>
             </div>
             {% endfor %}
         </div>
@@ -377,10 +382,17 @@
                         {% set key = day_index|string + '_' + period.number|string %}
                         {% if key in schedule_grid %}
                             {% set schedule = schedule_grid[key] %}
-                            <div class="class-block" style="background-color: {{ schedule.classroom.color }};">
-                                <div class="class-name">{{ schedule.classroom.name }}</div>
-                                <div class="class-subject">{{ schedule.classroom.subject }}</div>
-                            </div>
+                            {% if schedule.classroom_id %}
+                                <div class="class-block" style="background-color: {{ schedule.classroom.color }};">
+                                    <div class="class-name">{{ schedule.classroom.name }}</div>
+                                    <div class="class-subject">{{ schedule.classroom.subject }}</div>
+                                </div>
+                            {% elif schedule.mixed_group_id %}
+                                <div class="class-block" style="background-color: {{ schedule.mixed_group.color }};">
+                                    <div class="class-name"><i class="fas fa-users"></i> {{ schedule.mixed_group.name }}</div>
+                                    <div class="class-subject">{{ schedule.mixed_group.subject }}</div>
+                                </div>
+                            {% endif %}
                         {% endif %}
                     </td>
                     {% endfor %}
@@ -430,16 +442,18 @@ function openClassSelector(cell, event) {
 
     // Vider et remplir les options
     optionsContainer.innerHTML = '';
-    classrooms.forEach(classroom => {
+    classrooms.forEach(item => {
         const option = document.createElement('div');
         option.className = 'class-option';
-        option.onclick = () => selectClass(classroom.id);
+        option.onclick = () => selectClass(item.id, item.type);
 
+        const iconHtml = item.type === 'mixed_group' ? '<i class="fas fa-users" style="margin-right: 0.25rem;"></i>' : '';
+        
         option.innerHTML = `
-            <div class="class-color-dot" style="background-color: ${classroom.color};"></div>
+            <div class="class-color-dot" style="background-color: ${item.color};"></div>
             <div class="class-option-info">
-                <div class="class-option-name">${classroom.name}</div>
-                <div class="class-option-subject">${classroom.subject}</div>
+                <div class="class-option-name">${iconHtml}${item.name}</div>
+                <div class="class-option-subject">${item.subject}</div>
             </div>
         `;
 
@@ -478,21 +492,22 @@ function openClassSelector(cell, event) {
     selector.classList.add('show');
 }
 
-function selectClass(classroomId) {
+function selectClass(itemId, itemType = 'classroom') {
     if (!currentCell) return;
 
     const weekday = currentCell.dataset.weekday;
     const period = currentCell.dataset.period;
-    const classroom = classrooms.find(c => c.id === classroomId);
+    const item = classrooms.find(c => c.id === itemId && c.type === itemType);
 
     // Sauvegarder via AJAX
-    saveSchedule(weekday, period, classroomId).then(result => {
+    saveSchedule(weekday, period, itemId, itemType).then(result => {
         if (result.success) {
             // Mettre à jour l'affichage
+            const iconHtml = item.type === 'mixed_group' ? '<i class="fas fa-users"></i> ' : '';
             currentCell.innerHTML = `
-                <div class="class-block" style="background-color: ${classroom.color};">
-                    <div class="class-name">${classroom.name}</div>
-                    <div class="class-subject">${classroom.subject}</div>
+                <div class="class-block" style="background-color: ${item.color};">
+                    <div class="class-name">${iconHtml}${item.name}</div>
+                    <div class="class-subject">${item.subject}</div>
                 </div>
             `;
             closeClassSelector();
@@ -506,8 +521,8 @@ function removeClass() {
     const weekday = currentCell.dataset.weekday;
     const period = currentCell.dataset.period;
 
-    // Sauvegarder via AJAX (sans classroom_id pour supprimer)
-    saveSchedule(weekday, period, null).then(result => {
+    // Sauvegarder via AJAX (sans item_id pour supprimer)
+    saveSchedule(weekday, period, null, 'classroom').then(result => {
         if (result.success) {
             currentCell.innerHTML = '';
             closeClassSelector();
@@ -520,7 +535,7 @@ function closeClassSelector() {
     currentCell = null;
 }
 
-async function saveSchedule(weekday, periodNumber, classroomId) {
+async function saveSchedule(weekday, periodNumber, itemId, itemType = 'classroom') {
     try {
         const response = await fetch('{{ url_for("schedule.save_schedule") }}', {
             method: 'POST',
@@ -531,7 +546,9 @@ async function saveSchedule(weekday, periodNumber, classroomId) {
             body: JSON.stringify({
                 weekday: parseInt(weekday),
                 period_number: parseInt(periodNumber),
-                classroom_id: classroomId
+                classroom_id: itemId && itemType === 'classroom' ? parseInt(itemId) : null,
+                mixed_group_id: itemId && itemType === 'mixed_group' ? parseInt(itemId) : null,
+                type: itemType
             })
         });
 
