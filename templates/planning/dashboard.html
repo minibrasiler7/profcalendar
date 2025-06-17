@@ -317,64 +317,71 @@
     <h2><i class="fas fa-bolt"></i> Actions rapides</h2>
     <div class="action-buttons-grid">
         {% if current_lesson %}
-        <a href="{{ url_for('planning.lesson_view') }}" class="action-button current-lesson">
-            <i class="fas fa-graduation-cap"></i>
+        <a href="{{ url_for('planning.lesson_view') }}" class="action-button" style="background-color: #FEF3C7; border-color: #F59E0B;">
+            <i class="fas fa-graduation-cap" style="color: #F59E0B;"></i>
             <span>Cours actuel</span>
             <small style="font-size: 0.75rem; color: var(--gray-color); margin-top: 0.25rem;">
                 {{ current_lesson.classroom.name }} - P{{ current_lesson.period_number }}
             </small>
         </a>
         {% elif next_lesson %}
-        <a href="{{ url_for('planning.lesson_view') }}" class="action-button">
-            <i class="fas fa-clock"></i>
+        <a href="{{ url_for('planning.lesson_view') }}" class="action-button" style="background-color: #F3E8FF; border-color: #8B5CF6;">
+            <i class="fas fa-clock" style="color: #8B5CF6;"></i>
             <span>Prochain cours</span>
             <small style="font-size: 0.75rem; color: var(--gray-color); margin-top: 0.25rem;">
                 {{ next_lesson.classroom.name }} - {{ next_lesson.start_time.strftime('%H:%M') }}
             </small>
         </a>
         {% else %}
-        <a href="{{ url_for('planning.lesson_view') }}" class="action-button">
-            <i class="fas fa-calendar-alt"></i>
+        <a href="{{ url_for('planning.lesson_view') }}" class="action-button" style="background-color: #F3E8FF; border-color: #8B5CF6;">
+            <i class="fas fa-calendar-alt" style="color: #8B5CF6;"></i>
             <span>Prochain cours</span>
         </a>
         {% endif %}
 
-        <a href="{{ url_for('planning.calendar_view') }}" class="action-button">
-            <i class="fas fa-calendar"></i>
+        <a href="{{ url_for('planning.calendar_view') }}" class="action-button" style="background-color: #ECFDF5; border-color: #059669;">
+            <i class="fas fa-calendar" style="color: #059669;"></i>
             <span>Voir le calendrier</span>
         </a>
 
-        <a href="{{ url_for('schedule.view_schedule') }}" class="action-button">
-            <i class="fas fa-edit"></i>
+        <a href="{{ url_for('schedule.view_schedule') }}" class="action-button" style="background-color: #FEF7FF; border-color: #A855F7;">
+            <i class="fas fa-edit" style="color: #A855F7;"></i>
             <span>Modifier l'horaire type</span>
         </a>
 
-        <!-- Nouveau bouton pour le gestionnaire de fichiers -->
         <a href="{{ url_for('file_manager.index') }}" class="action-button" style="background-color: #F0F9FF; border-color: #3B82F6;">
             <i class="fas fa-folder-open" style="color: #3B82F6;"></i>
             <span>Gestionnaire de fichiers</span>
         </a>
 
-        <!-- Nouveau bouton pour la gestion des sanctions -->
         <a href="{{ url_for('sanctions.index') }}" class="action-button" style="background-color: #FEF2F2; border-color: #EF4444;">
             <i class="fas fa-exclamation-triangle" style="color: #EF4444;"></i>
             <span>Gestion des sanctions</span>
         </a>
 
-        <!-- Nouveau bouton pour le suivi des absences -->
         <a href="{{ url_for('attendance.index') }}" class="action-button" style="background-color: #F0FDF4; border-color: #10B981;">
             <i class="fas fa-calendar-check" style="color: #10B981;"></i>
             <span>Suivi des absences</span>
         </a>
 
-        <a href="{{ url_for('setup.initial_setup') }}" class="action-button">
-            <i class="fas fa-cog"></i>
+        <a href="{{ url_for('setup.initial_setup') }}" class="action-button" style="background-color: #F8FAFC; border-color: #64748B;">
+            <i class="fas fa-cog" style="color: #64748B;"></i>
             <span>Paramètres</span>
         </a>
 
-        <a href="{{ url_for('planning.manage_classes') }}" class="action-button">
-            <i class="fas fa-users"></i>
+        <a href="{{ url_for('planning.manage_classes') }}" class="action-button" style="background-color: #EFF6FF; border-color: #2563EB;">
+            <i class="fas fa-users" style="color: #2563EB;"></i>
             <span>Gérer les classes</span>
+        </a>
+
+        <a href="{{ url_for('collaboration.index') }}" class="action-button" style="background-color: #FDF2F8; border-color: #EC4899;">
+            <i class="fas fa-handshake" style="color: #EC4899;"></i>
+            <span>Collaboration</span>
+        </a>
+
+        <a href="{{ url_for('mixed_groups.index') }}" class="action-button" style="background-color: #FFFBEB; border-color: #F59E0B;">
+            <i class="fas fa-layer-group" style="color: #F59E0B;"></i>
+            <span>Groupes mixtes</span>
         </a>
     </div>
 </div>

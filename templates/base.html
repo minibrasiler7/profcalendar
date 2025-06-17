@@ -41,14 +41,6 @@
                 <a href="{{ url_for('planning.manage_classes') }}" class="nav-link {% if request.endpoint == 'planning.manage_classes' %}active{% endif %}">
                     <i class="fas fa-users"></i> Gestion de classe
                 </a>
-                <a href="{{ url_for('mixed_groups.index') }}" class="nav-link {% if request.endpoint.startswith('mixed_groups.') %}active{% endif %}">
-                    <i class="fas fa-users-cog"></i> Groupes mixtes
-                </a>
-                {% if current_user.__class__.__name__ == 'User' %}
-                <a href="{{ url_for('collaboration.index') }}" class="nav-link {% if request.endpoint.startswith('collaboration.') %}active{% endif %}">
-                    <i class="fas fa-handshake"></i> Collaboration
-                </a>
-                {% endif %}
                 <a href="{{ url_for('planning.calendar_view') }}" class="nav-link {% if request.endpoint == 'planning.calendar_view' %}active{% endif %}">
                     <i class="fas fa-calendar"></i> Calendrier
                 </a>
