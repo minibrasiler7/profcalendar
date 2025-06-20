@@ -2086,6 +2086,9 @@ async function loadClassFiles(classroomId) {
     
     console.log('Chargement des fichiers pour la classe:', classroomId);
     
+    // Extraire l'ID numérique si la valeur contient un préfixe (ex: "classroom_21" -> "21")
+    const numericId = classroomId.toString().includes('_') ? classroomId.split('_')[1] : classroomId;
+    
     // Afficher le chargement
     fileLoading.style.display = 'block';
     fileNavigation.style.display = 'none';
@@ -2093,7 +2096,7 @@ async function loadClassFiles(classroomId) {
     noFiles.style.display = 'none';
     
     try {
-        const response = await fetch(`/api/class-files/${classroomId}`);
+        const response = await fetch(`/api/class-files/${numericId}`);
         console.log('Réponse API:', response);
         
         if (!response.ok) {
@@ -3552,7 +3555,9 @@ async function loadGroupsForClass(classroomId) {
     }
     
     try {
-        const response = await fetch(`/planning/get-groups/${classroomId}`);
+        // Extraire l'ID numérique si classroomId contient un préfixe
+        const numericId = classroomId.toString().includes('_') ? classroomId.split('_')[1] : classroomId;
+        const response = await fetch(`/planning/get-groups/${numericId}`);
         const data = await response.json();
         
         if (data.success && data.groups.length > 0) {
@@ -3589,7 +3594,9 @@ async function loadGroupsForDayModal(classroomId) {
     }
     
     try {
-        const response = await fetch(`/planning/get-groups/${classroomId}`);
+        // Extraire l'ID numérique si classroomId contient un préfixe
+        const numericId = classroomId.toString().includes('_') ? classroomId.split('_')[1] : classroomId;
+        const response = await fetch(`/planning/get-groups/${numericId}`);
         const data = await response.json();
         
         if (data.success && data.groups.length > 0) {
@@ -3676,6 +3683,9 @@ async function loadDayClassFiles(classroomId) {
     
     console.log('Chargement des fichiers pour la classe:', classroomId);
     
+    // Extraire l'ID numérique si la valeur contient un préfixe (ex: "classroom_21" -> "21")
+    const numericId = classroomId.toString().includes('_') ? classroomId.split('_')[1] : classroomId;
+    
     // Afficher le chargement
     fileLoading.style.display = 'block';
     fileNavigation.style.display = 'none';
@@ -3683,7 +3693,7 @@ async function loadDayClassFiles(classroomId) {
     noFiles.style.display = 'none';
     
     try {
-        const response = await fetch(`/api/class-files/${classroomId}`);
+        const response = await fetch(`/api/class-files/${numericId}`);
         console.log('Réponse API:', response);
         
         if (!response.ok) {

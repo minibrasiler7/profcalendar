@@ -2123,6 +2123,11 @@
         <div class="header-content">
             <div class="header-title">
                 <h1><i class="fas fa-users"></i> Gestion des classes</h1>
+                {% if is_mixed_group_class and mixed_group %}
+                <a href="{{ url_for('mixed_groups.edit', group_id=mixed_group.id) }}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-cogs"></i> Gérer le groupe mixte
+                </a>
+                {% endif %}
             </div>
             <div class="class-selector">
                 <label for="classSelect">Classe :</label>
@@ -2182,12 +2187,19 @@
                     <button class="btn btn-secondary" onclick="generateClassCode()">
                         <i class="fas fa-key"></i> Code d'accès classe
                     </button>
+                    {% if not is_mixed_group_class %}
                     <button class="btn btn-primary" onclick="toggleAddStudentForm()">
                         <i class="fas fa-plus"></i> Ajouter un élève
                     </button>
+                    {% else %}
+                    <button class="btn btn-secondary" disabled title="Les élèves des groupes mixtes sont gérés depuis la page des groupes mixtes">
+                        <i class="fas fa-info-circle"></i> Groupe mixte - Gestion centralisée
+                    </button>
+                    {% endif %}
                 </div>
             </div>
 
+            {% if not is_mixed_group_class %}
             {% if is_specialized_teacher %}
             <!-- Liste déroulante pour enseignants spécialisés -->
             <div id="addStudentForm" class="add-student-form" style="display: none;">
@@ -2256,6 +2268,7 @@
                 </form>
             </div>
             {% endif %}
+            {% endif %}
 
             <!-- Liste des élèves -->
             {% if students %}
@@ -2274,14 +2287,20 @@
                         </div>
                     </div>
                     <div class="student-actions">
-                        {% if can_edit_students %}
-                        <button class="btn-icon" title="Modifier" onclick="editStudent({{ student.id }})">
-                            <i class="fas fa-edit"></i>
-                        </button>
+                        {% if not is_mixed_group_class %}
+                            {% if can_edit_students %}
+                            <button class="btn-icon" title="Modifier" onclick="editStudent({{ student.id }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            {% endif %}
+                            <button class="btn-icon danger" title="Supprimer" onclick="deleteStudent({{ student.id }}, '{{ student.full_name }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        {% else %}
+                            <span class="text-muted" style="font-size: 0.875rem;">
+                                <i class="fas fa-info-circle"></i> Groupe mixte
+                            </span>
                         {% endif %}
-                        <button class="btn-icon danger" title="Supprimer" onclick="deleteStudent({{ student.id }}, '{{ student.full_name }}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
                     </div>
                 </div>
                 {% endfor %}
@@ -2289,10 +2308,15 @@
             {% else %}
             <div class="empty-state">
                 <i class="fas fa-user-graduate"></i>
+                {% if is_mixed_group_class %}
+                <p>Aucun élève dans ce groupe mixte</p>
+                <p style="font-size: 0.875rem;">Les élèves doivent être ajoutés depuis la page de gestion des groupes mixtes</p>
+                {% else %}
                 <p>Aucun élève dans cette classe</p>
                 <button class="btn btn-primary" onclick="toggleAddStudentForm()">
                     <i class="fas fa-plus"></i> Ajouter le premier élève
                 </button>
+                {% endif %}
             </div>
             {% endif %}
         </div>
@@ -5226,6 +5250,7 @@ let editingStudentId = null;
 const canEditStudents = {{ can_edit_students|tojson }};
 const isSpecializedTeacher = {{ is_specialized_teacher|tojson }};
 const availableStudents = {{ available_students|tojson }};
+const isMixedGroupClass = {{ is_mixed_group_class|tojson }};
 
 // Gestion des onglets
 function showTab(tabName) {
@@ -5310,6 +5335,12 @@ function changeClass(classroomId) {
 
 // Afficher/masquer le formulaire d'ajout d'élève
 function toggleAddStudentForm() {
+    // Empêcher l'ajout d'élèves pour les classes mixtes
+    if (isMixedGroupClass) {
+        showAlert('info', 'Les élèves des groupes mixtes sont gérés depuis la page des groupes mixtes.');
+        return;
+    }
+    
     const form = document.getElementById('addStudentForm');
     form.style.display = form.style.display === 'none' ? 'block' : 'none';
 
@@ -5574,6 +5605,12 @@ function updateStudentCard(student) {
 
 // Modifier un élève
 async function editStudent(studentId) {
+    // Empêcher l'édition d'élèves pour les classes mixtes
+    if (isMixedGroupClass) {
+        showAlert('info', 'Les élèves des groupes mixtes sont gérés depuis la page des groupes mixtes.');
+        return;
+    }
+    
     try {
         const response = await fetch(`{{ url_for("planning.get_student", student_id=0) }}`.replace('0', studentId), {
             headers: {
@@ -5614,6 +5651,12 @@ async function editStudent(studentId) {
 
 // Supprimer un élève
 async function deleteStudent(studentId, studentName) {
+    // Empêcher la suppression d'élèves pour les classes mixtes
+    if (isMixedGroupClass) {
+        showAlert('info', 'Les élèves des groupes mixtes sont gérés depuis la page des groupes mixtes.');
+        return;
+    }
+    
     if (!confirm(`Êtes-vous sûr de vouloir supprimer ${studentName} ?\n\nCette action supprimera également toutes les notes de cet élève.`)) {
         return;
     }
@@ -5683,13 +5726,21 @@ async function deleteStudent(studentId, studentName) {
                         const studentsSection = document.querySelector('.students-section');
                         const emptyState = document.createElement('div');
                         emptyState.className = 'empty-state';
-                        emptyState.innerHTML = `
-                            <i class="fas fa-user-graduate"></i>
-                            <p>Aucun élève dans cette classe</p>
-                            <button class="btn btn-primary" onclick="toggleAddStudentForm()">
-                                <i class="fas fa-plus"></i> Ajouter le premier élève
-                            </button>
-                        `;
+                        if (isMixedGroupClass) {
+                            emptyState.innerHTML = `
+                                <i class="fas fa-user-graduate"></i>
+                                <p>Aucun élève dans ce groupe mixte</p>
+                                <p style="font-size: 0.875rem;">Les élèves doivent être ajoutés depuis la page de gestion des groupes mixtes</p>
+                            `;
+                        } else {
+                            emptyState.innerHTML = `
+                                <i class="fas fa-user-graduate"></i>
+                                <p>Aucun élève dans cette classe</p>
+                                <button class="btn btn-primary" onclick="toggleAddStudentForm()">
+                                    <i class="fas fa-plus"></i> Ajouter le premier élève
+                                </button>
+                            `;
+                        }
                         studentsSection.appendChild(emptyState);
                     }
                 }, 300);

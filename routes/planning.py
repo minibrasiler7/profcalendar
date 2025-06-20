@@ -978,11 +978,27 @@ def lesson_view():
             period_number=lesson.period_number
         ).first()
 
-    # Vérifier que la classe appartient bien à l'utilisateur
-    lesson_classroom = Classroom.query.filter_by(
-        id=lesson.classroom_id,
-        user_id=current_user.id
-    ).first()
+    # Déterminer la classe à utiliser (normale ou auto-créée pour groupe mixte)
+    lesson_classroom = None
+    if lesson.classroom_id:
+        # Classe traditionnelle
+        lesson_classroom = Classroom.query.filter_by(
+            id=lesson.classroom_id,
+            user_id=current_user.id
+        ).first()
+    elif lesson.mixed_group_id:
+        # Groupe mixte - utiliser la classe auto-créée
+        from models.mixed_group import MixedGroup
+        mixed_group = MixedGroup.query.filter_by(
+            id=lesson.mixed_group_id,
+            teacher_id=current_user.id
+        ).first()
+        
+        if mixed_group and mixed_group.auto_classroom_id:
+            lesson_classroom = Classroom.query.filter_by(
+                id=mixed_group.auto_classroom_id,
+                user_id=current_user.id
+            ).first()
     
     if not lesson_classroom:
         flash('Classe non trouvée ou non autorisée.', 'error')
@@ -1000,9 +1016,9 @@ def lesson_view():
         ).order_by(Student.last_name, Student.first_name).all()
     else:
         # Si aucun groupe spécifique ou pas de planification, récupérer tous les élèves de la classe
-        students = Student.query.filter_by(
-            classroom_id=lesson.classroom_id
-        ).order_by(Student.last_name, Student.first_name).all()
+        students = lesson_classroom.get_students()
+        # Trier les élèves par nom
+        students = sorted(students, key=lambda s: (s.last_name, s.first_name))
 
     # Récupérer les présences existantes pour ce cours
     attendance_records = {}
@@ -1296,8 +1312,14 @@ def manage_classes():
 
     selected_classroom = Classroom.query.get(selected_classroom_id)
 
-    # Récupérer les données de la classe sélectionnée
-    students = Student.query.filter_by(classroom_id=selected_classroom_id).order_by(Student.last_name, Student.first_name).all()
+    # Vérifier si c'est une classe auto-créée pour un groupe mixte
+    is_mixed_group_class = hasattr(selected_classroom, 'mixed_group') and selected_classroom.mixed_group is not None
+    mixed_group = selected_classroom.mixed_group if is_mixed_group_class else None
+    
+    # Récupérer les données de la classe sélectionnée (normale ou groupe mixte)
+    students = selected_classroom.get_students()
+    # Trier les élèves par nom
+    students = sorted(students, key=lambda s: (s.last_name, s.first_name))
     
     # Convertir les étudiants en dictionnaires pour le JSON (utilisé en JavaScript)
     students_json = []
@@ -1411,7 +1433,9 @@ def manage_classes():
                          justifications=justifications,
                          can_edit_students=can_edit_students,
                          available_students=available_students,
-                         is_specialized_teacher=is_specialized_teacher)
+                         is_specialized_teacher=is_specialized_teacher,
+                         is_mixed_group_class=is_mixed_group_class,
+                         mixed_group=mixed_group)
 
 
 @planning_bp.route('/update-sanction-count', methods=['POST'])

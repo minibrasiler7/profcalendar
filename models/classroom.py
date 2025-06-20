@@ -13,5 +13,15 @@ class Classroom(db.Model):
     schedules = db.relationship('Schedule', backref='classroom', lazy='dynamic', cascade='all, delete-orphan')
     plannings = db.relationship('Planning', backref='classroom', lazy='dynamic', cascade='all, delete-orphan')
 
+    def get_students(self):
+        """Récupère les élèves de la classe (normale ou groupe mixte)"""
+        if hasattr(self, 'mixed_group') and self.mixed_group:
+            # C'est une classe auto-créée pour un groupe mixte
+            return self.mixed_group.get_students()
+        else:
+            # C'est une classe normale
+            from models.student import Student
+            return Student.query.filter_by(classroom_id=self.id).all()
+    
     def __repr__(self):
         return f'<Classroom {self.name} - {self.subject}>'
