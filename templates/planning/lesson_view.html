@@ -836,7 +836,13 @@ if (typeof pdfjsLib !== 'undefined') {
                             <i class="fas fa-clock"></i> Prochain cours
                         </span>
                         {% endif %}
-                        {{ lesson.classroom.name }} - {{ lesson.classroom.subject }}
+                        {% if lesson.classroom_id %}
+                    {{ lesson.classroom.name }} - {{ lesson.classroom.subject }}
+                {% elif lesson.mixed_group_id %}
+                    {{ lesson.mixed_group.name }} - {{ lesson.mixed_group.subject }}
+                {% else %}
+                    Cours non défini
+                {% endif %}
                     </h1>
                 </div>
                 <div class="lesson-details">
@@ -1340,7 +1346,8 @@ if (typeof pdfjsLib !== 'undefined') {
 // Variables globales
 const lessonDate = '{{ lesson_date.strftime("%Y-%m-%d") }}';
 const periodNumber = {{ lesson.period_number }};
-const classroomId = {{ lesson.classroom_id }};
+const classroomId = {{ lesson.classroom_id if lesson.classroom_id else 'null' }};
+const mixedGroupId = {{ lesson.mixed_group_id if lesson.mixed_group_id else 'null' }};
 let isEditingPlanning = false;
 let isSplitViewActive = false;
 

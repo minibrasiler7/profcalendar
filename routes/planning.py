@@ -893,17 +893,39 @@ def lesson_view():
 
             # Vérifier si on est dans cette période
             if period_start <= current_time <= period_end:
-                # Chercher s'il y a un cours à cette période aujourd'hui
-                schedule = Schedule.query.filter_by(
+                # Chercher d'abord s'il y a une planification spécifique pour cette période
+                planning_check = Planning.query.filter_by(
                     user_id=current_user.id,
-                    weekday=weekday,
+                    date=current_date,
                     period_number=period['number']
                 ).first()
-
-                if schedule:
-                    current_lesson = schedule
+                
+                if planning_check:
+                    # Créer un objet Schedule-like à partir de la planification
+                    current_lesson = type('obj', (object,), {
+                        'classroom_id': planning_check.classroom_id,
+                        'mixed_group_id': planning_check.mixed_group_id,
+                        'period_number': planning_check.period_number,
+                        'weekday': weekday,
+                        'start_time': period_start,
+                        'end_time': period_end,
+                        'classroom': planning_check.classroom if planning_check.classroom_id else None,
+                        'mixed_group': planning_check.mixed_group if planning_check.mixed_group_id else None
+                    })()
                     is_current = True
                     break
+                else:
+                    # Si pas de planification, chercher dans l'horaire type
+                    schedule = Schedule.query.filter_by(
+                        user_id=current_user.id,
+                        weekday=weekday,
+                        period_number=period['number']
+                    ).first()
+
+                    if schedule:
+                        current_lesson = schedule
+                        is_current = True
+                        break
 
     # Si pas de cours actuel, chercher le prochain
     if not current_lesson:
@@ -913,16 +935,39 @@ def lesson_view():
             if search_start_date == current_date and period['start'] <= now.time():
                 continue
 
-            schedule = Schedule.query.filter_by(
+            # Chercher d'abord s'il y a une planification spécifique
+            planning_check = Planning.query.filter_by(
                 user_id=current_user.id,
-                weekday=weekday,
+                date=search_start_date,
                 period_number=period['number']
             ).first()
 
-            if schedule:
-                next_lesson = schedule
+            if planning_check:
+                # Créer un objet Schedule-like à partir de la planification
+                next_lesson = type('obj', (object,), {
+                    'classroom_id': planning_check.classroom_id,
+                    'mixed_group_id': planning_check.mixed_group_id,
+                    'period_number': planning_check.period_number,
+                    'weekday': weekday,
+                    'start_time': period['start'],
+                    'end_time': period['end'],
+                    'classroom': planning_check.classroom if planning_check.classroom_id else None,
+                    'mixed_group': planning_check.mixed_group if planning_check.mixed_group_id else None
+                })()
                 lesson_date = search_start_date
                 break
+            else:
+                # Si pas de planification, chercher dans l'horaire type
+                schedule = Schedule.query.filter_by(
+                    user_id=current_user.id,
+                    weekday=weekday,
+                    period_number=period['number']
+                ).first()
+
+                if schedule:
+                    next_lesson = schedule
+                    lesson_date = search_start_date
+                    break
 
         # Si pas de cours ce jour-là, chercher les jours suivants
         if not next_lesson:
@@ -952,15 +997,40 @@ def lesson_view():
                     continue
 
                 # Chercher le premier cours de la journée
-                first_schedule = Schedule.query.filter_by(
+                # D'abord chercher s'il y a des planifications spécifiques pour ce jour
+                first_planning = Planning.query.filter_by(
                     user_id=current_user.id,
-                    weekday=future_weekday
-                ).order_by(Schedule.period_number).first()
+                    date=future_date
+                ).order_by(Planning.period_number).first()
 
-                if first_schedule:
-                    next_lesson = first_schedule
-                    lesson_date = future_date
-                    break
+                if first_planning:
+                    # Récupérer les informations de période depuis la configuration
+                    period_info = next((p for p in periods if p['number'] == first_planning.period_number), None)
+                    if period_info:
+                        # Créer un objet Schedule-like à partir de la planification
+                        next_lesson = type('obj', (object,), {
+                            'classroom_id': first_planning.classroom_id,
+                            'mixed_group_id': first_planning.mixed_group_id,
+                            'period_number': first_planning.period_number,
+                            'weekday': future_weekday,
+                            'start_time': period_info['start'],
+                            'end_time': period_info['end'],
+                            'classroom': first_planning.classroom if first_planning.classroom_id else None,
+                            'mixed_group': first_planning.mixed_group if first_planning.mixed_group_id else None
+                        })()
+                        lesson_date = future_date
+                        break
+                else:
+                    # Si pas de planification, chercher dans l'horaire type
+                    first_schedule = Schedule.query.filter_by(
+                        user_id=current_user.id,
+                        weekday=future_weekday
+                    ).order_by(Schedule.period_number).first()
+
+                    if first_schedule:
+                        next_lesson = first_schedule
+                        lesson_date = future_date
+                        break
 
     # Préparer les données pour l'affichage
     lesson = current_lesson or next_lesson
