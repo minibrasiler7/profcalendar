@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Outil Grille - Unified PDF Viewer</title>
+    
+    <!-- Font Awesome pour les icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styles du PDF Viewer -->
+    <link rel="stylesheet" href="css/unified-pdf-viewer.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f0f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #333;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin-bottom: 0.5rem;
+        }
+
+        .controls {
+            padding: 1rem;
+            background: white;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .upload-btn {
+            padding: 0.5rem 1rem;
+            background: #3B82F6;
+            border: none;
+            border-radius: 0.5rem;
+            color: white;
+            cursor: pointer;
+            margin-right: 1rem;
+        }
+
+        .upload-btn:hover {
+            background: #2563EB;
+        }
+
+        .info {
+            background: #e3f2fd;
+            padding: 1rem;
+            margin: 1rem;
+            border-radius: 0.5rem;
+            border-left: 4px solid #2196f3;
+        }
+
+        .viewer-container {
+            flex: 1;
+            margin: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔲 Test de l'outil Grille</h1>
+        <p>Testez le nouveau bouton grille dans le lecteur PDF</p>
+    </div>
+
+    <div class="controls">
+        <label for="file-input" class="upload-btn">
+            📁 Charger un PDF
+        </label>
+        <input type="file" id="file-input" accept=".pdf" style="display: none;">
+        
+        <button id="mode-teacher" class="upload-btn">Mode Enseignant</button>
+        <button id="mode-student" class="upload-btn">Mode Étudiant</button>
+    </div>
+
+    <div class="info">
+        <h3>🔍 Instructions de test :</h3>
+        <ol>
+            <li>Chargez un fichier PDF avec le bouton "Charger un PDF"</li>
+            <li>Cherchez le bouton grille (🔲) dans la barre d'outils d'annotation</li>
+            <li>Cliquez sur le bouton grille pour l'activer/désactiver</li>
+            <li>La grille devrait apparaître/disparaître sur la page</li>
+            <li>Testez avec différentes pages si le PDF en a plusieurs</li>
+            <li>Testez les deux modes (Enseignant et Étudiant)</li>
+        </ol>
+    </div>
+
+    <div class="viewer-container">
+        <div id="pdf-viewer-test" style="height: 600px;"></div>
+    </div>
+
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <!-- PDF Viewer -->
+    <script src="js/unified-pdf-viewer.js"></script>
+
+    <script>
+        let currentViewer = null;
+        let currentMode = 'teacher';
+
+        // Initialiser le viewer
+        function initViewer(mode = 'teacher') {
+            currentMode = mode;
+            
+            // Détruire le viewer existant si nécessaire
+            if (currentViewer) {
+                currentViewer.destroy?.();
+            }
+
+            const options = {
+                mode: mode,
+                debug: true,
+                enableKeyboardShortcuts: true,
+                enableTouchGestures: true
+            };
+
+            currentViewer = new UnifiedPDFViewer('pdf-viewer-test', options);
+
+            // Événements du viewer
+            currentViewer.container.addEventListener('pdf-loaded', (e) => {
+                console.log('📄 PDF chargé:', e.detail);
+                alert(`✅ PDF chargé avec succès! Maintenant testez le bouton grille (🔲) dans la barre d'outils.`);
+            });
+
+            console.log(`🔧 Viewer initialisé en mode: ${mode}`);
+        }
+
+        // Gestionnaire du sélecteur de fichier
+        document.getElementById('file-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                console.log('📁 Chargement du fichier:', file.name);
+                if (currentViewer) {
+                    await currentViewer.loadPDF(file);
+                }
+            } else {
+                alert('⚠️ Veuillez sélectionner un fichier PDF valide.');
+            }
+        });
+
+        // Boutons de mode
+        document.getElementById('mode-teacher').addEventListener('click', () => {
+            initViewer('teacher');
+            document.getElementById('mode-teacher').style.background = '#059669';
+            document.getElementById('mode-student').style.background = '#3B82F6';
+        });
+
+        document.getElementById('mode-student').addEventListener('click', () => {
+            initViewer('student');
+            document.getElementById('mode-student').style.background = '#059669';
+            document.getElementById('mode-teacher').style.background = '#3B82F6';
+        });
+
+        // Initialiser avec le mode enseignant par défaut
+        initViewer('teacher');
+        document.getElementById('mode-teacher').style.background = '#059669';
+
+        console.log('🚀 Page de test grille prête!');
+    </script>
+</body>
+</html>
