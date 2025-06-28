@@ -123,15 +123,15 @@ class FileAnnotation(db.Model):
     __tablename__ = 'file_annotations'
     
     id = db.Column(db.Integer, primary_key=True)
-    file_id = db.Column(db.Integer, db.ForeignKey('user_files.id'), nullable=False)
+    file_id = db.Column(db.Integer, nullable=False)  # ID du fichier (peut être ClassFile ou UserFile)
+    file_type = db.Column(db.String(20), default='class_file')  # 'class_file' ou 'user_file'
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     annotations_data = db.Column(db.JSON, nullable=False)  # Stockage JSON des annotations
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relations
-    file = db.relationship('UserFile', backref='annotations')
     user = db.relationship('User', backref='file_annotations')
     
     def __repr__(self):
-        return f'<FileAnnotation {self.file_id} by user {self.user_id}>'
+        return f'<FileAnnotation {self.file_type}:{self.file_id} by user {self.user_id}>'

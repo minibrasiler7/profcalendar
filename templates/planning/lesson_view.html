@@ -5,6 +5,10 @@
 {% block extra_css %}
 <!-- PDF.js pour l'affichage des PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- Font Awesome pour les icônes -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Lecteur PDF unifié -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified-pdf-viewer.css') }}">
 <script>
 // Configuration du worker PDF.js
 if (typeof pdfjsLib !== 'undefined') {
@@ -1261,84 +1265,14 @@ if (typeof pdfjsLib !== 'undefined') {
     </div>
 </div>
 
-<!-- Modal Viewer/Annotateur -->
+<!-- Modal Viewer/Annotateur avec Lecteur PDF Unifié -->
 <div class="file-viewer-modal" id="fileViewerModal">
-    <div class="viewer-header">
-        <div class="viewer-title">
-        </div>
-        <div class="viewer-tools">
-            
-            <!-- Outils de dessin -->
-            <div class="tool-group">
-                <button class="tool-btn active" id="penTool" title="Stylo" data-tool="pen">
-                    <i class="fas fa-pen"></i>
-                </button>
-                <button class="tool-btn" id="highlighterTool" title="Surligneur" data-tool="highlighter">
-                    <i class="fas fa-highlighter"></i>
-                </button>
-                <button class="tool-btn" id="eraserTool" title="Gomme" data-tool="eraser">
-                    <i class="fas fa-eraser"></i>
-                </button>
-            </div>
-            
-            <!-- Couleurs -->
-            <div class="color-picker-container">
-                <div class="preset-colors">
-                    <button class="color-btn active" data-color="#000000" style="background-color: #000000" title="Noir"></button>
-                    <button class="color-btn" data-color="#EF4444" style="background-color: #EF4444" title="Rouge"></button>
-                    <button class="color-btn" data-color="#F59E0B" style="background-color: #F59E0B" title="Orange"></button>
-                    <button class="color-btn" data-color="#EAB308" style="background-color: #EAB308" title="Jaune"></button>
-                    <button class="color-btn" data-color="#22C55E" style="background-color: #22C55E" title="Vert"></button>
-                    <button class="color-btn" data-color="#3B82F6" style="background-color: #3B82F6" title="Bleu"></button>
-                </div>
-                <input type="color" id="annotationColor" value="#000000" title="Couleur personnalisée">
-            </div>
-            
-            <div class="stroke-width-container">
-                <input type="range" id="strokeWidth" min="1" max="20" value="3" title="Épaisseur">
-                <span id="strokeWidthValue">3</span>
-            </div>
-            
-            <!-- Actions -->
-            <div class="tool-group">
-                <button class="tool-btn" id="saveBtn" title="Sauvegarder maintenant" onclick="saveAnnotations()">
-                    <i class="fas fa-save"></i>
-                </button>
-                <button class="tool-btn" id="undoBtn" title="Annuler">
-                    <i class="fas fa-undo"></i>
-                </button>
-                <button class="tool-btn" id="clearAllBtn" title="Tout effacer">
-                    <i class="fas fa-trash"></i>
-                </button>
-                <!-- Bouton debug supprimé pour simplifier -->
-            </div>
-        </div>
+    <div class="unified-pdf-viewer-wrapper">
         <button class="close-viewer" onclick="closeFileViewer()">
             <i class="fas fa-times"></i>
         </button>
-    </div>
-    <div class="viewer-content">
-        <!-- Barre latérale des pages - permanente à gauche -->
-        <div class="page-sidebar show" id="pageSidebar">
-            <div class="sidebar-header">
-                <h6><i class="fas fa-copy"></i> Pages</h6>
-            </div>
-            <div class="page-thumbnails scrollable" id="pageThumbnails">
-                <!-- Les miniatures seront générées ici -->
-            </div>
-        </div>
-        
-        <!-- Zone d'affichage principal -->
-        <div class="viewer-container" id="viewerContainer">
-            <div class="pdf-pages-container" id="pdfPagesContainer">
-                <!-- Les pages PDF seront ajoutées ici dynamiquement -->
-            </div>
-        </div>
-    </div>
-    <div class="viewer-footer">
-        <div class="save-status" id="saveStatus">
-<i class="fas fa-info-circle"></i> Sauvegarde à la fermeture
-        </div>
+        <!-- Le lecteur PDF unifié sera injecté ici -->
+        <div id="unified-pdf-viewer-container"></div>
     </div>
 </div>
 
@@ -2326,14 +2260,9 @@ if (typeof pdfjsLib === 'undefined') {
     document.head.appendChild(script);
 }
 
-// Ouvrir le viewer de fichier amélioré
+// Fonction openFileViewer redirigée vers le nouveau lecteur unifié
 async function openFileViewer(fileId, filename, fileType) {
-    currentFileId = fileId;
-    
-    // Réinitialiser les variables
-    currentPageNum = 1;
-    currentScale = 1.0;
-    annotations = [];
+    console.log('🔄 Redirection vers le lecteur unifié:', filename, fileType);
     
     // Si l'éditeur de planification est actif, ouvrir en vue split
     if (isEditingPlanning) {
@@ -2341,166 +2270,14 @@ async function openFileViewer(fileId, filename, fileType) {
         return;
     }
     
-    // Sinon, ouvrir normalement
-    const modal = document.getElementById('fileViewerModal');
-    modal.classList.add('show');
-    
-    // Initialiser les canvas
-    initializeCanvases();
-    
-    // Charger le fichier et les annotations
-    try {
-        if (fileType.toLowerCase() === 'pdf') {
-            await loadPDF(fileId);
-            // Pour les PDF, charger les annotations après que la première page soit rendue
-            await loadAnnotations(fileId);
-        } else if (['png', 'jpg', 'jpeg'].includes(fileType.toLowerCase())) {
-            await loadImage(fileId);
-            // Pour les images, charger immédiatement
-            await loadAnnotations(fileId);
-        }
-        
-        setupAnnotationTools();
-        
-        // Configurer les événements des boutons d'interface
-        setTimeout(() => {
-            console.log('🔧 Configuration des événements d\'interface...');
-            setupToolEvents();
-        }, 100);
-        
-        // NOUVEAU: Attendre que le canvas soit prêt avant de redessiner les annotations
-        setTimeout(() => {
-            console.log('🎨 Vérification du canvas pour redessiner les annotations...');
-            if (annotationCtx && annotations.length > 0) {
-                console.log(`🎨 Canvas prêt - redessinage forcé de ${annotations.length} annotations`);
-                redrawAnnotations(true); // Force le redessinage des annotations chargées
-            } else if (!annotationCtx) {
-                console.log('⚠️ Canvas encore non disponible, retry dans 200ms...');
-                setTimeout(() => {
-                    if (annotationCtx && annotations.length > 0) {
-                        console.log(`🎨 Canvas prêt (retry) - redessinage forcé de ${annotations.length} annotations`);
-                        redrawAnnotations(true); // Force le redessinage des annotations chargées
-                    } else {
-                        console.log('❌ Canvas toujours non disponible après retry');
-                    }
-                }, 200);
-            } else {
-                console.log('ℹ️ Canvas prêt mais aucune annotation à dessiner');
-            }
-            
-            // Activer automatiquement la surveillance des annotations
-            if (typeof annotationDebug !== 'undefined') {
-                setTimeout(() => {
-                    console.log('🔍 Activation automatique de la surveillance des annotations...');
-                    annotationDebug.watchAnnotations();
-                }, 500);
-            }
-            
-            // NOUVEAU: Forcer l'affichage des annotations après un délai plus long
-            setTimeout(() => {
-                if (annotationCtx && annotations.length > 0) {
-                    console.log(`🎨 FORCE FINALE - Redessinage de ${annotations.length} annotations après délai`);
-                    isDrawing = false; // Forcer isDrawing à false
-                    redrawAnnotations(true);
-                } else {
-                    console.log('ℹ️ Pas d\'annotations à redessiner lors de la force finale');
-                }
-            }, 1000);
-            
-            // NOUVEAU: Créer une fonction globale simple pour forcer l'affichage
-            window.forceShowAnnotations = function() {
-                console.log('🎨 === AFFICHAGE FORCÉ GLOBAL ===');
-                console.log(`📄 Page: ${currentPageNum}, Annotations: ${annotations.length}`);
-                
-                // Utiliser le même système que redrawAnnotations
-                const currentAnnotationCanvas = document.getElementById(`annotation-canvas-${currentPageNum}`);
-                console.log(`🖼️ Canvas annotation-canvas-${currentPageNum}: ${!!currentAnnotationCanvas}`);
-                
-                if (currentAnnotationCanvas) {
-                    const wasDrawing = isDrawing;
-                    isDrawing = false;
-                    console.log('🔄 Redessinage forcé...');
-                    redrawAnnotations(true);
-                    isDrawing = wasDrawing;
-                    console.log('✅ Terminé');
-                } else {
-                    console.log('❌ Canvas non disponible');
-                }
-            };
-            
-            console.log('🎨 Fonction globale créée: window.forceShowAnnotations()');
-            
-            // NOUVEAU: Fonction de test pour diagnostic
-            window.annotationTest = function() {
-                console.log('🧪 === TEST DIAGNOSTIC ANNOTATIONS ===');
-                console.log(`📄 Page actuelle: ${currentPageNum}`);
-                console.log(`📊 Annotations par page:`, Object.keys(annotationsByPage));
-                console.log(`📊 Annotations page courante: ${annotations.length}`);
-                
-                // Vérifier canvas
-                const testCanvas = document.getElementById(`annotation-canvas-${currentPageNum}`);
-                console.log(`🖼️ Canvas annotation-canvas-${currentPageNum}: ${testCanvas ? 'TROUVÉ' : 'MANQUANT'}`);
-                
-                if (testCanvas) {
-                    const testCtx = testCanvas.getContext('2d');
-                    console.log(`🎨 Contexte: ${testCtx ? 'VALIDE' : 'INVALIDE'}`);
-                    console.log(`📏 Dimensions: ${testCanvas.width}x${testCanvas.height}`);
-                    
-                    // Test de dessin simple
-                    testCtx.save();
-                    testCtx.strokeStyle = '#FF0000';
-                    testCtx.lineWidth = 5;
-                    testCtx.beginPath();
-                    testCtx.arc(50, 50, 20, 0, 2 * Math.PI);
-                    testCtx.stroke();
-                    testCtx.restore();
-                    console.log('🔴 Cercle de test dessiné en (50,50)');
-                }
-                
-                // Forcer redraw des annotations existantes
-                if (annotations.length > 0) {
-                    console.log('🔄 Test de redessinage des annotations...');
-                    redrawAnnotations(true);
-                }
-            };
-            
-            console.log('🧪 Fonction de test créée: window.annotationTest()');
-            
-            // NOUVEAU: Test du système de dessin lissé
-            window.testSmoothDrawing = function() {
-                console.log('🎨 === TEST SYSTÈME DE DESSIN LISSÉ ===');
-                console.log('✏️ Le nouveau système inclut :');
-                console.log('  - Lissage quadratique pour des courbes plus douces');
-                console.log('  - Pression variable basée sur la vitesse de dessin');
-                console.log('  - Rendu amélioré des annotations sauvegardées');
-                console.log('  - Épaisseur dynamique du trait');
-                console.log('🎯 Pour tester : dessinez lentement puis rapidement et observez la différence d\'épaisseur');
-                console.log('🎨 Essayez différentes vitesses pour voir l\'effet de "pression" simulée');
-            };
-            
-            console.log('🎨 Fonction de test lissage créée: window.testSmoothDrawing()');
-            
-            // NOUVEAU: Auto-redessinage périodique pendant les premiers 10 secondes
-            let autoRedrawCount = 0;
-            const autoRedrawInterval = setInterval(() => {
-                autoRedrawCount++;
-                if (autoRedrawCount > 10) {
-                    clearInterval(autoRedrawInterval);
-                    console.log('🔄 Auto-redessinage arrêté après 10 tentatives');
-                    return;
-                }
-                
-                if (annotationCtx && annotations.length > 0 && !isDrawing) {
-                    console.log(`🔄 Auto-redessinage ${autoRedrawCount}/10 - ${annotations.length} annotations`);
-                    redrawAnnotations(true);
-                }
-            }, 1000);
-        }, 300);
-        
-    } catch (error) {
-        console.error('Erreur lors du chargement du fichier:', error);
-        showError('Erreur lors du chargement du fichier');
+    // Pour les PDF, utiliser le nouveau lecteur unifié
+    if (fileType.toLowerCase() === 'pdf') {
+        openFileWithUnifiedViewer(fileId, filename);
+        return;
     }
+    
+    // Pour les autres types de fichiers, rediriger vers l'ouverture simple
+    window.open(`/file_manager/serve_file/${encodeURIComponent(fileId)}`, '_blank');
 }
 
 // Initialiser les canvas
@@ -6088,17 +5865,8 @@ function loadSeatingPlan() {
         }
     });
     
-    // Données des étudiants
-    const studentsData = [
-        {% for student in students %}
-        {
-            id: {{ student.id }},
-            first_name: "{{ student.first_name }}",
-            last_name: "{{ student.last_name or '' }}",
-            full_name: "{{ student.full_name }}"
-        }{% if not loop.last %},{% endif %}
-        {% endfor %}
-    ];
+    // Les données des étudiants sont déjà définies globalement
+    // studentsData est disponible pour tous les scripts
     
     // Placer les étudiants
     studentsPlacement.forEach((placement) => {
@@ -7530,5 +7298,455 @@ function adjustSeatingScale() {
         width: 160px;
     }
 }
+
+/* Styles pour l'intégration du lecteur PDF unifié */
+.file-viewer-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    display: none;
+}
+
+.unified-pdf-viewer-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: white;
+}
+
+.unified-pdf-viewer-wrapper .close-viewer {
+    position: absolute;
+    top: 2rem;
+    right: 1rem;
+    z-index: 10001;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.unified-pdf-viewer-wrapper .close-viewer:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.1);
+}
+
+#unified-pdf-viewer-container {
+    width: 100%;
+    height: 100%;
+}
+
+/* Correction affichage miniatures - scroll vertical avec miniatures pleine largeur */
+.thumbnails-container {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 12px !important;
+    height: 100% !important;
+    flex: 1 !important;
+    grid-auto-rows: max-content !important;
+}
+
+.thumbnail-item {
+    width: 100% !important;
+    min-width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 140px !important;
+    padding: 8px !important;
+    margin-bottom: 0 !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.thumbnail-canvas {
+    width: calc(100% - 16px) !important;
+    height: 120px !important;
+    min-height: 120px !important;
+    max-height: 120px !important;
+    max-width: 100% !important;
+    display: block !important;
+    object-fit: contain !important;
+    border: 1px solid #ddd !important;
+    margin: 0 auto !important;
+    flex-shrink: 0 !important;
+}
+
+.thumbnail-number {
+    font-size: 10px !important;
+    padding: 1px 3px !important;
+    position: absolute !important;
+    bottom: 4px !important;
+    left: 4px !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    color: white !important;
+    border-radius: 2px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    min-width: auto !important;
+    max-width: fit-content !important;
+    width: auto !important;
+    height: auto !important;
+    text-align: center !important;
+    z-index: 10 !important;
+    display: inline-block !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Améliorer la scrollbar verticale */
+.thumbnails-container::-webkit-scrollbar {
+    width: 8px !important;
+    height: auto !important;
+}
+
+.thumbnails-container::-webkit-scrollbar-track {
+    background: #f1f1f1 !important;
+    border-radius: 4px !important;
+}
+
+.thumbnails-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1 !important;
+    border-radius: 4px !important;
+}
+
+.thumbnails-container::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1 !important;
+}
+
+/* S'assurer que le panneau des miniatures utilise tout l'espace */
+#thumbnails-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    min-height: 200px !important;
+    max-height: none !important;
+}
+
+/* Surcharger TOUTES les contraintes avec des sélecteurs ultra-spécifiques */
+.unified-pdf-viewer .thumbnails-container .thumbnail-item,
+#thumbnails-container .thumbnail-item,
+#thumbnails-panel .thumbnail-item,
+body .thumbnail-item {
+    width: 100% !important;
+    min-height: 140px !important;
+    max-height: none !important;
+    height: auto !important;
+    padding: 8px !important;
+    margin-bottom: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.unified-pdf-viewer .thumbnails-container .thumbnail-canvas,
+#thumbnails-container .thumbnail-canvas,
+#thumbnails-panel .thumbnail-canvas,
+body .thumbnail-canvas {
+    width: calc(100% - 16px) !important;
+    height: 120px !important;
+    min-height: 120px !important;
+    max-height: 120px !important;
+    object-fit: contain !important;
+    border: 1px solid #ddd !important;
+    margin: 0 auto !important;
+    flex-shrink: 0 !important;
+}
+
+/* Surcharger toutes les media queries avec des hauteurs fixes */
+@media (max-width: 1200px) {
+    .unified-pdf-viewer .thumbnails-container .thumbnail-item,
+    #thumbnails-container .thumbnail-item,
+    #thumbnails-panel .thumbnail-item {
+        min-height: 140px !important;
+        height: auto !important;
+        padding: 8px !important;
+    }
+    
+    .unified-pdf-viewer .thumbnails-container .thumbnail-canvas,
+    #thumbnails-container .thumbnail-canvas,
+    #thumbnails-panel .thumbnail-canvas {
+        height: 120px !important;
+        min-height: 120px !important;
+        max-height: 120px !important;
+        width: calc(100% - 16px) !important;
+    }
+    
+    .thumbnail-number {
+        font-size: 9px !important;
+        padding: 1px 2px !important;
+        bottom: 3px !important;
+        left: 3px !important;
+        background: rgba(0, 0, 0, 0.4) !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .unified-pdf-viewer .thumbnails-container .thumbnail-item,
+    #thumbnails-container .thumbnail-item,
+    #thumbnails-panel .thumbnail-item {
+        min-height: 130px !important;
+        height: auto !important;
+        padding: 6px !important;
+    }
+    
+    .unified-pdf-viewer .thumbnails-container .thumbnail-canvas,
+    #thumbnails-container .thumbnail-canvas,
+    #thumbnails-panel .thumbnail-canvas {
+        height: 110px !important;
+        min-height: 110px !important;
+        max-height: 110px !important;
+        width: calc(100% - 12px) !important;
+    }
+    
+    .thumbnail-number {
+        font-size: 8px !important;
+        padding: 1px 2px !important;
+        bottom: 3px !important;
+        left: 3px !important;
+        background: rgba(0, 0, 0, 0.4) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .unified-pdf-viewer .thumbnails-container .thumbnail-item,
+    #thumbnails-container .thumbnail-item,
+    #thumbnails-panel .thumbnail-item {
+        min-height: 120px !important;
+        height: auto !important;
+        padding: 6px !important;
+    }
+    
+    .unified-pdf-viewer .thumbnails-container .thumbnail-canvas,
+    #thumbnails-container .thumbnail-canvas,
+    #thumbnails-panel .thumbnail-canvas {
+        height: 100px !important;
+        min-height: 100px !important;
+        max-height: 100px !important;
+        width: calc(100% - 12px) !important;
+    }
+    
+    .thumbnail-number {
+        font-size: 8px !important;
+        padding: 1px 2px !important;
+        bottom: 2px !important;
+        left: 2px !important;
+        background: rgba(0, 0, 0, 0.4) !important;
+    }
+}
+
+@media (max-width: 600px) {
+    .unified-pdf-viewer .thumbnails-container .thumbnail-item,
+    #thumbnails-container .thumbnail-item,
+    #thumbnails-panel .thumbnail-item {
+        min-height: 110px !important;
+        height: auto !important;
+        padding: 4px !important;
+    }
+    
+    .unified-pdf-viewer .thumbnails-container .thumbnail-canvas,
+    #thumbnails-container .thumbnail-canvas,
+    #thumbnails-panel .thumbnail-canvas {
+        height: 90px !important;
+        min-height: 90px !important;
+        max-height: 90px !important;
+        width: calc(100% - 8px) !important;
+    }
+    
+    .thumbnail-number {
+        font-size: 7px !important;
+        padding: 1px 2px !important;
+        bottom: 2px !important;
+        left: 2px !important;
+        background: rgba(0, 0, 0, 0.4) !important;
+    }
+}
+
+@media (max-width: 400px) {
+    .unified-pdf-viewer .thumbnails-container .thumbnail-item,
+    #thumbnails-container .thumbnail-item,
+    #thumbnails-panel .thumbnail-item {
+        min-height: 100px !important;
+        height: auto !important;
+        padding: 4px !important;
+    }
+    
+    .unified-pdf-viewer .thumbnails-container .thumbnail-canvas,
+    #thumbnails-container .thumbnail-canvas,
+    #thumbnails-panel .thumbnail-canvas {
+        height: 80px !important;
+        min-height: 80px !important;
+        max-height: 80px !important;
+        width: calc(100% - 8px) !important;
+    }
+    
+    .thumbnail-number {
+        font-size: 6px !important;
+        padding: 1px 2px !important;
+        bottom: 1px !important;
+        left: 1px !important;
+        background: rgba(0, 0, 0, 0.4) !important;
+    }
+}
 </style>
+
+<!-- Lecteur PDF Unifié -->
+<script src="{{ url_for('static', filename='js/unified-pdf-viewer.js') }}"></script>
+<script>
+// Variables globales pour le lecteur PDF unifié
+let unifiedPDFViewer = null;
+let currentPDFUrl = null;
+
+// Données des étudiants (définies globalement pour le PDF viewer)
+let studentsData = [
+    {% for student in students %}
+    {
+        id: {{ student.id }},
+        first_name: "{{ student.first_name }}",
+        last_name: "{{ student.last_name or '' }}",
+        full_name: "{{ student.full_name }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+// Fonction pour ouvrir un fichier avec le nouveau lecteur unifié
+function openFileWithUnifiedViewer(filePath, fileName) {
+    console.log('🎯 Ouverture avec le lecteur unifié:', fileName);
+    
+    // Afficher la modal
+    const modal = document.getElementById('fileViewerModal');
+    if (!modal) {
+        console.error('Modal fileViewerModal non trouvée');
+        return;
+    }
+    
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    
+    // Vérifier la disponibilité des données des élèves
+    if (typeof studentsData === 'undefined' || !Array.isArray(studentsData)) {
+        console.warn('studentsData non défini, utilisation d’un tableau vide');
+        studentsData = [];
+    }
+    
+    // Préparer les données des élèves et sanctions pour le PDF viewer
+    const sanctionsData = {};
+    try {
+        // Récupérer les compteurs de sanctions actuels
+        document.querySelectorAll('.count-display').forEach(element => {
+            const studentId = element.dataset.student;
+            const sanctionId = element.dataset.sanction;
+            const count = parseInt(element.textContent) || 0;
+            if (studentId && sanctionId) {
+                sanctionsData[`${studentId}_${sanctionId}`] = count;
+            }
+        });
+    } catch (error) {
+        console.warn('Erreur lors de la récupération des sanctions:', error);
+    }
+    
+    // Récupérer le HTML du plan de classe actuel s'il existe
+    let seatingPlanHTML = null;
+    try {
+        const seatingWorkspace = document.querySelector('#seating-workspace');
+        if (seatingWorkspace) {
+            seatingPlanHTML = seatingWorkspace.outerHTML;
+        }
+    } catch (error) {
+        console.warn('Erreur lors de la récupération du plan de classe:', error);
+    }
+    
+    // Créer l'instance du lecteur unifié s'il n'existe pas
+    if (!unifiedPDFViewer) {
+        try {
+            unifiedPDFViewer = new UnifiedPDFViewer('unified-pdf-viewer-container', {
+                mode: 'teacher',
+                enableKeyboardShortcuts: true,
+                enableTouchGestures: true,
+                autoSave: true,
+                saveDelay: 3000,
+                debug: true,
+                studentData: studentsData, // Utiliser les données globales des élèves
+                sanctionsData: sanctionsData,
+                seatingPlanHTML: seatingPlanHTML,
+                apiEndpoints: {
+                    saveAnnotations: '/file_manager/api/save-annotations',
+                    loadAnnotations: '/file_manager/api/load-annotations',
+                    search: '/api/search-pdf'
+                }
+            });
+            console.log('✅ Lecteur PDF unifié créé avec données des élèves');
+        } catch (error) {
+            console.error('❌ Erreur lors de la création du lecteur:', error);
+            return;
+        }
+    }
+    
+    // Charger le PDF en utilisant la même URL que l'ancien système
+    const pdfUrl = `/file_manager/serve_file/${encodeURIComponent(filePath)}`;
+    currentPDFUrl = pdfUrl;
+    
+    // Passer filePath comme fileId pour permettre le chargement des annotations
+    unifiedPDFViewer.loadPDF(pdfUrl, filePath)
+        .then(() => {
+            console.log('✅ PDF chargé avec succès dans le lecteur unifié');
+        })
+        .catch(error => {
+            console.error('❌ Erreur lors du chargement du PDF:', error);
+            alert('Erreur lors du chargement du PDF: ' + error.message);
+        });
+}
+
+// Fonction pour fermer le viewer (mise à jour pour le nouveau lecteur)
+function closeFileViewer() {
+    console.log('🔄 Fermeture du lecteur PDF unifié');
+    
+    const modal = document.getElementById('fileViewerModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+    
+    // Nettoyer l'instance du lecteur si nécessaire
+    if (unifiedPDFViewer) {
+        // Appeler la méthode destroy pour nettoyer tout, y compris le panneau de graphique
+        unifiedPDFViewer.destroy();
+        console.log('📄 Lecteur PDF unifié nettoyé et panneau de graphique fermé');
+    }
+    
+    currentPDFUrl = null;
+}
+
+// Fonction modifiée pour ouvrir les fichiers (remplace l'ancienne fonction openFile)
+function openFile(filePath, fileName, fileType) {
+    console.log('📁 Ouverture du fichier:', fileName, 'Type:', fileType);
+    
+    if (fileType === 'pdf') {
+        // Utiliser le nouveau lecteur unifié pour les PDF
+        openFileWithUnifiedViewer(filePath, fileName);
+    } else {
+        // Pour les autres types de fichiers, utiliser l'ancienne méthode ou rediriger
+        window.open(`/file_manager/serve_file/${encodeURIComponent(filePath)}`, '_blank');
+    }
+}
+
+// Gérer la fermeture avec Échap
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('fileViewerModal');
+        if (modal && modal.style.display === 'block') {
+            closeFileViewer();
+        }
+    }
+});
+</script>
 {% endblock %}

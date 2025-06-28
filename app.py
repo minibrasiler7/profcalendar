@@ -64,6 +64,7 @@ def create_app(config_class=Config):
     from routes.collaboration import collaboration_bp
     from routes.student_auth import student_auth_bp
     from routes.mixed_groups import mixed_groups_bp
+    from routes.send_to_students import send_to_students_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(setup_bp)
@@ -79,6 +80,7 @@ def create_app(config_class=Config):
     app.register_blueprint(collaboration_bp)
     app.register_blueprint(student_auth_bp)
     app.register_blueprint(mixed_groups_bp)
+    app.register_blueprint(send_to_students_bp)
 
     # Route d'accueil
     @app.route('/')

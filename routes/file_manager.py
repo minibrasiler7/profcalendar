@@ -1278,3 +1278,110 @@ def update_folder_color():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@file_manager_bp.route('/api/save-annotations', methods=['POST'])
+@login_required
+def save_annotations():
+    """Sauvegarder les annotations d'un fichier"""
+    try:
+        from models.file_manager import FileAnnotation
+        
+        data = request.get_json()
+        annotations_data = data.get('annotations', {})
+        file_id_raw = data.get('file_id')
+        
+        # Extraire l'ID du fichier depuis les données
+        file_id = int(file_id_raw) if str(file_id_raw).isdigit() else None
+        if not file_id:
+            return jsonify({'success': False, 'message': 'ID de fichier invalide'}), 400
+            
+        # Vérifier que le fichier existe et appartient à l'utilisateur
+        from models.student import ClassFile
+        from models.classroom import Classroom
+        
+        class_file = ClassFile.query.join(
+            Classroom, ClassFile.classroom_id == Classroom.id
+        ).filter(
+            ClassFile.id == file_id,
+            Classroom.user_id == current_user.id
+        ).first()
+        
+        if not class_file:
+            return jsonify({'success': False, 'message': 'Fichier introuvable'}), 404
+            
+        # Chercher une annotation existante
+        annotation = FileAnnotation.query.filter_by(
+            file_id=file_id,
+            file_type='class_file',
+            user_id=current_user.id
+        ).first()
+        
+        if annotation:
+            # Mettre à jour l'annotation existante
+            annotation.annotations_data = annotations_data
+            annotation.updated_at = datetime.utcnow()
+        else:
+            # Créer une nouvelle annotation
+            annotation = FileAnnotation(
+                file_id=file_id,
+                file_type='class_file',
+                user_id=current_user.id,
+                annotations_data=annotations_data
+            )
+            db.session.add(annotation)
+            
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Annotations sauvegardées'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erreur lors de la sauvegarde des annotations: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@file_manager_bp.route('/api/load-annotations/<int:file_id>', methods=['GET'])
+@login_required
+def load_annotations(file_id):
+    """Charger les annotations d'un fichier"""
+    try:
+        from models.file_manager import FileAnnotation
+            
+        # Vérifier que le fichier existe et appartient à l'utilisateur
+        from models.student import ClassFile
+        from models.classroom import Classroom
+        
+        class_file = ClassFile.query.join(
+            Classroom, ClassFile.classroom_id == Classroom.id
+        ).filter(
+            ClassFile.id == file_id,
+            Classroom.user_id == current_user.id
+        ).first()
+        
+        if not class_file:
+            return jsonify({'success': False, 'message': 'Fichier introuvable'}), 404
+            
+        # Chercher l'annotation
+        annotation = FileAnnotation.query.filter_by(
+            file_id=file_id,
+            file_type='class_file',
+            user_id=current_user.id
+        ).first()
+        
+        if annotation:
+            return jsonify({
+                'success': True,
+                'annotations': annotation.annotations_data
+            })
+        else:
+            # Pas d'annotations trouvées, retourner structure vide
+            return jsonify({
+                'success': True,
+                'annotations': {}
+            })
+            
+    except Exception as e:
+        print(f"Erreur lors du chargement des annotations: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
