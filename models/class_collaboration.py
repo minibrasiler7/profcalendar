@@ -8,7 +8,7 @@ class ClassMaster(db.Model):
     __tablename__ = 'class_masters'
     
     id = db.Column(db.Integer, primary_key=True)
-    classroom_id = db.Column(db.Integer, db.ForeignKey('classrooms.id'), nullable=False)
+    classroom_id = db.Column(db.Integer, db.ForeignKey('classrooms.id', ondelete='CASCADE'), nullable=False)
     master_teacher_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     school_year = db.Column(db.String(20), nullable=False)  # Ex: "2024-2025"
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

@@ -172,7 +172,6 @@
     width: 280px;
     max-height: 400px;
     overflow: hidden;
-    display: flex;
     flex-direction: column;
 }
 
@@ -180,10 +179,38 @@
     display: flex;
 }
 
-.class-selector h3 {
-    margin: 0 0 1rem 0;
-    font-size: 1rem;
+.class-selector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
     flex-shrink: 0;
+}
+
+.class-selector h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.close-selector {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: var(--gray-color);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: var(--border-radius);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.close-selector:hover {
+    background-color: var(--light-gray);
+    color: var(--dark-color);
 }
 
 .class-options-container {
@@ -302,28 +329,8 @@
 {% block content %}
 <div class="setup-container">
     <!-- Barre de progression -->
-    <div class="setup-progress">
-        <div class="progress-step completed">
-            <div class="progress-circle"><i class="fas fa-check"></i></div>
-            <span class="progress-label">Configuration</span>
-        </div>
-        <div class="progress-step completed">
-            <div class="progress-circle"><i class="fas fa-check"></i></div>
-            <span class="progress-label">Classes</span>
-        </div>
-        <div class="progress-step completed">
-            <div class="progress-circle"><i class="fas fa-check"></i></div>
-            <span class="progress-label">Vacances</span>
-        </div>
-        <div class="progress-step completed">
-            <div class="progress-circle"><i class="fas fa-check"></i></div>
-            <span class="progress-label">Pauses</span>
-        </div>
-        <div class="progress-step active">
-            <div class="progress-circle">5</div>
-            <span class="progress-label">Horaire type</span>
-        </div>
-    </div>
+    {% set current_step = 5 %}
+    {% include 'setup/progress_bar.html' %}
 
     <!-- En-tête -->
     <div class="schedule-header">
@@ -353,6 +360,14 @@
                 </span>
             </div>
             {% endfor %}
+            <!-- Légende pour les tâches personnalisées -->
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #6B7280;"></div>
+                <span>
+                    <i class="fas fa-tasks" style="margin-right: 0.25rem;"></i>
+                    Tâches personnalisées
+                </span>
+            </div>
         </div>
     </div>
 
@@ -392,6 +407,11 @@
                                     <div class="class-name"><i class="fas fa-users"></i> {{ schedule.mixed_group.name }}</div>
                                     <div class="class-subject">{{ schedule.mixed_group.subject }}</div>
                                 </div>
+                            {% elif schedule.custom_task_title %}
+                                <div class="class-block" style="background-color: #6B7280;">
+                                    <div class="class-name"><i class="fas fa-tasks"></i> {{ schedule.custom_task_title }}</div>
+                                    <div class="class-subject">Autre</div>
+                                </div>
                             {% endif %}
                         {% endif %}
                     </td>
@@ -418,10 +438,30 @@
 
 <!-- Sélecteur de classe -->
 <div class="class-selector" id="classSelector">
-    <h3>Sélectionner une classe</h3>
+    <div class="class-selector-header">
+        <h3>Sélectionner une classe</h3>
+        <button type="button" class="close-selector" id="closeSelectorBtn" onclick="closeClassSelector()" title="Fermer">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
     <div class="class-options-container" id="classOptions"></div>
     <div class="remove-option" onclick="removeClass()">
         <i class="fas fa-times"></i> Retirer la classe
+    </div>
+</div>
+
+<!-- Modal pour tâche personnalisée -->
+<div id="customTaskModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 2000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 2rem; border-radius: 0.5rem; min-width: 400px;">
+        <h3 style="margin-bottom: 1rem;">Ajouter une tâche personnalisée</h3>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Titre de la tâche :</label>
+            <input type="text" id="customTaskTitle" placeholder="Ex: Surveillance, Réunion, etc." style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.25rem;">
+        </div>
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button onclick="closeCustomTaskModal()" style="padding: 0.75rem 1.5rem; border: 1px solid #D1D5DB; background: white; border-radius: 0.25rem; cursor: pointer;">Annuler</button>
+            <button onclick="saveCustomTask()" style="padding: 0.75rem 1.5rem; background: #3B82F6; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Ajouter</button>
+        </div>
     </div>
 </div>
 
@@ -459,6 +499,19 @@ function openClassSelector(cell, event) {
 
         optionsContainer.appendChild(option);
     });
+    
+    // Ajouter l'option "Autre tâche"
+    const customOption = document.createElement('div');
+    customOption.className = 'class-option';
+    customOption.onclick = () => showCustomTaskModal();
+    customOption.innerHTML = `
+        <div class="class-color-dot" style="background-color: #6B7280;"></div>
+        <div class="class-option-info">
+            <div class="class-option-name"><i class="fas fa-tasks" style="margin-right: 0.25rem;"></i>Autre tâche</div>
+            <div class="class-option-subject">Tâche personnalisée</div>
+        </div>
+    `;
+    optionsContainer.appendChild(customOption);
 
     // Positionner le sélecteur
     const rect = cell.getBoundingClientRect();
@@ -535,30 +588,150 @@ function closeClassSelector() {
     currentCell = null;
 }
 
-async function saveSchedule(weekday, periodNumber, itemId, itemType = 'classroom') {
+async function saveSchedule(weekday, periodNumber, itemId, itemType = 'classroom', customTitle = null) {
     try {
+        const requestData = {
+            weekday: parseInt(weekday),
+            period_number: parseInt(periodNumber),
+            classroom_id: itemId && itemType === 'classroom' ? parseInt(itemId) : null,
+            mixed_group_id: itemId && itemType === 'mixed_group' ? parseInt(itemId) : null,
+            custom_task_title: itemType === 'custom' ? customTitle : null,
+            type: itemType
+        };
+        
+        console.log('saveSchedule - requestData:', requestData);
+        
         const response = await fetch('{{ url_for("schedule.save_schedule") }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: JSON.stringify({
-                weekday: parseInt(weekday),
-                period_number: parseInt(periodNumber),
-                classroom_id: itemId && itemType === 'classroom' ? parseInt(itemId) : null,
-                mixed_group_id: itemId && itemType === 'mixed_group' ? parseInt(itemId) : null,
-                type: itemType
-            })
+            body: JSON.stringify(requestData)
         });
 
-        return await response.json();
+        console.log('saveSchedule - response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('saveSchedule - result:', result);
+        
+        return result;
     } catch (error) {
-        console.error('Erreur:', error);
-        showNotification('error', 'Erreur lors de la sauvegarde');
-        return { success: false };
+        console.error('Erreur dans saveSchedule:', error);
+        return { success: false, message: error.message };
     }
 }
+
+// Fonctions pour le modal de tâche personnalisée
+function showCustomTaskModal() {
+    console.log('showCustomTaskModal() appelée, currentCell:', currentCell);
+    
+    if (!currentCell) {
+        console.error('currentCell est null dans showCustomTaskModal');
+        alert('Erreur: impossible de déterminer le créneau sélectionné');
+        return;
+    }
+    
+    // Stocker les infos du créneau dans le modal pour éviter les problèmes avec currentCell
+    const modal = document.getElementById('customTaskModal');
+    modal.dataset.weekday = currentCell.dataset.weekday;
+    modal.dataset.period = currentCell.dataset.period;
+    
+    console.log('Stockage créneau dans modal:', modal.dataset.weekday, modal.dataset.period);
+    
+    modal.style.display = 'block';
+    document.getElementById('customTaskTitle').value = '';
+    document.getElementById('customTaskTitle').focus();
+    
+    // Cacher le sélecteur
+    document.getElementById('classSelector').classList.remove('show');
+}
+
+function closeCustomTaskModal() {
+    document.getElementById('customTaskModal').style.display = 'none';
+    currentCell = null; // Remettre à null seulement ici
+}
+
+function saveCustomTask() {
+    console.log('saveCustomTask() appelée');
+    
+    const title = document.getElementById('customTaskTitle').value.trim();
+    console.log('Titre saisi:', title);
+    
+    if (!title) {
+        alert('Veuillez saisir un titre pour la tâche');
+        return;
+    }
+    
+    // Récupérer les infos du créneau depuis le modal
+    const modal = document.getElementById('customTaskModal');
+    const weekday = modal.dataset.weekday;
+    const period = modal.dataset.period;
+    
+    console.log('Créneau depuis modal:', weekday, period);
+    
+    if (!weekday || !period) {
+        console.error('Informations de créneau manquantes dans le modal');
+        alert('Erreur: informations de créneau manquantes');
+        return;
+    }
+    
+    // Retrouver la cellule correspondante pour la mise à jour de l'affichage
+    const targetCell = document.querySelector(`[data-weekday="${weekday}"][data-period="${period}"]`);
+    console.log('Cellule trouvée:', targetCell);
+    
+    if (!targetCell) {
+        console.error('Impossible de trouver la cellule cible');
+        alert('Erreur: impossible de trouver la cellule cible');
+        return;
+    }
+    
+    // Sauvegarder la tâche personnalisée
+    console.log('Appel saveSchedule...');
+    saveSchedule(weekday, period, null, 'custom', title).then(result => {
+        console.log('Résultat saveSchedule:', result);
+        if (result.success) {
+            console.log('Succès - mise à jour de l\'affichage');
+            // Mettre à jour l'affichage de la cellule
+            targetCell.innerHTML = `
+                <div class="class-block" style="background-color: #6B7280;">
+                    <div class="class-name"><i class="fas fa-tasks"></i> ${title}</div>
+                    <div class="class-subject">Autre</div>
+                </div>
+            `;
+            closeCustomTaskModal();
+        } else {
+            console.error('Erreur lors de la sauvegarde:', result.message);
+            alert('Erreur lors de la sauvegarde: ' + (result.message || 'Erreur inconnue'));
+        }
+    }).catch(error => {
+        console.error('Erreur dans saveCustomTask:', error);
+        alert('Erreur lors de la sauvegarde: ' + error.message);
+    });
+}
+
+// Fermer le modal avec Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeCustomTaskModal();
+    }
+});
+
+// Valider avec Enter dans le champ
+document.addEventListener('DOMContentLoaded', function() {
+    const titleInput = document.getElementById('customTaskTitle');
+    if (titleInput) {
+        titleInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                saveCustomTask();
+            }
+        });
+    }
+});
 
 // Fermer le sélecteur en cliquant ailleurs
 document.addEventListener('click', (e) => {
@@ -566,5 +739,6 @@ document.addEventListener('click', (e) => {
         closeClassSelector();
     }
 });
+
 </script>
 {% endblock %}

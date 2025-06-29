@@ -164,28 +164,8 @@
 {% block content %}
 <div class="setup-container">
     <!-- Barre de progression -->
-    <div class="setup-progress">
-        <div class="progress-step completed">
-            <div class="progress-circle"><i class="fas fa-check"></i></div>
-            <span class="progress-label">Configuration</span>
-        </div>
-        <div class="progress-step completed">
-            <div class="progress-circle"><i class="fas fa-check"></i></div>
-            <span class="progress-label">Vacances</span>
-        </div>
-        <div class="progress-step completed">
-            <div class="progress-circle"><i class="fas fa-check"></i></div>
-            <span class="progress-label">Pauses</span>
-        </div>
-        <div class="progress-step active">
-            <div class="progress-circle">4</div>
-            <span class="progress-label">Classes</span>
-        </div>
-        <div class="progress-step">
-            <div class="progress-circle">5</div>
-            <span class="progress-label">Horaire type</span>
-        </div>
-    </div>
+    {% set current_step = 4 %}
+    {% include 'setup/progress_bar.html' %}
 
     <!-- Section de configuration -->
     <div class="setup-section">
@@ -227,8 +207,26 @@
                 
                 <div class="form-group">
                     {{ form.color.label(class="form-label") }}
-                    <div class="color-picker-wrapper">
-                        {{ form.color(class="form-control color-picker", type="color") }}
+                    <div class="color-palette">
+                        <input type="hidden" id="color" name="color" value="#4F46E5">
+                        <div class="color-options">
+                            <div class="color-option active" data-color="#4F46E5" style="background-color: #4F46E5;" title="Violet"></div>
+                            <div class="color-option" data-color="#EF4444" style="background-color: #EF4444;" title="Rouge"></div>
+                            <div class="color-option" data-color="#F59E0B" style="background-color: #F59E0B;" title="Orange"></div>
+                            <div class="color-option" data-color="#84CC16" style="background-color: #84CC16;" title="Vert lime"></div>
+                            <div class="color-option" data-color="#22C55E" style="background-color: #22C55E;" title="Vert"></div>
+                            <div class="color-option" data-color="#06B6D4" style="background-color: #06B6D4;" title="Cyan"></div>
+                            <div class="color-option" data-color="#3B82F6" style="background-color: #3B82F6;" title="Bleu"></div>
+                            <div class="color-option" data-color="#8B5CF6" style="background-color: #8B5CF6;" title="Violet clair"></div>
+                            <div class="color-option" data-color="#EC4899" style="background-color: #EC4899;" title="Rose"></div>
+                            <div class="color-option" data-color="#F97316" style="background-color: #F97316;" title="Orange foncé"></div>
+                            <div class="color-option" data-color="#10B981" style="background-color: #10B981;" title="Emeraude"></div>
+                            <div class="color-option" data-color="#14B8A6" style="background-color: #14B8A6;" title="Sarcelle"></div>
+                            <div class="color-option" data-color="#6366F1" style="background-color: #6366F1;" title="Indigo"></div>
+                            <div class="color-option" data-color="#A855F7" style="background-color: #A855F7;" title="Violet profond"></div>
+                            <div class="color-option" data-color="#F43F5E" style="background-color: #F43F5E;" title="Rose rouge"></div>
+                            <div class="color-option" data-color="#FDE047" style="background-color: #FDE047;" title="Jaune vif"></div>
+                        </div>
                     </div>
                 </div>
                 
@@ -270,11 +268,8 @@
     <div class="classrooms-list">
         <h2><i class="fas fa-list"></i> Mes classes</h2>
         
-        <!-- Classes propres (maître) -->
+        <!-- Classes propres -->
         {% if classrooms %}
-            <h3 style="font-size: 1.1rem; margin-bottom: 1rem; color: var(--gray-color);">
-                <i class="fas fa-crown"></i> Classes dont je suis maître
-            </h3>
             {% for classroom in classrooms %}
             <div class="classroom-item">
                 <div class="classroom-info">
@@ -286,11 +281,19 @@
                 </div>
                 
                 <div class="classroom-actions" style="display: flex; gap: 0.5rem;">
-                    <form method="POST" action="{{ url_for('setup.become_class_master', classroom_id=classroom.id) }}" style="margin: 0;">
-                        <button type="submit" class="btn btn-success btn-sm" title="Devenir maître de cette classe">
-                            <i class="fas fa-crown"></i> Maître
+                    {% if classroom.id in master_classroom_ids %}
+                        <!-- L'utilisateur est déjà maître de cette classe -->
+                        <button type="button" class="btn btn-info btn-sm master-status" disabled title="Vous êtes maître de cette classe">
+                            <i class="fas fa-crown"></i> Vous êtes maître de classe
                         </button>
-                    </form>
+                    {% else %}
+                        <!-- L'utilisateur n'est pas encore maître -->
+                        <form method="POST" action="{{ url_for('setup.become_class_master', classroom_id=classroom.id) }}" style="margin: 0;">
+                            <button type="submit" class="btn btn-success btn-sm" title="Devenir maître de cette classe">
+                                <i class="fas fa-crown"></i> Devenir maître
+                            </button>
+                        </form>
+                    {% endif %}
                     
                     <form method="POST" action="{{ url_for('setup.delete_classroom', id=classroom.id) }}" style="margin: 0;">
                         <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette classe ?');" title="Supprimer cette classe">
@@ -336,27 +339,15 @@
 
     <!-- Boutons de navigation -->
     <div class="action-buttons" style="margin-top: 2rem;">
-        {% if not current_user.setup_completed %}
+        <!-- Bouton gauche : Pauses -->
         <a href="{{ url_for('setup.manage_breaks') }}" class="btn btn-outline">
-            <i class="fas fa-arrow-left"></i> Précédent
+            <i class="fas fa-coffee"></i> Pauses
         </a>
-        {% else %}
-        <a href="{{ url_for('planning.dashboard') }}" class="btn btn-outline">
-            <i class="fas fa-arrow-left"></i> Retour au tableau de bord
-        </a>
-        {% endif %}
         
-        {% if classrooms or linked_classrooms %}
-            {% if not current_user.setup_completed %}
-            <a href="{{ url_for('schedule.weekly_schedule') }}" class="btn btn-primary">
-                Suivant <i class="fas fa-arrow-right"></i>
-            </a>
-            {% else %}
-            <a href="{{ url_for('planning.dashboard') }}" class="btn btn-primary">
-                Retour au tableau de bord <i class="fas fa-arrow-right"></i>
-            </a>
-            {% endif %}
-        {% endif %}
+        <!-- Bouton droit : Horaire type -->
+        <a href="{{ url_for('schedule.weekly_schedule') }}" class="btn btn-primary">
+            Horaire type <i class="fas fa-calendar-week"></i>
+        </a>
     </div>
 </div>
 
@@ -365,5 +356,101 @@
     padding: 0.375rem 0.75rem;
     font-size: 0.875rem;
 }
+
+/* Sélecteur de couleurs personnalisé */
+.color-palette {
+    margin-top: 0.5rem;
+}
+
+.color-options {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 0.75rem;
+    max-width: 400px;
+}
+
+.color-option {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.color-option:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.color-option.active {
+    border-color: #333;
+    transform: scale(1.15);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.color-option.active::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 16px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Responsive pour petits écrans */
+@media (max-width: 600px) {
+    .color-options {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.5rem;
+    }
+    
+    .color-option {
+        width: 35px;
+        height: 35px;
+    }
+}
+
+/* Style pour le bouton maître désactivé */
+.btn.master-status[disabled] {
+    opacity: 0.9;
+    cursor: not-allowed;
+    background-color: #17a2b8; /* Bleu turquoise */
+    border-color: #17a2b8;
+    color: #fff;
+}
+
+.btn.master-status[disabled]:hover {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+}
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestionnaire pour le sélecteur de couleurs
+    const colorOptions = document.querySelectorAll('.color-option');
+    const colorInput = document.getElementById('color');
+    
+    colorOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            // Retirer la classe active de toutes les options
+            colorOptions.forEach(opt => opt.classList.remove('active'));
+            
+            // Ajouter la classe active à l'option cliquée
+            this.classList.add('active');
+            
+            // Mettre à jour la valeur de l'input caché
+            const selectedColor = this.getAttribute('data-color');
+            colorInput.value = selectedColor;
+            
+            console.log('Couleur sélectionnée:', selectedColor);
+        });
+    });
+});
+</script>
 {% endblock %}

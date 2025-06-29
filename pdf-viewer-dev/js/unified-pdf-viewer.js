@@ -258,6 +258,12 @@ class UnifiedPDFViewer {
         
         this.container.innerHTML = `
             <div class="${containerClasses.join(' ')}" data-mode="${this.options.mode}">
+                ${this.currentMode.layout === 'split' ? `
+                <!-- Bouton de fermeture pour le mode split -->
+                <button class="pdf-close-button" id="pdf-close-button" title="Fermer le lecteur PDF">
+                    <i class="fas fa-times"></i>
+                </button>
+                ` : ''}
                 <!-- Corps principal -->
                 <div class="pdf-main">
                     <!-- Barre latérale -->
@@ -549,10 +555,44 @@ class UnifiedPDFViewer {
                     right: 0 !important;
                     width: 50vw !important;
                     height: 100vh !important;
-                    z-index: 1000 !important;
+                    z-index: 10000 !important;
                     background: white !important;
                     border-left: 1px solid #e5e7eb !important;
                     box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1) !important;
+                }
+                
+                /* Bouton de fermeture pour le mode split */
+                .pdf-close-button {
+                    position: absolute !important;
+                    top: 5px !important;
+                    right: 5px !important;
+                    width: 28px !important;
+                    height: 28px !important;
+                    border-radius: 50% !important;
+                    background: white !important;
+                    border: 1px solid #e5e7eb !important;
+                    cursor: pointer !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    z-index: 10001 !important;
+                    transition: all 0.2s !important;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+                }
+                
+                .pdf-close-button:hover {
+                    background: #f3f4f6 !important;
+                    transform: scale(1.05) !important;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+                }
+                
+                .pdf-close-button i {
+                    font-size: 14px !important;
+                    color: #6b7280 !important;
+                }
+                
+                .pdf-close-button:hover i {
+                    color: #374151 !important;
                 }
                 
                 .split-view-container .pdf-annotation-toolbar {
@@ -614,15 +654,57 @@ class UnifiedPDFViewer {
                     width: 100% !important;
                 }
                 
+                .split-view-container .thumbnails-container {
+                    display: flex !important;
+                    flex-direction: column !important;
+                    gap: 0.75rem !important;
+                    padding: 0.5rem !important;
+                    height: 100% !important;
+                    overflow-y: auto !important;
+                }
+                
                 .split-view-container .thumbnail-item {
-                    width: 100px !important;
+                    width: 100% !important;
                     height: auto !important;
-                    margin-bottom: 0.5rem !important;
+                    margin-bottom: 0 !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    align-items: center !important;
+                    padding: 0.5rem !important;
+                    background: #f9fafb !important;
+                    border: 2px solid #e5e7eb !important;
+                    border-radius: 6px !important;
+                    cursor: pointer !important;
+                    transition: all 0.2s !important;
+                    min-height: 120px !important;
+                }
+                
+                .split-view-container .thumbnail-item:hover {
+                    border-color: #3b82f6 !important;
+                    background: #eff6ff !important;
+                }
+                
+                .split-view-container .thumbnail-item.active {
+                    border-color: #3b82f6 !important;
+                    background: #dbeafe !important;
+                    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2) !important;
                 }
                 
                 .split-view-container .thumbnail-canvas {
+                    width: auto !important;
                     max-width: 100% !important;
                     height: auto !important;
+                    max-height: 100px !important;
+                    object-fit: contain !important;
+                    display: block !important;
+                    margin: 0 auto !important;
+                }
+                
+                .split-view-container .thumbnail-number {
+                    margin-top: 0.5rem !important;
+                    font-size: 0.75rem !important;
+                    font-weight: 600 !important;
+                    color: #374151 !important;
                 }
                 
                 .split-view-container .pdf-nav-controls {
@@ -831,11 +913,13 @@ class UnifiedPDFViewer {
             <div class="stroke-options">
                 ${strokeWidths}
             </div>
+            ${this.options.enableStudentTracking !== false ? `
             <div class="student-tracking-section">
                 <button class="btn-tool" id="btn-student-tracking" title="Suivi élève">
                     <i class="fas fa-user-graduate"></i>
                 </button>
             </div>
+            ` : ''}
             <div class="annotation-actions">
                 <button class="btn-tool" id="btn-undo" title="Annuler">
                     <i class="fas fa-undo"></i>
@@ -1357,6 +1441,20 @@ class UnifiedPDFViewer {
         // Annotations (si disponibles)
         if (this.currentMode.annotations) {
             this.initAnnotationEvents();
+        }
+        
+        // Bouton de fermeture (mode split)
+        if (this.currentMode.layout === 'split') {
+            const closeButton = document.getElementById('pdf-close-button');
+            if (closeButton) {
+                closeButton.addEventListener('click', () => {
+                    this.destroy();
+                    // Appeler la fonction de fermeture définie dans calendar
+                    if (typeof closePdfViewer === 'function') {
+                        closePdfViewer();
+                    }
+                });
+            }
         }
 
         // Redimensionnement
@@ -6442,7 +6540,9 @@ class UnifiedPDFViewer {
         for (let pageNum = 1; pageNum <= this.totalPages; pageNum++) {
             try {
                 const page = await this.pdfDoc.getPage(pageNum);
-                const viewport = page.getViewport({ scale: 0.15 }); // Échelle réduite pour de meilleures miniatures
+                // Utiliser une échelle plus grande pour le mode split
+                const scale = this.currentMode.layout === 'split' ? 0.25 : 0.15;
+                const viewport = page.getViewport({ scale: scale }); // Échelle adaptée selon le mode
 
                 // Créer le conteneur de la miniature
                 const thumbnailItem = document.createElement('div');
@@ -11284,6 +11384,11 @@ class UnifiedPDFViewer {
             formData.append('action', 'send_to_students');
             formData.append('send_mode', sendMode);
             formData.append('selected_students', JSON.stringify(selectedStudents));
+            
+            // Ajouter l'ID de classe si disponible
+            if (this.options.currentClassId) {
+                formData.append('current_class_id', this.options.currentClassId);
+            }
             
             // Envoyer au serveur
             const response = await fetch('/api/send-to-students', {

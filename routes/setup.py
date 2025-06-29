@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from extensions import db
 from models.user import User, Holiday, Break
 from models.classroom import Classroom
+from models.college import College, CollegeHoliday, CollegeBreak
 from flask_wtf import FlaskForm
 from wtforms import StringField, DateField, TimeField, IntegerField, FieldList, FormField, BooleanField, SubmitField, SelectField, RadioField
 from wtforms.validators import DataRequired, NumberRange
@@ -13,6 +14,61 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.vaud_holidays import get_vaud_holidays
 
 setup_bp = Blueprint('setup', __name__, url_prefix='/setup')
+
+@setup_bp.route('/colleges/search', methods=['POST'])
+@login_required
+def search_colleges():
+    """API pour l'autocomplétion des noms de collèges"""
+    data = request.get_json()
+    query = data.get('query', '').strip()
+    
+    if len(query) < 2:
+        return jsonify({'colleges': []})
+    
+    # Rechercher les collèges qui commencent par la requête
+    colleges = College.query.filter(
+        College.name.ilike(f'{query}%')
+    ).order_by(College.name).limit(10).all()
+    
+    results = []
+    for college in colleges:
+        results.append({
+            'id': college.id,
+            'name': college.name,
+            'has_config': bool(college.school_year_start)  # Indique si le collège a une config complète
+        })
+    
+    return jsonify({'colleges': results})
+
+@setup_bp.route('/colleges/config', methods=['POST'])
+@login_required
+def get_college_config():
+    """API pour récupérer la configuration d'un collège"""
+    data = request.get_json()
+    college_name = data.get('college_name', '').strip()
+    
+    if not college_name:
+        return jsonify({'exists': False})
+    
+    college = College.query.filter_by(name=college_name).first()
+    
+    if college and college.school_year_start:
+        return jsonify({
+            'exists': True,
+            'has_config': True,
+            'data': college.to_dict()
+        })
+    elif college:
+        return jsonify({
+            'exists': True,
+            'has_config': False,
+            'message': 'Ce collège existe mais n\'a pas de configuration complète'
+        })
+    else:
+        return jsonify({
+            'exists': False,
+            'message': 'Nouveau collège - vous pouvez créer sa configuration'
+        })
 
 class ClassroomForm(FlaskForm):
     name = StringField('Nom de la classe', validators=[DataRequired()])
@@ -50,8 +106,8 @@ class BreakForm(FlaskForm):
 
 class InitialSetupForm(FlaskForm):
     # Copie de configuration
-    copy_from_teacher = StringField('Copier la configuration d\'un enseignant (optionnel)', 
-                                   description='Entrez le nom d\'utilisateur ou email d\'un enseignant existant')
+    college_name = StringField('Nom du collège (optionnel)', 
+                              description='Entrez le nom de votre collège pour copier sa configuration ou en créer un nouveau')
     
     # Année scolaire
     school_year_start = DateField('Début de l\'année scolaire')
@@ -73,8 +129,8 @@ class InitialSetupForm(FlaskForm):
         """Validation personnalisée : les champs sont requis seulement si on ne copie pas"""
         initial_validation = super().validate(extra_validators)
         
-        # Si on copie d'un autre enseignant, pas besoin de valider les autres champs
-        if self.copy_from_teacher.data:
+        # Si on copie d'un collège existant, pas besoin de valider les autres champs
+        if self.college_name.data:
             return True
             
         # Sinon, vérifier que tous les champs sont remplis
@@ -106,67 +162,32 @@ def initial_setup():
     form = InitialSetupForm()
 
     if form.validate_on_submit():
-        # Vérifier s'il faut copier la configuration d'un autre enseignant
-        if form.copy_from_teacher.data:
-            source_teacher = User.query.filter(
-                (User.username == form.copy_from_teacher.data) | 
-                (User.email == form.copy_from_teacher.data)
-            ).first()
+        # Vérifier s'il faut copier la configuration d'un collège
+        if form.college_name.data:
+            college_name = form.college_name.data.strip()
+            college = College.query.filter_by(name=college_name).first()
             
-            if source_teacher and source_teacher.id != current_user.id:
-                # Copier la configuration de base
-                if source_teacher.school_year_start:
-                    current_user.school_year_start = source_teacher.school_year_start
-                    current_user.school_year_end = source_teacher.school_year_end
-                    current_user.day_start_time = source_teacher.day_start_time
-                    current_user.day_end_time = source_teacher.day_end_time
-                    current_user.period_duration = source_teacher.period_duration
-                    current_user.break_duration = source_teacher.break_duration
-                    
-                    # Copier les vacances
-                    for holiday in source_teacher.holidays:
-                        existing_holiday = Holiday.query.filter_by(
-                            user_id=current_user.id,
-                            name=holiday.name,
-                            start_date=holiday.start_date
-                        ).first()
-                        if not existing_holiday:
-                            new_holiday = Holiday(
-                                user_id=current_user.id,
-                                name=holiday.name,
-                                start_date=holiday.start_date,
-                                end_date=holiday.end_date
-                            )
-                            db.session.add(new_holiday)
-                    
-                    # Copier les pauses
-                    for break_obj in source_teacher.breaks:
-                        existing_break = Break.query.filter_by(
-                            user_id=current_user.id,
-                            name=break_obj.name,
-                            start_time=break_obj.start_time
-                        ).first()
-                        if not existing_break:
-                            new_break = Break(
-                                user_id=current_user.id,
-                                name=break_obj.name,
-                                start_time=break_obj.start_time,
-                                end_time=break_obj.end_time,
-                                is_major_break=break_obj.is_major_break
-                            )
-                            db.session.add(new_break)
-                    
-                    try:
-                        db.session.commit()
-                        flash(f'Configuration copiée depuis {source_teacher.username} avec succès !', 'success')
-                        return redirect(url_for('setup.manage_classrooms'))
-                    except Exception as e:
-                        db.session.rollback()
-                        flash(f'Erreur lors de la copie : {str(e)}', 'error')
-                else:
-                    flash(f'L\'enseignant {source_teacher.username} n\'a pas encore de configuration complète.', 'warning')
+            if college and college.school_year_start:
+                # Copier la configuration du collège existant
+                current_user.school_year_start = college.school_year_start
+                current_user.school_year_end = college.school_year_end
+                current_user.day_start_time = college.day_start_time
+                current_user.day_end_time = college.day_end_time
+                current_user.period_duration = college.period_duration
+                current_user.break_duration = college.break_duration
+                current_user.college_name = college_name  # Associer l'utilisateur au collège
+                
+                try:
+                    db.session.commit()
+                    flash(f'Configuration copiée depuis le collège "{college_name}" avec succès !', 'success')
+                    return redirect(url_for('setup.manage_holidays'))
+                except Exception as e:
+                    db.session.rollback()
+                    flash(f'Erreur lors de la copie : {str(e)}', 'error')
             else:
-                flash('Enseignant non trouvé ou vous ne pouvez pas copier votre propre configuration.', 'error')
+                # Nouveau collège ou collège sans configuration
+                # On continue avec la configuration manuelle et on créera le collège plus tard
+                current_user.college_name = college_name
         
         # Configuration manuelle (sans copie)
         # Mise à jour des informations utilisateur avec les données du formulaire
@@ -177,10 +198,35 @@ def initial_setup():
         current_user.period_duration = form.period_duration.data
         current_user.break_duration = form.break_duration.data
 
+        # Créer ou mettre à jour le collège si spécifié
+        if hasattr(current_user, 'college_name') and current_user.college_name:
+            college = College.query.filter_by(name=current_user.college_name).first()
+            if not college:
+                # Créer un nouveau collège
+                college = College(
+                    name=current_user.college_name,
+                    created_by_id=current_user.id,
+                    school_year_start=form.school_year_start.data,
+                    school_year_end=form.school_year_end.data,
+                    day_start_time=form.day_start_time.data,
+                    day_end_time=form.day_end_time.data,
+                    period_duration=form.period_duration.data,
+                    break_duration=form.break_duration.data
+                )
+                db.session.add(college)
+            elif not college.school_year_start:
+                # Mettre à jour un collège existant sans configuration
+                college.school_year_start = form.school_year_start.data
+                college.school_year_end = form.school_year_end.data
+                college.day_start_time = form.day_start_time.data
+                college.day_end_time = form.day_end_time.data
+                college.period_duration = form.period_duration.data
+                college.break_duration = form.break_duration.data
+
         try:
             db.session.commit()
             flash('Configuration initiale enregistrée avec succès !', 'success')
-            return redirect(url_for('setup.manage_holidays'))  # Nouvelle route : Vacances en premier
+            return redirect(url_for('setup.manage_holidays'))
         except Exception as e:
             db.session.rollback()
             flash(f'Erreur lors de la sauvegarde : {str(e)}', 'error')
@@ -315,8 +361,11 @@ def manage_classrooms():
     # Récupérer toutes les classes (propres et liées)
     classrooms = current_user.classrooms.all()
     
+    # Récupérer les informations sur les classes dont l'utilisateur est maître
+    from models.class_collaboration import TeacherCollaboration, SharedClassroom, ClassMaster
+    master_classroom_ids = [cm.classroom_id for cm in ClassMaster.query.filter_by(master_teacher_id=current_user.id).all()]
+    
     # Récupérer aussi les classes liées via collaboration
-    from models.class_collaboration import TeacherCollaboration, SharedClassroom
     collaborations = TeacherCollaboration.query.filter_by(
         specialized_teacher_id=current_user.id
     ).all()
@@ -336,7 +385,8 @@ def manage_classrooms():
     return render_template('setup/manage_classrooms.html', 
                          form=form, 
                          classrooms=classrooms,
-                         linked_classrooms=linked_classrooms)
+                         linked_classrooms=linked_classrooms,
+                         master_classroom_ids=master_classroom_ids)
 
 @setup_bp.route('/classrooms/<int:classroom_id>/become-master', methods=['GET', 'POST'])
 @login_required
@@ -479,6 +529,20 @@ def manage_classrooms_initial():
 @login_required
 def delete_classroom(id):
     classroom = Classroom.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+    
+    # Supprimer d'abord les enregistrements ClassMaster associés
+    from models.class_collaboration import ClassMaster, SharedClassroom
+    
+    # Vérifier s'il y a des classes dérivées (enseignants spécialisés qui utilisent cette classe)
+    shared_classrooms = SharedClassroom.query.filter_by(original_classroom_id=classroom.id).count()
+    if shared_classrooms > 0:
+        flash(f'Impossible de supprimer la classe "{classroom.name}" car elle est partagée avec {shared_classrooms} enseignant(s) spécialisé(s).', 'error')
+        return redirect(url_for('setup.manage_classrooms'))
+    
+    # Supprimer les enregistrements ClassMaster
+    ClassMaster.query.filter_by(classroom_id=classroom.id).delete()
+    
+    # Ensuite supprimer la classe
     db.session.delete(classroom)
     db.session.commit()
     flash(f'Classe "{classroom.name}" supprimée avec succès.', 'info')
@@ -487,6 +551,27 @@ def delete_classroom(id):
 @setup_bp.route('/holidays', methods=['GET', 'POST'])
 @login_required
 def manage_holidays():
+    # Vérifier si l'utilisateur appartient à un collège et s'il faut copier les vacances
+    if current_user.college_name and current_user.holidays.count() == 0:
+        college = College.query.filter_by(name=current_user.college_name).first()
+        if college and college.holidays.count() > 0:
+            # Copier les vacances du collège
+            for college_holiday in college.holidays:
+                user_holiday = Holiday(
+                    user_id=current_user.id,
+                    name=college_holiday.name,
+                    start_date=college_holiday.start_date,
+                    end_date=college_holiday.end_date
+                )
+                db.session.add(user_holiday)
+            
+            try:
+                db.session.commit()
+                flash(f'Vacances copiées depuis le collège "{college.name}" avec succès !', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Erreur lors de la copie des vacances : {str(e)}', 'error')
+    
     if request.method == 'POST':
         form = HolidayForm()
         if form.validate_on_submit():
@@ -497,6 +582,20 @@ def manage_holidays():
                 end_date=form.end_date.data
             )
             db.session.add(holiday)
+            
+            # Si l'utilisateur appartient à un collège, ajouter aussi au niveau du collège
+            if current_user.college_name:
+                college = College.query.filter_by(name=current_user.college_name).first()
+                if college and current_user.id == college.created_by_id:
+                    # Seulement si c'est le créateur du collège
+                    college_holiday = CollegeHoliday(
+                        college_id=college.id,
+                        name=form.name.data,
+                        start_date=form.start_date.data,
+                        end_date=form.end_date.data
+                    )
+                    db.session.add(college_holiday)
+            
             db.session.commit()
             flash(f'Période de vacances "{holiday.name}" ajoutée avec succès !', 'success')
         return redirect(url_for('setup.manage_holidays'))
@@ -517,6 +616,28 @@ def delete_holiday(id):
 @setup_bp.route('/breaks', methods=['GET', 'POST'])
 @login_required
 def manage_breaks():
+    # Vérifier si l'utilisateur appartient à un collège et s'il faut copier les pauses
+    if current_user.college_name and current_user.breaks.count() == 0:
+        college = College.query.filter_by(name=current_user.college_name).first()
+        if college and college.breaks.count() > 0:
+            # Copier les pauses du collège
+            for college_break in college.breaks:
+                user_break = Break(
+                    user_id=current_user.id,
+                    name=college_break.name,
+                    start_time=college_break.start_time,
+                    end_time=college_break.end_time,
+                    is_major_break=college_break.is_major_break
+                )
+                db.session.add(user_break)
+            
+            try:
+                db.session.commit()
+                flash(f'Pauses copiées depuis le collège "{college.name}" avec succès !', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Erreur lors de la copie des pauses : {str(e)}', 'error')
+    
     if request.method == 'POST':
         form = BreakForm()
         if form.validate_on_submit():
@@ -528,6 +649,21 @@ def manage_breaks():
                 is_major_break=form.is_major_break.data
             )
             db.session.add(break_obj)
+            
+            # Si l'utilisateur appartient à un collège, ajouter aussi au niveau du collège
+            if current_user.college_name:
+                college = College.query.filter_by(name=current_user.college_name).first()
+                if college and current_user.id == college.created_by_id:
+                    # Seulement si c'est le créateur du collège
+                    college_break = CollegeBreak(
+                        college_id=college.id,
+                        name=form.name.data,
+                        start_time=form.start_time.data,
+                        end_time=form.end_time.data,
+                        is_major_break=form.is_major_break.data
+                    )
+                    db.session.add(college_break)
+            
             db.session.commit()
             flash(f'Pause "{break_obj.name}" ajoutée avec succès !', 'success')
         return redirect(url_for('setup.manage_breaks'))
@@ -556,6 +692,10 @@ def import_vaud_holidays():
         Holiday.query.filter_by(user_id=current_user.id).delete()
 
     # Ajouter les nouvelles vacances
+    college = None
+    if current_user.college_name:
+        college = College.query.filter_by(name=current_user.college_name).first()
+    
     for holiday_data in holidays:
         # Vérifier si cette période existe déjà
         existing = Holiday.query.filter_by(
@@ -572,6 +712,16 @@ def import_vaud_holidays():
                 end_date=holiday_data['end']
             )
             db.session.add(holiday)
+            
+            # Si c'est le créateur du collège, ajouter aussi au niveau du collège
+            if college and current_user.id == college.created_by_id:
+                college_holiday = CollegeHoliday(
+                    college_id=college.id,
+                    name=holiday_data['name'],
+                    start_date=holiday_data['start'],
+                    end_date=holiday_data['end']
+                )
+                db.session.add(college_holiday)
 
     try:
         db.session.commit()

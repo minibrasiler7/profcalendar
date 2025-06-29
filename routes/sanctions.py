@@ -171,7 +171,7 @@ def save():
 @sanctions_bp.route('/delete/<int:template_id>', methods=['DELETE'])
 @login_required
 def delete(template_id):
-    """Supprimer un modèle de sanction"""
+    """Supprimer un modèle de sanction et toutes ses dépendances"""
     try:
         template = SanctionTemplate.query.filter_by(
             id=template_id,
@@ -181,22 +181,43 @@ def delete(template_id):
         if not template:
             return jsonify({'success': False, 'message': 'Modèle non trouvé'}), 404
         
-        # Vérifier s'il y a des imports actifs
+        # Compter les imports actifs et les compteurs d'élèves pour le message
         active_imports = ClassroomSanctionImport.query.filter_by(
             template_id=template.id,
             is_active=True
         ).count()
         
-        if active_imports > 0:
-            return jsonify({
-                'success': False, 
-                'message': f'Impossible de supprimer : ce modèle est utilisé dans {active_imports} classe(s)'
-            }), 400
+        # Importer le modèle StudentSanctionCount
+        from models.student_sanctions import StudentSanctionCount
         
+        # Compter et supprimer les compteurs d'élèves
+        student_counts = StudentSanctionCount.query.filter_by(
+            template_id=template.id
+        ).count()
+        
+        StudentSanctionCount.query.filter_by(
+            template_id=template.id
+        ).delete()
+        
+        # Supprimer tous les imports de ce modèle
+        ClassroomSanctionImport.query.filter_by(
+            template_id=template.id
+        ).delete()
+        
+        # Supprimer le modèle (les seuils et options seront supprimés en cascade)
         db.session.delete(template)
         db.session.commit()
         
-        return jsonify({'success': True, 'message': 'Modèle supprimé avec succès'})
+        message = 'Modèle supprimé avec succès'
+        if active_imports > 0 or student_counts > 0:
+            details = []
+            if active_imports > 0:
+                details.append(f'{active_imports} classe(s)')
+            if student_counts > 0:
+                details.append(f'{student_counts} compteur(s) d\'élève')
+            message += f' (supprimé de {" et ".join(details)})'
+        
+        return jsonify({'success': True, 'message': message})
         
     except Exception as e:
         db.session.rollback()
@@ -233,74 +254,87 @@ def toggle_status(template_id):
 @sanctions_bp.route('/import-to-class', methods=['POST'])
 @login_required
 def import_to_class():
-    """Importer un modèle vers une ou plusieurs classes"""
+    """Importer un ou plusieurs modèles vers une ou plusieurs classes"""
     data = request.get_json()
     
     if not data:
         return jsonify({'success': False, 'message': 'Aucune donnée reçue'}), 400
     
     try:
-        template_id = data.get('template_id')
+        # Support pour un seul template_id (ancien format) ou plusieurs template_ids
+        template_ids = data.get('template_ids', [])
+        if not template_ids and data.get('template_id'):
+            template_ids = [data.get('template_id')]
+            
         classroom_ids = data.get('classroom_ids', [])
         
-        if not template_id or not classroom_ids:
+        if not template_ids or not classroom_ids:
             return jsonify({'success': False, 'message': 'Données manquantes'}), 400
         
-        # Vérifier que le template appartient à l'utilisateur
-        template = SanctionTemplate.query.filter_by(
-            id=template_id,
-            user_id=current_user.id
-        ).first()
+        # Vérifier que tous les templates appartiennent à l'utilisateur
+        templates = SanctionTemplate.query.filter(
+            SanctionTemplate.id.in_(template_ids),
+            SanctionTemplate.user_id == current_user.id
+        ).all()
         
-        if not template:
-            return jsonify({'success': False, 'message': 'Modèle non trouvé'}), 404
+        if len(templates) != len(template_ids):
+            return jsonify({'success': False, 'message': 'Un ou plusieurs modèles non trouvés'}), 404
         
-        imported_count = 0
-        already_imported = 0
+        total_imported = 0
+        total_already_imported = 0
         
-        for classroom_id in classroom_ids:
-            # Vérifier que la classe appartient à l'utilisateur
-            classroom = Classroom.query.filter_by(
-                id=classroom_id,
-                user_id=current_user.id
-            ).first()
-            
-            if not classroom:
-                continue
-            
-            # Vérifier si déjà importé
-            existing = ClassroomSanctionImport.query.filter_by(
-                classroom_id=classroom_id,
-                template_id=template_id
-            ).first()
-            
-            if existing:
-                if not existing.is_active:
-                    existing.is_active = True
-                    existing.updated_at = datetime.utcnow()
-                    imported_count += 1
-                else:
-                    already_imported += 1
-            else:
-                # Créer nouvel import
-                import_record = ClassroomSanctionImport(
+        for template in templates:
+            for classroom_id in classroom_ids:
+                # Vérifier que la classe appartient à l'utilisateur
+                classroom = Classroom.query.filter_by(
+                    id=classroom_id,
+                    user_id=current_user.id
+                ).first()
+                
+                if not classroom:
+                    continue
+                
+                # Vérifier si déjà importé
+                existing = ClassroomSanctionImport.query.filter_by(
                     classroom_id=classroom_id,
-                    template_id=template_id
-                )
-                db.session.add(import_record)
-                imported_count += 1
+                    template_id=template.id
+                ).first()
+                
+                if existing:
+                    if not existing.is_active:
+                        existing.is_active = True
+                        existing.updated_at = datetime.utcnow()
+                        total_imported += 1
+                    else:
+                        total_already_imported += 1
+                else:
+                    # Créer nouvel import
+                    import_record = ClassroomSanctionImport(
+                        classroom_id=classroom_id,
+                        template_id=template.id
+                    )
+                    db.session.add(import_record)
+                    total_imported += 1
         
         db.session.commit()
         
-        message = f'Modèle importé dans {imported_count} classe(s)'
-        if already_imported > 0:
-            message += f' ({already_imported} déjà importé(s))'
+        # Message adapté selon le nombre de modèles
+        templates_count = len(templates)
+        classes_count = len(classroom_ids)
+        
+        if templates_count == 1:
+            message = f'Modèle importé dans {classes_count} classe(s)'
+        else:
+            message = f'{templates_count} modèles importés dans {classes_count} classe(s)'
+            
+        if total_already_imported > 0:
+            message += f' ({total_already_imported} import(s) déjà existant(s))'
         
         return jsonify({
             'success': True,
             'message': message,
-            'imported_count': imported_count,
-            'already_imported': already_imported
+            'imported_count': total_imported,
+            'already_imported': total_already_imported
         })
         
     except Exception as e:

@@ -9,62 +9,6 @@
     margin: 0 auto;
 }
 
-.setup-progress {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 3rem;
-    position: relative;
-}
-
-.setup-progress::before {
-    content: '';
-    position: absolute;
-    top: 20px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background-color: var(--light-gray);
-    z-index: 0;
-}
-
-.progress-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-    z-index: 1;
-}
-
-.progress-circle {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background-color: var(--light-gray);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    color: var(--gray-color);
-    margin-bottom: 0.5rem;
-    transition: all 0.3s ease;
-}
-
-.progress-step.active .progress-circle {
-    background-color: var(--primary-color);
-    color: var(--white);
-    transform: scale(1.1);
-}
-
-.progress-step.completed .progress-circle {
-    background-color: var(--success-color);
-    color: var(--white);
-}
-
-.progress-label {
-    font-size: 0.875rem;
-    color: var(--gray-color);
-    text-align: center;
-}
 
 .setup-section {
     background-color: var(--white);
@@ -121,51 +65,34 @@
 {% block content %}
 <div class="setup-container">
     <!-- Barre de progression -->
-    <div class="setup-progress">
-        <div class="progress-step active">
-            <div class="progress-circle">1</div>
-            <span class="progress-label">Configuration</span>
-        </div>
-        <div class="progress-step">
-            <div class="progress-circle">2</div>
-            <span class="progress-label">Vacances</span>
-        </div>
-        <div class="progress-step">
-            <div class="progress-circle">3</div>
-            <span class="progress-label">Pauses</span>
-        </div>
-        <div class="progress-step">
-            <div class="progress-circle">4</div>
-            <span class="progress-label">Classes</span>
-        </div>
-        <div class="progress-step">
-            <div class="progress-circle">5</div>
-            <span class="progress-label">Horaire type</span>
-        </div>
-    </div>
+    {% set current_step = 1 %}
+    {% include 'setup/progress_bar.html' %}
 
     <form method="POST" action="{{ url_for('setup.initial_setup') }}">
         {{ form.hidden_tag() }}
         
         <!-- Section Copie de configuration -->
         <div class="setup-section">
-            <i class="fas fa-copy section-icon"></i>
-            <h2 class="section-title">Copie de configuration (optionnel)</h2>
-            <p class="section-description">Si vous travaillez dans le même établissement qu'un autre enseignant, vous pouvez copier sa configuration pour gagner du temps.</p>
+            <i class="fas fa-school section-icon"></i>
+            <h2 class="section-title">Collège (optionnel)</h2>
+            <p class="section-description">Entrez le nom de votre collège pour copier sa configuration existante ou créer une nouvelle configuration pour votre établissement.</p>
             
             <div class="form-group">
-                {{ form.copy_from_teacher.label(class="form-label") }}
-                {{ form.copy_from_teacher(class="form-control", placeholder="Nom d'utilisateur ou email de l'enseignant") }}
-                <p class="form-help">Laissez vide pour configurer manuellement. Si rempli, les 3 premières étapes seront automatiquement configurées.</p>
-                <div id="teacher-status" style="margin-top: 0.5rem; font-size: 0.875rem;">
+                {{ form.college_name.label(class="form-label") }}
+                <div class="autocomplete-wrapper">
+                    {{ form.college_name(class="form-control", placeholder="Ex: Collège de Béthusy, Gymnase de Chamblandes...", autocomplete="off") }}
+                    <div id="college-suggestions" class="autocomplete-suggestions"></div>
+                </div>
+                <p class="form-help">Laissez vide pour configurer manuellement. Si vous entrez un collège existant, sa configuration sera copiée.</p>
+                <div id="college-status" style="margin-top: 0.5rem; font-size: 0.875rem;">
                     <!-- Le statut sera affiché ici -->
                 </div>
                 <div id="copy-info" class="alert alert-info" style="display: none; margin-top: 1rem;">
-                    <i class="fas fa-info-circle"></i> Les paramètres de cet enseignant ont été chargés. En cliquant sur "Suivant", les vacances et pauses seront également copiées.
+                    <i class="fas fa-info-circle"></i> La configuration de ce collège sera copiée. En cliquant sur "Suivant", les paramètres seront automatiquement appliqués.
                 </div>
-                {% if form.copy_from_teacher.errors %}
+                {% if form.college_name.errors %}
                     <div class="form-error">
-                        {% for error in form.copy_from_teacher.errors %}
+                        {% for error in form.college_name.errors %}
                             <small>{{ error }}</small>
                         {% endfor %}
                     </div>
@@ -302,74 +229,188 @@
     opacity: 0.5;
     pointer-events: none;
 }
+
+.autocomplete-wrapper {
+    position: relative;
+}
+
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.suggestion-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f1f1;
+    transition: background-color 0.2s ease;
+}
+
+.suggestion-item:hover,
+.suggestion-item.active {
+    background-color: #f8f9fa;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-name {
+    font-weight: 600;
+    color: var(--dark-color);
+    margin-bottom: 0.25rem;
+}
+
+.suggestion-status {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+}
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const copyField = document.getElementById('copy_from_teacher');
+    const collegeField = document.getElementById('college_name');
+    const collegeSuggestions = document.getElementById('college-suggestions');
+    const collegeStatus = document.getElementById('college-status');
     const copyInfo = document.getElementById('copy-info');
-    const teacherStatus = document.getElementById('teacher-status');
     const setupSections = document.querySelectorAll('.setup-section:not(:first-child)');
     
     let debounceTimer;
-    let teacherFound = false;
+    let collegeFound = false;
     
-    function checkTeacher() {
-        const username = copyField.value.trim();
+    function searchColleges() {
+        const query = collegeField.value.trim();
         
-        if (!username) {
-            teacherStatus.innerHTML = '';
+        if (query.length < 2) {
+            collegeSuggestions.style.display = 'none';
+            collegeStatus.innerHTML = '';
             copyInfo.style.display = 'none';
             setupSections.forEach(section => {
                 section.classList.remove('disabled-section');
             });
             clearFields();
-            teacherFound = false;
+            collegeFound = false;
             return;
         }
         
         // Afficher un message de chargement
-        teacherStatus.innerHTML = '<span style="color: #666;"><i class="fas fa-spinner fa-spin"></i> Recherche en cours...</span>';
+        collegeStatus.innerHTML = '<span style="color: #666;"><i class="fas fa-spinner fa-spin"></i> Recherche en cours...</span>';
         
-        fetch('{{ url_for("setup.check_teacher") }}', {
+        fetch('{{ url_for("setup.search_colleges") }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
             },
-            body: JSON.stringify({ username_or_email: username })
+            body: JSON.stringify({ query: query })
         })
         .then(response => response.json())
         .then(data => {
-            if (data.exists && !data.incomplete) {
-                teacherStatus.innerHTML = '<span style="color: #28a745;"><i class="fas fa-check-circle"></i> Utilisateur trouvé dans la base de données</span>';
+            if (data.colleges && data.colleges.length > 0) {
+                showSuggestions(data.colleges);
+                collegeStatus.innerHTML = '<span style="color: #666;"><i class="fas fa-search"></i> ' + data.colleges.length + ' collège(s) trouvé(s)</span>';
+            } else {
+                collegeSuggestions.style.display = 'none';
+                collegeStatus.innerHTML = '<span style="color: #17a2b8;"><i class="fas fa-plus-circle"></i> Nouveau collège - vous pouvez créer sa configuration</span>';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            collegeStatus.innerHTML = '<span style="color: #dc3545;"><i class="fas fa-exclamation-circle"></i> Erreur de connexion</span>';
+            collegeSuggestions.style.display = 'none';
+        });
+    }
+    
+    function showSuggestions(colleges) {
+        collegeSuggestions.innerHTML = '';
+        colleges.forEach(college => {
+            const item = document.createElement('div');
+            item.className = 'suggestion-item';
+            item.innerHTML = `
+                <div class="suggestion-name">${college.name}</div>
+                <div class="suggestion-status">
+                    ${college.has_config ? 
+                        '<i class="fas fa-check-circle" style="color: #28a745;"></i> Configuration disponible' : 
+                        '<i class="fas fa-exclamation-triangle" style="color: #ffc107;"></i> Pas de configuration'
+                    }
+                </div>
+            `;
+            item.addEventListener('click', function() {
+                selectCollege(college);
+            });
+            collegeSuggestions.appendChild(item);
+        });
+        collegeSuggestions.style.display = 'block';
+    }
+    
+    function selectCollege(college) {
+        collegeField.value = college.name;
+        collegeSuggestions.style.display = 'none';
+        
+        if (college.has_config) {
+            checkCollegeConfig(college.name);
+        } else {
+            collegeStatus.innerHTML = '<span style="color: #ffc107;"><i class="fas fa-exclamation-triangle"></i> Ce collège existe mais n\'a pas de configuration complète</span>';
+            copyInfo.style.display = 'none';
+            setupSections.forEach(section => {
+                section.classList.remove('disabled-section');
+            });
+            clearFields();
+            collegeFound = false;
+        }
+    }
+    
+    function checkCollegeConfig(collegeName) {
+        fetch('{{ url_for("setup.get_college_config") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            },
+            body: JSON.stringify({ college_name: collegeName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists && data.has_config) {
+                collegeStatus.innerHTML = '<span style="color: #28a745;"><i class="fas fa-check-circle"></i> Configuration trouvée pour ce collège</span>';
                 copyInfo.style.display = 'block';
                 setupSections.forEach(section => {
                     section.classList.add('disabled-section');
                 });
                 fillFields(data.data);
-                teacherFound = true;
-            } else if (data.exists && data.incomplete) {
-                teacherStatus.innerHTML = '<span style="color: #ffc107;"><i class="fas fa-exclamation-triangle"></i> ' + data.message + '</span>';
+                collegeFound = true;
+            } else if (data.exists && !data.has_config) {
+                collegeStatus.innerHTML = '<span style="color: #ffc107;"><i class="fas fa-exclamation-triangle"></i> ' + data.message + '</span>';
                 copyInfo.style.display = 'none';
                 setupSections.forEach(section => {
                     section.classList.remove('disabled-section');
                 });
                 clearFields();
-                teacherFound = false;
+                collegeFound = false;
             } else {
-                teacherStatus.innerHTML = '<span style="color: #dc3545;"><i class="fas fa-times-circle"></i> Ce nom d\'utilisateur n\'existe pas</span>';
+                collegeStatus.innerHTML = '<span style="color: #17a2b8;"><i class="fas fa-plus-circle"></i> ' + data.message + '</span>';
                 copyInfo.style.display = 'none';
                 setupSections.forEach(section => {
                     section.classList.remove('disabled-section');
                 });
                 clearFields();
-                teacherFound = false;
+                collegeFound = false;
             }
         })
         .catch(error => {
             console.error('Erreur:', error);
-            teacherStatus.innerHTML = '<span style="color: #dc3545;"><i class="fas fa-exclamation-circle"></i> Erreur de connexion</span>';
+            collegeStatus.innerHTML = '<span style="color: #dc3545;"><i class="fas fa-exclamation-circle"></i> Erreur de connexion</span>';
         });
     }
     
@@ -384,7 +425,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function clearFields() {
         // Ne pas effacer les champs si l'utilisateur les a déjà remplis manuellement
-        if (!teacherFound) return;
+        if (!collegeFound) return;
         
         document.getElementById('school_year_start').value = '';
         document.getElementById('school_year_end').value = '';
@@ -394,15 +435,59 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('break_duration').value = '';
     }
     
-    // Utiliser un debounce pour éviter trop de requêtes
-    copyField.addEventListener('input', function() {
+    // Gérer la saisie avec debounce
+    collegeField.addEventListener('input', function() {
         clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(checkTeacher, 300); // Attendre 300ms après la dernière frappe
+        debounceTimer = setTimeout(searchColleges, 300);
+    });
+    
+    // Masquer les suggestions quand on clique ailleurs
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.autocomplete-wrapper')) {
+            collegeSuggestions.style.display = 'none';
+        }
+    });
+    
+    // Gérer la navigation au clavier
+    collegeField.addEventListener('keydown', function(event) {
+        const items = collegeSuggestions.querySelectorAll('.suggestion-item');
+        const activeItem = collegeSuggestions.querySelector('.suggestion-item.active');
+        
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            if (items.length > 0) {
+                if (activeItem) {
+                    activeItem.classList.remove('active');
+                    const nextItem = activeItem.nextElementSibling || items[0];
+                    nextItem.classList.add('active');
+                } else {
+                    items[0].classList.add('active');
+                }
+            }
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (items.length > 0) {
+                if (activeItem) {
+                    activeItem.classList.remove('active');
+                    const prevItem = activeItem.previousElementSibling || items[items.length - 1];
+                    prevItem.classList.add('active');
+                } else {
+                    items[items.length - 1].classList.add('active');
+                }
+            }
+        } else if (event.key === 'Enter') {
+            event.preventDefault();
+            if (activeItem) {
+                activeItem.click();
+            }
+        } else if (event.key === 'Escape') {
+            collegeSuggestions.style.display = 'none';
+        }
     });
     
     // Vérifier l'état initial
-    if (copyField.value) {
-        checkTeacher();
+    if (collegeField.value) {
+        checkCollegeConfig(collegeField.value);
     }
 });
 </script>

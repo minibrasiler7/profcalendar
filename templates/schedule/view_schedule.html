@@ -315,6 +315,10 @@
                                      style="background-color: {{ schedule.mixed_group.color }};"
                                      data-mixed-group-id="{{ schedule.mixed_group_id }}"
                                      data-type="mixed_group"
+                                 {% elif schedule.custom_task_title %}
+                                     style="background-color: #6B7280;"
+                                     data-custom-task="true"
+                                     data-type="custom"
                                  {% endif %}
                              {% endif %}>
                             {% if schedule %}
@@ -324,6 +328,9 @@
                                 {% elif schedule.mixed_group_id %}
                                     <div class="class-name"><i class="fas fa-users"></i> {{ schedule.mixed_group.name }}</div>
                                     <div class="class-subject">{{ schedule.mixed_group.subject }}</div>
+                                {% elif schedule.custom_task_title %}
+                                    <div class="class-name"><i class="fas fa-tasks"></i> {{ schedule.custom_task_title }}</div>
+                                    <div class="class-subject">Autre</div>
                                 {% endif %}
                             {% else %}
                                 <div class="empty-slot">Cliquez pour ajouter</div>
@@ -352,6 +359,18 @@
                                     </div>
                                 </div>
                                 {% endfor %}
+                                
+                                <!-- Option pour ajouter une tâche personnalisée -->
+                                <div class="class-option" data-type="custom" onclick="showCustomTaskModal(this)">
+                                    <div class="class-color-dot" style="background-color: #6B7280;"></div>
+                                    <div class="class-option-info">
+                                        <div class="class-option-name">
+                                            <i class="fas fa-tasks" style="margin-right: 0.25rem;"></i>
+                                            Autre tâche
+                                        </div>
+                                        <div class="class-option-subject">Tâche personnalisée</div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="remove-option">
                                 <i class="fas fa-times"></i> Retirer
@@ -389,6 +408,21 @@
     </div>
 </div>
 
+<!-- Modal pour tâche personnalisée -->
+<div id="customTaskModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 2000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 2rem; border-radius: 0.5rem; min-width: 400px;">
+        <h3 style="margin-bottom: 1rem;">Ajouter une tâche personnalisée</h3>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Titre de la tâche :</label>
+            <input type="text" id="customTaskTitle" placeholder="Ex: Surveillance, Réunion, etc." style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.25rem;">
+        </div>
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button onclick="closeCustomTaskModal()" style="padding: 0.75rem 1.5rem; border: 1px solid #D1D5DB; background: white; border-radius: 0.25rem; cursor: pointer;">Annuler</button>
+            <button onclick="saveCustomTask()" style="padding: 0.75rem 1.5rem; background: #3B82F6; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Ajouter</button>
+        </div>
+    </div>
+</div>
+
 <div class="save-status" id="saveStatus">
     <i class="fas fa-check"></i> Modifications enregistrées !
 </div>
@@ -401,6 +435,7 @@ const classrooms = {{ classrooms_json | tojson }};
 const periods = {{ periods_json | tojson }};
 let currentSchedule = {{ schedule_grid_json | tojson }};
 let pendingChanges = new Set();
+let currentSlotForCustomTask = null;
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', function() {
@@ -434,8 +469,14 @@ function initializeScheduleSlots() {
         options.forEach(option => {
             option.addEventListener('click', function(e) {
                 e.stopPropagation();
-                const itemId = this.dataset.classroomId || this.dataset.mixedGroupId;
                 const itemType = this.dataset.type;
+                
+                if (itemType === 'custom') {
+                    // Ne pas traiter ici, c'est géré par showCustomTaskModal
+                    return;
+                }
+                
+                const itemId = this.dataset.classroomId || this.dataset.mixedGroupId;
                 const weekday = selector.dataset.weekday;
                 const period = selector.dataset.period;
                 
@@ -486,8 +527,20 @@ function hideAllSelectors() {
 }
 
 function selectClass(weekday, period, itemId, itemType = 'classroom') {
-    const item = classrooms.find(c => c.id == itemId && c.type == itemType);
-    if (!item) return;
+    let item;
+    if (itemType === 'custom') {
+        // Pour les tâches personnalisées, itemId est en fait le titre
+        item = {
+            id: null,
+            name: itemId,
+            subject: 'Autre',
+            color: '#6B7280',
+            type: 'custom'
+        };
+    } else {
+        item = classrooms.find(c => c.id == itemId && c.type == itemType);
+        if (!item) return;
+    }
 
     // Mettre à jour l'interface
     updateSlotUI(weekday, period, item);
@@ -496,7 +549,11 @@ function selectClass(weekday, period, itemId, itemType = 'classroom') {
     pendingChanges.add(`${weekday}_${period}`);
     
     // Sauvegarder automatiquement
-    saveScheduleSlot(weekday, period, itemId, itemType);
+    if (itemType === 'custom') {
+        saveScheduleSlot(weekday, period, null, itemType, itemId);
+    } else {
+        saveScheduleSlot(weekday, period, itemId, itemType);
+    }
 }
 
 function removeClass(weekday, period) {
@@ -521,6 +578,7 @@ function updateSlotUI(weekday, period, item) {
         // Nettoyer les anciens attributs
         slot.removeAttribute('data-classroom-id');
         slot.removeAttribute('data-mixed-group-id');
+        slot.removeAttribute('data-custom-task');
         slot.removeAttribute('data-type');
         
         // Ajouter les nouveaux attributs selon le type
@@ -529,6 +587,13 @@ function updateSlotUI(weekday, period, item) {
             slot.dataset.type = 'mixed_group';
             slot.innerHTML = `
                 <div class="class-name"><i class="fas fa-users"></i> ${item.name}</div>
+                <div class="class-subject">${item.subject}</div>
+            `;
+        } else if (item.type === 'custom') {
+            slot.dataset.customTask = 'true';
+            slot.dataset.type = 'custom';
+            slot.innerHTML = `
+                <div class="class-name"><i class="fas fa-tasks"></i> ${item.name}</div>
                 <div class="class-subject">${item.subject}</div>
             `;
         } else {
@@ -544,25 +609,29 @@ function updateSlotUI(weekday, period, item) {
         slot.style.backgroundColor = '';
         slot.removeAttribute('data-classroom-id');
         slot.removeAttribute('data-mixed-group-id');
+        slot.removeAttribute('data-custom-task');
         slot.removeAttribute('data-type');
         slot.innerHTML = '<div class="empty-slot">Cliquez pour ajouter</div>';
     }
 }
 
-async function saveScheduleSlot(weekday, period, itemId, itemType = 'classroom') {
+async function saveScheduleSlot(weekday, period, itemId, itemType = 'classroom', customTitle = null) {
     try {
+        const requestData = {
+            weekday: parseInt(weekday),
+            period_number: parseInt(period),
+            classroom_id: itemId && itemType === 'classroom' ? parseInt(itemId) : null,
+            mixed_group_id: itemId && itemType === 'mixed_group' ? parseInt(itemId) : null,
+            custom_task_title: itemType === 'custom' ? customTitle : null,
+            type: itemType
+        };
+        
         const response = await fetch('/schedule/save', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                weekday: parseInt(weekday),
-                period_number: parseInt(period),
-                classroom_id: itemId && itemType === 'classroom' ? parseInt(itemId) : null,
-                mixed_group_id: itemId && itemType === 'mixed_group' ? parseInt(itemId) : null,
-                type: itemType
-            })
+            body: JSON.stringify(requestData)
         });
 
         const result = await response.json();
@@ -598,5 +667,52 @@ function showSaveStatus() {
         status.classList.remove('show');
     }, 3000);
 }
+
+// Fonctions pour le modal de tâche personnalisée
+function showCustomTaskModal(element) {
+    const selector = element.closest('.class-selector');
+    currentSlotForCustomTask = {
+        weekday: selector.dataset.weekday,
+        period: selector.dataset.period
+    };
+    
+    document.getElementById('customTaskModal').style.display = 'block';
+    document.getElementById('customTaskTitle').value = '';
+    document.getElementById('customTaskTitle').focus();
+    
+    hideAllSelectors();
+}
+
+function closeCustomTaskModal() {
+    document.getElementById('customTaskModal').style.display = 'none';
+    currentSlotForCustomTask = null;
+}
+
+function saveCustomTask() {
+    const title = document.getElementById('customTaskTitle').value.trim();
+    if (!title) {
+        alert('Veuillez saisir un titre pour la tâche');
+        return;
+    }
+    
+    if (currentSlotForCustomTask) {
+        selectClass(currentSlotForCustomTask.weekday, currentSlotForCustomTask.period, title, 'custom');
+        closeCustomTaskModal();
+    }
+}
+
+// Fermer le modal avec Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeCustomTaskModal();
+    }
+});
+
+// Valider avec Enter dans le champ
+document.getElementById('customTaskTitle').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        saveCustomTask();
+    }
+});
 </script>
 {% endblock %}

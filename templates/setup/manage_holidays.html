@@ -175,28 +175,8 @@
 {% block content %}
 <div class="setup-container">
     <!-- Barre de progression -->
-    <div class="setup-progress">
-        <div class="progress-step completed">
-            <div class="progress-circle"><i class="fas fa-check"></i></div>
-            <span class="progress-label">Configuration</span>
-        </div>
-        <div class="progress-step completed">
-            <div class="progress-circle"><i class="fas fa-check"></i></div>
-            <span class="progress-label">Classes</span>
-        </div>
-        <div class="progress-step active">
-            <div class="progress-circle">3</div>
-            <span class="progress-label">Vacances</span>
-        </div>
-        <div class="progress-step">
-            <div class="progress-circle">4</div>
-            <span class="progress-label">Pauses</span>
-        </div>
-        <div class="progress-step">
-            <div class="progress-circle">5</div>
-            <span class="progress-label">Horaire type</span>
-        </div>
-    </div>
+    {% set current_step = 2 %}
+    {% include 'setup/progress_bar.html' %}
 
     <!-- Information -->
     <div class="info-box">

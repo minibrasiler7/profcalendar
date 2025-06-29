@@ -26,11 +26,18 @@ function openPlanningModal(cell, fromAnnualView = false) {
             } else if (data.planning.mixed_group_id) {
                 modalClassroomValue = `mixed_group_${data.planning.mixed_group_id}`;
             } else {
-                // Si la planification n'a pas de classe associée, utiliser la classe par défaut de la cellule
+                // Si la planification n'a pas de classe associée, vérifier s'il s'agit d'une tâche personnalisée
                 const defaultClassroom = cell.dataset.defaultClassroom;
                 const defaultMixedGroup = cell.dataset.defaultMixedGroup;
+                const defaultCustomTask = cell.dataset.defaultCustomTask;
                 
-                if (defaultClassroom) {
+                console.log('Debug existing planning without class - defaultCustomTask:', defaultCustomTask);
+                
+                if (defaultCustomTask === 'true') {
+                    // Tâche personnalisée - sélectionner l'option "Autre"
+                    modalClassroomValue = 'custom_task';
+                    console.log('Debug existing planning - setting custom task value');
+                } else if (defaultClassroom) {
                     modalClassroomValue = `classroom_${defaultClassroom}`;
                 } else if (defaultMixedGroup) {
                     modalClassroomValue = `mixed_group_${defaultMixedGroup}`;
@@ -66,15 +73,22 @@ function openPlanningModal(cell, fromAnnualView = false) {
             // Pré-sélectionner la classe par défaut si disponible
             const defaultClassroom = cell.dataset.defaultClassroom;
             const defaultMixedGroup = cell.dataset.defaultMixedGroup;
+            const defaultCustomTask = cell.dataset.defaultCustomTask;
             
             // Debug: afficher les données de la cellule
             console.log('Debug openPlanningModal - cell.dataset:', cell.dataset);
             console.log('Debug openPlanningModal - defaultClassroom:', defaultClassroom);
             console.log('Debug openPlanningModal - defaultMixedGroup:', defaultMixedGroup);
+            console.log('Debug openPlanningModal - defaultCustomTask:', defaultCustomTask);
             console.log('Debug openPlanningModal - schedule key:', cell.dataset.debugScheduleKey);
             console.log('Debug openPlanningModal - has schedule:', cell.dataset.debugHasSchedule);
             
-            if (defaultClassroom) {
+            if (defaultCustomTask === 'true') {
+                // Tâche personnalisée - sélectionner l'option "Autre"
+                console.log('Debug openPlanningModal - setting custom task value');
+                document.getElementById('modalClassroom').value = 'custom_task';
+                // Pas besoin de charger les groupes pour les tâches personnalisées
+            } else if (defaultClassroom) {
                 // Format attendu : classroom_ID
                 const classroomValue = `classroom_${defaultClassroom}`;
                 console.log('Debug openPlanningModal - setting classroomValue:', classroomValue);
@@ -693,8 +707,8 @@ async function savePlanning() {
             body: JSON.stringify({
                 date: date,
                 period_number: parseInt(period),
-                classroom_id: classroomId && classroomId.startsWith('classroom_') ? parseInt(classroomId.split('_')[1]) : null,
-                mixed_group_id: classroomId && classroomId.startsWith('mixed_group_') ? parseInt(classroomId.split('_')[2]) : null,
+                classroom_id: classroomId && classroomId.startsWith('classroom_') && classroomId !== 'custom_task' ? parseInt(classroomId.split('_')[1]) : null,
+                mixed_group_id: classroomId && classroomId.startsWith('mixed_group_') && classroomId !== 'custom_task' ? parseInt(classroomId.split('_')[2]) : null,
                 title: title,
                 description: description,
                 checklist_states: checklistStates,
@@ -716,8 +730,8 @@ async function savePlanning() {
                     body: JSON.stringify({
                         start_date: date,
                         period_number: parseInt(period),
-                        classroom_id: classroomId && classroomId.startsWith('classroom_') ? parseInt(classroomId.split('_')[1]) : null,
-                        mixed_group_id: classroomId && classroomId.startsWith('mixed_group_') ? parseInt(classroomId.split('_')[2]) : null,
+                        classroom_id: classroomId && classroomId.startsWith('classroom_') && classroomId !== 'custom_task' ? parseInt(classroomId.split('_')[1]) : null,
+                        mixed_group_id: classroomId && classroomId.startsWith('mixed_group_') && classroomId !== 'custom_task' ? parseInt(classroomId.split('_')[2]) : null,
                         title: title,
                         description: description,
                         checklist_states: checklistStates,
@@ -850,7 +864,20 @@ function updateWeeklyCellAfterSave(date, period, classroomId, title, description
     // Vider le contenu actuel
     cell.innerHTML = '';
     
-    if (classroomId) {
+    if (classroomId === 'custom_task') {
+        // Cas tâche personnalisée - afficher seulement le titre
+        if (title) {
+            const customBlock = document.createElement('div');
+            customBlock.className = 'class-block planned custom-task';
+            customBlock.style.backgroundColor = '#6B7280'; // Couleur grise pour les tâches personnalisées
+            customBlock.style.color = 'white'; // Texte blanc sur fond gris
+            customBlock.innerHTML = `
+                <div class="class-name"><i class="fas fa-tasks"></i> Tâche personnalisée</div>
+                <div class="planning-title">${title}</div>
+            `;
+            cell.appendChild(customBlock);
+        }
+    } else if (classroomId) {
         // Parser l'ID pour obtenir les informations de classe
         let type, numericId, classroomData;
         

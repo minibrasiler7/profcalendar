@@ -142,7 +142,8 @@ def save_schedule():
         period_number = data.get('period_number')
         classroom_id_param = data.get('classroom_id')
         mixed_group_id_param = data.get('mixed_group_id')
-        item_type = data.get('type', 'classroom')  # 'classroom' ou 'mixed_group'
+        custom_task_title = data.get('custom_task_title', '').strip()
+        item_type = data.get('type', 'classroom')  # 'classroom', 'mixed_group' ou 'custom'
         
         # Initialiser les variables
         classroom_id = None
@@ -155,7 +156,7 @@ def save_schedule():
             period_number=period_number
         ).first()
 
-        if classroom_id_param or mixed_group_id_param:
+        if classroom_id_param or mixed_group_id_param or custom_task_title:
             # Vérifier selon le type
             if item_type == 'mixed_group' and mixed_group_id_param:
                 from models.mixed_group import MixedGroup
@@ -164,12 +165,19 @@ def save_schedule():
                     return jsonify({'success': False, 'message': 'Groupe mixte non trouvé'}), 404
                 classroom_id = None
                 mixed_group_id = mixed_group_id_param
+                custom_task_title = None
             elif item_type == 'classroom' and classroom_id_param:
                 # Vérifier que la classe appartient à l'utilisateur
                 classroom = Classroom.query.filter_by(id=classroom_id_param, user_id=current_user.id).first()
                 if not classroom:
                     return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
                 classroom_id = classroom_id_param
+                mixed_group_id = None
+                custom_task_title = None
+            elif item_type == 'custom' and custom_task_title:
+                if not custom_task_title:
+                    return jsonify({'success': False, 'message': 'Le titre de la tâche est obligatoire'}), 400
+                classroom_id = None
                 mixed_group_id = None
             else:
                 return jsonify({'success': False, 'message': 'Paramètres invalides'}), 400
@@ -184,6 +192,7 @@ def save_schedule():
                 # Mettre à jour
                 existing.classroom_id = classroom_id
                 existing.mixed_group_id = mixed_group_id
+                existing.custom_task_title = custom_task_title
                 existing.start_time = period['start']
                 existing.end_time = period['end']
             else:
@@ -192,6 +201,7 @@ def save_schedule():
                     user_id=current_user.id,
                     classroom_id=classroom_id,
                     mixed_group_id=mixed_group_id,
+                    custom_task_title=custom_task_title,
                     weekday=weekday,
                     period_number=period_number,
                     start_time=period['start'],

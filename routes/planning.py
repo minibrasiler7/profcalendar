@@ -496,6 +496,15 @@ def calendar_view():
                 'classroom_color': schedule.mixed_group.color,
                 'type': 'mixed_group'
             }
+        elif schedule.custom_task_title:
+            schedule_grid_json[key] = {
+                'weekday': schedule.weekday,
+                'period_number': schedule.period_number,
+                'classroom_name': schedule.custom_task_title,
+                'classroom_subject': 'Autre',
+                'classroom_color': '#6B7280',
+                'type': 'custom'
+            }
 
     return render_template('planning/calendar_view.html',
                          week_dates=week_dates,
@@ -752,7 +761,7 @@ def save_planning():
             period_number=period_number
         ).first()
 
-        if (classroom_id or mixed_group_id) and (title or description):
+        if (classroom_id or mixed_group_id or title or description):
             if existing:
                 # Mettre à jour
                 existing.classroom_id = classroom_id
@@ -900,7 +909,8 @@ def lesson_view():
                     period_number=period['number']
                 ).first()
                 
-                if planning_check:
+                if planning_check and (planning_check.classroom_id or planning_check.mixed_group_id):
+                    # Ignorer les tâches personnalisées (sans classroom_id ni mixed_group_id)
                     # Créer un objet Schedule-like à partir de la planification
                     current_lesson = type('obj', (object,), {
                         'classroom_id': planning_check.classroom_id,
@@ -922,7 +932,8 @@ def lesson_view():
                         period_number=period['number']
                     ).first()
 
-                    if schedule:
+                    if schedule and (schedule.classroom_id or schedule.mixed_group_id):
+                        # Ignorer les tâches personnalisées de l'horaire type
                         current_lesson = schedule
                         is_current = True
                         break
@@ -942,7 +953,8 @@ def lesson_view():
                 period_number=period['number']
             ).first()
 
-            if planning_check:
+            if planning_check and (planning_check.classroom_id or planning_check.mixed_group_id):
+                # Ignorer les tâches personnalisées
                 # Créer un objet Schedule-like à partir de la planification
                 next_lesson = type('obj', (object,), {
                     'classroom_id': planning_check.classroom_id,
@@ -964,7 +976,8 @@ def lesson_view():
                     period_number=period['number']
                 ).first()
 
-                if schedule:
+                if schedule and (schedule.classroom_id or schedule.mixed_group_id):
+                    # Ignorer les tâches personnalisées de l'horaire type
                     next_lesson = schedule
                     lesson_date = search_start_date
                     break
@@ -996,11 +1009,13 @@ def lesson_view():
                 if is_holiday(future_date, current_user):
                     continue
 
-                # Chercher le premier cours de la journée
+                # Chercher le premier cours de la journée (exclure les tâches personnalisées)
                 # D'abord chercher s'il y a des planifications spécifiques pour ce jour
                 first_planning = Planning.query.filter_by(
                     user_id=current_user.id,
                     date=future_date
+                ).filter(
+                    (Planning.classroom_id.isnot(None)) | (Planning.mixed_group_id.isnot(None))
                 ).order_by(Planning.period_number).first()
 
                 if first_planning:
@@ -1027,7 +1042,8 @@ def lesson_view():
                         weekday=future_weekday
                     ).order_by(Schedule.period_number).first()
 
-                    if first_schedule:
+                    if first_schedule and (first_schedule.classroom_id or first_schedule.mixed_group_id):
+                        # Ignorer les tâches personnalisées de l'horaire type
                         next_lesson = first_schedule
                         lesson_date = future_date
                         break
@@ -3131,6 +3147,90 @@ def get_accommodation_templates():
             user_id=current_user.id,
             is_active=True
         ).order_by(AccommodationTemplate.category, AccommodationTemplate.name).all()
+        
+        # Si aucun template n'existe, créer des aménagements prédéfinis de base
+        if not templates:
+            default_templates = [
+                {
+                    'name': 'Temps majoré (1/3 temps)',
+                    'description': 'Temps supplémentaire de 1/3 pour les évaluations',
+                    'emoji': '⏰',
+                    'category': 'Temps',
+                    'is_time_extension': True,
+                    'time_multiplier': 1.33
+                },
+                {
+                    'name': 'Temps majoré (1/2 temps)',
+                    'description': 'Temps supplémentaire de 1/2 pour les évaluations',
+                    'emoji': '⏱️',
+                    'category': 'Temps',
+                    'is_time_extension': True,
+                    'time_multiplier': 1.5
+                },
+                {
+                    'name': 'Utilisation de l\'ordinateur',
+                    'description': 'Autorisation d\'utiliser un ordinateur pour la rédaction',
+                    'emoji': '💻',
+                    'category': 'Matériel',
+                    'is_time_extension': False,
+                    'time_multiplier': None
+                },
+                {
+                    'name': 'Lecture des consignes',
+                    'description': 'Lecture à haute voix des consignes',
+                    'emoji': '📖',
+                    'category': 'Consignes',
+                    'is_time_extension': False,
+                    'time_multiplier': None
+                },
+                {
+                    'name': 'Reformulation des consignes',
+                    'description': 'Reformulation ou explication des consignes',
+                    'emoji': '💬',
+                    'category': 'Consignes',
+                    'is_time_extension': False,
+                    'time_multiplier': None
+                },
+                {
+                    'name': 'Évaluation séparée',
+                    'description': 'Composition dans une salle séparée',
+                    'emoji': '🏠',
+                    'category': 'Environnement',
+                    'is_time_extension': False,
+                    'time_multiplier': None
+                },
+                {
+                    'name': 'Police agrandie',
+                    'description': 'Documents avec police de caractères agrandie',
+                    'emoji': '🔍',
+                    'category': 'Matériel',
+                    'is_time_extension': False,
+                    'time_multiplier': None
+                },
+                {
+                    'name': 'Calculatrice autorisée',
+                    'description': 'Utilisation d\'une calculatrice',
+                    'emoji': '🔢',
+                    'category': 'Matériel',
+                    'is_time_extension': False,
+                    'time_multiplier': None
+                }
+            ]
+            
+            for template_data in default_templates:
+                template = AccommodationTemplate(
+                    user_id=current_user.id,
+                    **template_data
+                )
+                db.session.add(template)
+            
+            db.session.commit()
+            
+            # Récupérer les templates nouvellement créés
+            templates = AccommodationTemplate.query.filter_by(
+                user_id=current_user.id,
+                is_active=True
+            ).order_by(AccommodationTemplate.category, AccommodationTemplate.name).all()
         
         templates_data = []
         for template in templates:
