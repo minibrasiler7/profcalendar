@@ -1221,7 +1221,8 @@ def lesson_view():
         from models.accommodation import StudentAccommodation, AccommodationTemplate
         
         for student in students:
-            accommodations = db.session.query(StudentAccommodation, AccommodationTemplate).join(
+            # Récupérer les aménagements prédéfinis (avec template)
+            template_accommodations = db.session.query(StudentAccommodation, AccommodationTemplate).join(
                 AccommodationTemplate,
                 StudentAccommodation.template_id == AccommodationTemplate.id
             ).filter(
@@ -1229,15 +1230,33 @@ def lesson_view():
                 StudentAccommodation.is_active == True
             ).all()
             
-            if accommodations:
-                student_accommodations[student.id] = [
-                    {
-                        'name': acc_template.name,
-                        'emoji': acc_template.emoji,
-                        'time_multiplier': acc_template.time_multiplier
-                    }
-                    for student_acc, acc_template in accommodations
-                ]
+            # Récupérer les aménagements personnalisés (sans template)
+            custom_accommodations = StudentAccommodation.query.filter(
+                StudentAccommodation.student_id == student.id,
+                StudentAccommodation.template_id.is_(None),
+                StudentAccommodation.is_active == True
+            ).all()
+            
+            all_accommodations = []
+            
+            # Ajouter les aménagements prédéfinis
+            for student_acc, acc_template in template_accommodations:
+                all_accommodations.append({
+                    'name': acc_template.name,
+                    'emoji': acc_template.emoji,
+                    'time_multiplier': acc_template.time_multiplier
+                })
+            
+            # Ajouter les aménagements personnalisés
+            for student_acc in custom_accommodations:
+                all_accommodations.append({
+                    'name': student_acc.custom_name,
+                    'emoji': student_acc.custom_emoji,
+                    'time_multiplier': student_acc.custom_time_multiplier
+                })
+            
+            if all_accommodations:
+                student_accommodations[student.id] = all_accommodations
 
     return render_template('planning/lesson_view.html',
                          lesson=lesson,
@@ -1383,27 +1402,57 @@ def manage_classes():
     from models.sanctions import SanctionTemplate, ClassroomSanctionImport
     from models.student_sanctions import StudentSanctionCount
 
-    # Récupérer la classe sélectionnée (par défaut la première)
-    selected_classroom_id = request.args.get('classroom', type=int)
+    # Récupérer le groupe de classe sélectionné
+    selected_class_group = request.args.get('classroom', '')
     selected_tab = request.args.get('tab', 'students')  # onglet par défaut : students
-    classrooms = current_user.classrooms.all()
+    all_classrooms = current_user.classrooms.all()
 
-    if not classrooms:
+    if not all_classrooms:
         flash('Veuillez d\'abord créer au moins une classe.', 'warning')
         return redirect(url_for('setup.manage_classrooms'))
+    
+    # Regrouper les classes par class_group
+    from collections import defaultdict
+    classrooms_by_group = defaultdict(list)
+    for classroom in all_classrooms:
+        group_name = classroom.class_group or classroom.name
+        classrooms_by_group[group_name].append(classroom)
+    
+    # Créer la structure de données pour le template
+    class_groups = []
+    for group_name, group_classrooms in sorted(classrooms_by_group.items()):
+        # Trier les classes du groupe par matière
+        group_classrooms.sort(key=lambda c: c.subject)
+        
+        # Créer un objet représentant le groupe
+        class_group = {
+            'name': group_name,
+            'classrooms': group_classrooms,
+            'subjects': [c.subject for c in group_classrooms],
+            'is_multi_subject': len(group_classrooms) > 1
+        }
+        class_groups.append(class_group)
+    
+    # Si aucun groupe sélectionné, prendre le premier
+    if not selected_class_group or not any(g['name'] == selected_class_group for g in class_groups):
+        selected_class_group = class_groups[0]['name'] if class_groups else None
+    
+    # Trouver le groupe sélectionné
+    selected_group = next((g for g in class_groups if g['name'] == selected_class_group), None)
+    if not selected_group:
+        flash('Groupe de classe non trouvé.', 'error')
+        return redirect(url_for('setup.manage_classrooms'))
 
-    # Si aucune classe sélectionnée, prendre la première
-    if not selected_classroom_id or not any(c.id == selected_classroom_id for c in classrooms):
-        selected_classroom_id = classrooms[0].id
-
-    selected_classroom = Classroom.query.get(selected_classroom_id)
-
+    # Utiliser la première classe du groupe pour récupérer les élèves
+    # (les élèves sont les mêmes pour toutes les matières d'une classe)
+    primary_classroom = selected_group['classrooms'][0]
+    
     # Vérifier si c'est une classe auto-créée pour un groupe mixte
-    is_mixed_group_class = hasattr(selected_classroom, 'mixed_group') and selected_classroom.mixed_group is not None
-    mixed_group = selected_classroom.mixed_group if is_mixed_group_class else None
+    is_mixed_group_class = hasattr(primary_classroom, 'mixed_group') and primary_classroom.mixed_group is not None
+    mixed_group = primary_classroom.mixed_group if is_mixed_group_class else None
     
     # Récupérer les données de la classe sélectionnée (normale ou groupe mixte)
-    students = selected_classroom.get_students()
+    students = primary_classroom.get_students()
     # Trier les élèves par nom
     students = sorted(students, key=lambda s: (s.last_name, s.first_name))
     
@@ -1418,16 +1467,17 @@ def manage_classes():
             'email': student.email
         })
 
-    # Récupérer les notes récentes
-    recent_grades = Grade.query.filter_by(classroom_id=selected_classroom_id).order_by(Grade.date.desc()).limit(10).all()
+    # Récupérer les notes récentes de toutes les matières du groupe
+    classroom_ids = [c.id for c in selected_group['classrooms']]
+    recent_grades = Grade.query.filter(Grade.classroom_id.in_(classroom_ids)).order_by(Grade.date.desc()).limit(10).all()
 
-    # Récupérer les modèles de sanctions importés dans cette classe
+    # Récupérer les modèles de sanctions importés dans toutes les matières du groupe
     imported_sanctions = db.session.query(SanctionTemplate).join(ClassroomSanctionImport).filter(
-        ClassroomSanctionImport.classroom_id == selected_classroom_id,
+        ClassroomSanctionImport.classroom_id.in_(classroom_ids),
         ClassroomSanctionImport.is_active == True,
         SanctionTemplate.user_id == current_user.id,
         SanctionTemplate.is_active == True
-    ).order_by(SanctionTemplate.name).all()
+    ).distinct().order_by(SanctionTemplate.name).all()
 
     # Créer le tableau des coches pour chaque élève/sanction
     sanctions_data = {}
@@ -1459,7 +1509,7 @@ def manage_classes():
     justifications = AbsenceJustification.query.join(
         Student, AbsenceJustification.student_id == Student.id
     ).filter(
-        Student.classroom_id == selected_classroom_id
+        Student.classroom_id == primary_classroom.id
     ).order_by(AbsenceJustification.created_at.desc()).limit(50).all()
 
     # Vérifier si l'utilisateur peut éditer les élèves de cette classe
@@ -1468,7 +1518,7 @@ def manage_classes():
     
     # Vérifier si c'est une classe dérivée (enseignant spécialisé)
     shared_classroom = SharedClassroom.query.filter_by(
-        derived_classroom_id=selected_classroom_id
+        derived_classroom_id=primary_classroom.id
     ).first()
     
     collaboration = None
@@ -1507,9 +1557,10 @@ def manage_classes():
                 })
 
     return render_template('planning/manage_classes.html',
-                         classrooms=classrooms,
-                         selected_classroom=selected_classroom,
-                         selected_classroom_id=selected_classroom_id,
+                         class_groups=class_groups,
+                         selected_group=selected_group,
+                         selected_class_group=selected_class_group,
+                         primary_classroom=primary_classroom,
                          selected_tab=selected_tab,
                          students=students,
                          students_json=students_json,
@@ -3570,24 +3621,31 @@ def get_student_report_accommodations(student_id):
     try:
         from models.accommodation import StudentAccommodation, AccommodationTemplate
         
-        accommodations = db.session.query(StudentAccommodation, AccommodationTemplate).join(
-            AccommodationTemplate,
-            StudentAccommodation.template_id == AccommodationTemplate.id
-        ).filter(
+        # Récupérer tous les aménagements de l'élève (prédéfinis et personnalisés)
+        accommodations = StudentAccommodation.query.filter(
             StudentAccommodation.student_id == student_id,
-            StudentAccommodation.is_active == True,
-            AccommodationTemplate.user_id == current_user.id
+            StudentAccommodation.is_active == True
         ).all()
+        
+        # Filtrer pour ne garder que ceux appartenant à l'utilisateur actuel
+        valid_accommodations = []
+        for acc in accommodations:
+            # Si c'est un aménagement prédéfini, vérifier que le template appartient à l'utilisateur
+            if acc.template_id and acc.template and acc.template.user_id == current_user.id:
+                valid_accommodations.append(acc)
+            # Si c'est un aménagement personnalisé, l'inclure (il appartient forcément à l'utilisateur)
+            elif not acc.template_id:
+                valid_accommodations.append(acc)
         
         return jsonify({
             'success': True,
             'accommodations': [
                 {
-                    'name': acc_template.name,
-                    'emoji': acc_template.emoji,
-                    'time_multiplier': acc_template.time_multiplier
+                    'name': acc.name,
+                    'emoji': acc.emoji,
+                    'time_multiplier': acc.time_multiplier
                 }
-                for student_acc, acc_template in accommodations
+                for acc in valid_accommodations
             ]
         })
         
