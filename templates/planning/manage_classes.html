@@ -2132,10 +2132,15 @@
             <div class="class-selector">
                 <label for="classSelect">Classe :</label>
                 <select id="classSelect" onchange="changeClass(this.value)">
-                    {% for classroom in classrooms %}
-                    <option value="{{ classroom.id }}" {% if classroom.id == selected_classroom_id %}selected{% endif %}>
-                        {{ classroom.name }} - {{ classroom.subject }}
-                    </option>
+                    {% for group in class_groups %}
+                        <option value="{{ group.name }}" {% if group.name == selected_class_group %}selected{% endif %}>
+                            {{ group.name }}
+                            {% if group.is_multi_subject %}
+                                ({{ group.subjects|join(', ') }})
+                            {% else %}
+                                - {{ group.subjects[0] }}
+                            {% endif %}
+                        </option>
                     {% endfor %}
                 </select>
             </div>
@@ -5370,7 +5375,7 @@ function showTab(tabName) {
 }
 
 // Changer de classe
-function changeClass(classroomId) {
+function changeClass(classGroupName) {
     // Mémoriser l'onglet actuel
     const activeTab = document.querySelector('.tab-button.active');
     let currentTab = 'students'; // onglet par défaut
@@ -5386,7 +5391,7 @@ function changeClass(classroomId) {
         }
     }
     
-    window.location.href = `{{ url_for('planning.manage_classes') }}?classroom=${classroomId}&tab=${currentTab}`;
+    window.location.href = `{{ url_for('planning.manage_classes') }}?classroom=${encodeURIComponent(classGroupName)}&tab=${currentTab}`;
 }
 
 // Afficher/masquer le formulaire d'ajout d'élève
@@ -5440,7 +5445,7 @@ if (studentForm) {
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
 
     const data = {
-        classroom_id: {{ selected_classroom_id }},
+        classroom_id: "{{ primary_classroom.id }}",
         first_name: document.getElementById('studentFirstName').value,
         last_name: document.getElementById('studentLastName').value,
         email: document.getElementById('studentEmail').value,
@@ -5524,7 +5529,7 @@ if (isSpecializedTeacher) {
             }
 
             const data = {
-                classroom_id: {{ selected_classroom_id }},
+                classroom_id: "{{ primary_classroom.id }}",
                 master_student_id: parseInt(masterStudentId)
             };
 
@@ -6041,7 +6046,7 @@ async function resetAllSanctions() {
                 'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({
-                classroom_id: {{ selected_classroom_id }}
+                classroom_id: {{ primary_classroom.id }}
             })
         });
         
@@ -6114,7 +6119,7 @@ function initClassFileManager() {
 
 // Charger les fichiers de la classe
 async function loadClassFiles(folderPath = '') {
-    const classroomId = {{ selected_classroom_id }};
+    const classroomId = "{{ primary_classroom.id }}";
     currentClassFolder = folderPath;
     
     try {
@@ -6423,7 +6428,7 @@ async function traverseClassFileSystem(entry, path, fileStructure) {
 
 // Créer la structure de dossiers dans la classe
 async function createClassFolderStructure(folderPaths) {
-    const classroomId = {{ selected_classroom_id }};
+    const classroomId = "{{ primary_classroom.id }}";
     folderPaths.sort((a, b) => a.split('/').length - b.split('/').length);
     
     try {
@@ -6464,7 +6469,7 @@ async function uploadClassFilesWithStructure(filesData) {
     for (const fileData of filesData) {
         const formData = new FormData();
         formData.append('file', fileData.file);
-        formData.append('classroom_id', {{ selected_classroom_id }});
+        formData.append('classroom_id', "{{ primary_classroom.id }}");
         formData.append('folder_path', fileData.path);
         
         if (currentClassFolder) {
@@ -6558,7 +6563,7 @@ async function uploadClassFiles(files) {
     for (const file of files) {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('classroom_id', {{ selected_classroom_id }});
+        formData.append('classroom_id', "{{ primary_classroom.id }}");
         
         if (currentClassFolder) {
             formData.append('folder_id', currentClassFolder);
@@ -6649,7 +6654,7 @@ async function createClassFolder(e) {
     e.preventDefault();
     
     const name = document.getElementById('classFolderName').value;
-    const classroomId = {{ selected_classroom_id }};
+    const classroomId = "{{ primary_classroom.id }}";
     
     try {
         const response = await fetch('/api/class-files/create-folder', {
@@ -6778,7 +6783,7 @@ async function deleteClassFolder(folderPath) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                classroom_id: {{ selected_classroom_id }},
+                classroom_id: "{{ primary_classroom.id }}",
                 folder_path: folderPath
             })
         });
@@ -6833,7 +6838,7 @@ function formatFileSize(bytes) {
 
 // Charger les évaluations de la classe
 async function loadEvaluations() {
-    const classroomId = {{ selected_classroom_id }};
+    const classroomId = "{{ primary_classroom.id }}";
     
     try {
         const response = await fetch(`/api/evaluations/classroom/${classroomId}`);
@@ -7019,7 +7024,7 @@ function generateGradeInputs() {
 async function createEvaluation(event) {
     event.preventDefault();
     
-    const classroomId = {{ selected_classroom_id }};
+    const classroomId = "{{ primary_classroom.id }}";
     
     // Récupérer les données du formulaire
     const title = document.getElementById('evalTitle').value.trim();
@@ -8057,7 +8062,7 @@ let currentSelectedStudentId = null;
 
 // Fonction helper pour récupérer l'ID de la classe actuelle
 function getCurrentClassroomId() {
-    return {{ selected_classroom_id }};
+    return "{{ primary_classroom.id }}";
 }
 
 // Charger la liste des élèves pour le sélecteur de rapport
@@ -8580,7 +8585,7 @@ function shareFileWithStudents(fileId, fileName) {
 
 // Charger les élèves pour le partage de fichiers
 async function loadStudentsForFileSharing() {
-    const classroomId = {{ selected_classroom_id }};
+    const classroomId = "{{ primary_classroom.id }}";
     const studentsGrid = document.getElementById('studentsSelectionGrid');
     
     console.log('Chargement des élèves pour la classe ID:', classroomId);
