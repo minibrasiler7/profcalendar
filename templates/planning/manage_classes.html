@@ -227,6 +227,52 @@
     box-shadow: var(--shadow-sm);
 }
 
+/* Sections par discipline */
+.grades-section-by-subject {
+    background-color: var(--white);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--light-gray);
+}
+
+.subject-title {
+    color: var(--primary-color);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.grades-section-by-subject .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--light-gray);
+}
+
+/* Sections par discipline pour les fichiers */
+.files-section-by-subject {
+    background-color: var(--white);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--light-gray);
+}
+
+.files-section-by-subject .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--light-gray);
+}
+
 .grades-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -319,6 +365,28 @@
 .header-actions {
     display: flex;
     gap: 0.5rem;
+    align-items: center;
+}
+
+.btn-group {
+    display: flex;
+    gap: 0;
+}
+
+.btn-group .btn {
+    border-radius: 0;
+    border-right-width: 0;
+}
+
+.btn-group .btn:first-child {
+    border-top-left-radius: var(--border-radius);
+    border-bottom-left-radius: var(--border-radius);
+}
+
+.btn-group .btn:last-child {
+    border-top-right-radius: var(--border-radius);
+    border-bottom-right-radius: var(--border-radius);
+    border-right-width: 1px;
 }
 
 .drop-zone {
@@ -475,6 +543,156 @@
     padding: 2rem;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-sm);
+}
+
+.display-mode-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background-color: var(--light-gray);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--light-gray);
+    width: 100%;
+    max-width: none;
+}
+
+.display-mode-selector .form-label {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--gray-color);
+    font-weight: 600;
+}
+
+.radio-group {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 1.5rem;
+    flex-wrap: nowrap !important;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.radio-option {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.radio-option input[type="radio"] {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.radio-option input[type="radio"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.radio-option label {
+    margin: 0;
+    font-size: 0.825rem;
+    cursor: pointer;
+    user-select: none;
+    line-height: 1.2;
+}
+
+.radio-option input[type="radio"]:disabled + label {
+    color: var(--gray-color);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.lock-warning {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 0.5rem;
+    border-radius: var(--border-radius);
+    font-size: 0.75rem;
+    border: 1px solid #ffeeba;
+}
+
+.lock-warning i {
+    color: #ffc107;
+}
+
+/* Modal de confirmation */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    padding: 1.5rem 1.5rem 0 1.5rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.modal-header h3 {
+    margin: 0 0 1rem 0;
+    color: var(--dark-color);
+    font-size: 1.25rem;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-body p {
+    margin: 0;
+    color: var(--gray-color);
+    line-height: 1.5;
+}
+
+.modal-footer {
+    padding: 0 1.5rem 1.5rem 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    border-top: 1px solid var(--light-gray);
+    margin-top: 1rem;
+    padding-top: 1rem;
+}
+
+.sanctions-by-subject {
+    margin-bottom: 2rem;
+}
+
+.sanctions-by-subject .subject-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .sanctions-table-container {
@@ -2493,19 +2711,43 @@
                 </div>
             </div>
 
-            <!-- Tableau des évaluations -->
-            <div id="evaluationsContainer">
-                <!-- Les évaluations seront chargées dynamiquement -->
-            </div>
-            
-            <!-- État vide pour les évaluations -->
-            <div class="empty-state" id="evaluationsEmptyState" style="display: none;">
-                <i class="fas fa-clipboard-check"></i>
-                <p>Aucune évaluation créée</p>
-                <button class="btn btn-primary" onclick="showNewEvaluationModal()">
-                    <i class="fas fa-plus"></i> Créer une première évaluation
-                </button>
-            </div>
+            <!-- Sections par discipline -->
+            {% if grades_by_subject %}
+                {% for subject, subject_data in grades_by_subject.items() %}
+                <div class="grades-section-by-subject" data-subject="{{ subject }}">
+                    <div class="section-header">
+                        <h3 class="subject-title">
+                            <i class="fas fa-book"></i> {{ subject }}
+                        </h3>
+                        <button class="btn btn-primary btn-sm" onclick="showNewEvaluationModal('{{ subject_data.classroom.id }}')">
+                            <i class="fas fa-plus"></i> Nouvelle évaluation
+                        </button>
+                    </div>
+                    
+                    <div id="evaluationsContainer-{{ subject_data.classroom.id }}" class="evaluations-container">
+                        <!-- Les évaluations seront chargées dynamiquement pour cette matière -->
+                    </div>
+                    
+                    <!-- État vide pour cette matière -->
+                    <div class="empty-state" id="evaluationsEmptyState-{{ subject_data.classroom.id }}" style="display: none;">
+                        <i class="fas fa-clipboard-check"></i>
+                        <p>Aucune évaluation créée pour {{ subject }}</p>
+                        <button class="btn btn-primary" onclick="showNewEvaluationModal('{{ subject_data.classroom.id }}')">
+                            <i class="fas fa-plus"></i> Créer une première évaluation
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <!-- État vide général -->
+                <div class="empty-state" id="evaluationsEmptyState" style="display: none;">
+                    <i class="fas fa-clipboard-check"></i>
+                    <p>Aucune évaluation créée</p>
+                    <button class="btn btn-primary" onclick="showNewEvaluationModal()">
+                        <i class="fas fa-plus"></i> Créer une première évaluation
+                    </button>
+                </div>
+            {% endif %}
             
             <!-- Histogramme des notes -->
             <div id="gradeHistogram" style="display: none; margin-top: 2rem;">
@@ -2536,47 +2778,119 @@
         <div class="files-section">
             <div class="section-header">
                 <h2 class="section-title">
-                    <i class="fas fa-folder-open"></i> Fichiers de la classe
+                    <i class="fas fa-folder-open"></i> Fichiers par discipline
                 </h2>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNewClassFolderModal()">
-                        <i class="fas fa-folder-plus"></i> Nouveau dossier
-                    </button>
-                    <button class="btn btn-success" onclick="document.getElementById('classFileInput').click()">
-                        <i class="fas fa-upload"></i> Uploader
-                    </button>
-                    <input type="file" id="classFileInput" multiple accept=".pdf,.png,.jpg,.jpeg" style="display: none;" onchange="handleClassFileSelect(event)">
+            </div>
+
+            <!-- Sections par discipline -->
+            {% if grades_by_subject %}
+                {% for subject, subject_data in grades_by_subject.items() %}
+                <div class="files-section-by-subject" data-subject="{{ subject }}" data-classroom-id="{{ subject_data.classroom.id }}">
+                    <div class="section-header">
+                        <h3 class="subject-title">
+                            <i class="fas fa-book"></i> {{ subject }}
+                        </h3>
+                        <div class="header-actions">
+                            <button class="btn btn-primary btn-sm" onclick="showNewClassFolderModal('{{ subject_data.classroom.id }}')">
+                                <i class="fas fa-folder-plus"></i> Nouveau dossier
+                            </button>
+                            <div class="btn-group">
+                                <button class="btn btn-success btn-sm" onclick="document.getElementById('classFileInput-{{ subject_data.classroom.id }}').click()">
+                                    <i class="fas fa-file-upload"></i> Fichiers
+                                </button>
+                                <button class="btn btn-info btn-sm" onclick="document.getElementById('classFolderInput-{{ subject_data.classroom.id }}').click()">
+                                    <i class="fas fa-folder-upload"></i> Dossier
+                                </button>
+                            </div>
+                            <input type="file" id="classFileInput-{{ subject_data.classroom.id }}" multiple accept=".pdf,.png,.jpg,.jpeg" style="display: none;" onchange="handleClassFileSelect(event, '{{ subject_data.classroom.id }}')">
+                            <input type="file" id="classFolderInput-{{ subject_data.classroom.id }}" webkitdirectory directory multiple style="display: none;" onchange="handleClassFolderSelect(event, '{{ subject_data.classroom.id }}')">
+                        </div>
+                    </div>
+
+                    <!-- Zone de drop pour cette discipline -->
+                    <div class="drop-zone" id="classDropZone-{{ subject_data.classroom.id }}" data-classroom-id="{{ subject_data.classroom.id }}">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Glissez vos fichiers ou dossiers ici pour {{ subject }}</p>
+                        <p style="font-size: 0.875rem; color: var(--gray-color);">
+                            PDF, PNG, JPG • Max 80 MB • Les dossiers seront importés avec leur structure
+                        </p>
+                    </div>
+
+                    <!-- Navigation fil d'ariane pour cette discipline -->
+                    <div class="breadcrumb" id="classBreadcrumb-{{ subject_data.classroom.id }}" style="display: none;">
+                        <a href="javascript:void(0)" class="breadcrumb-item" onclick="navigateToClassRoot('{{ subject_data.classroom.id }}')">
+                            <i class="fas fa-home"></i> Racine
+                        </a>
+                        <!-- Les éléments du breadcrumb seront ajoutés dynamiquement -->
+                    </div>
+
+                    <!-- Grille des fichiers pour cette discipline -->
+                    <div class="file-grid" id="classFileGrid-{{ subject_data.classroom.id }}">
+                        <!-- Les fichiers seront chargés dynamiquement -->
+                    </div>
+
+                    <!-- État vide pour cette discipline -->
+                    <div class="empty-state" id="classEmptyState-{{ subject_data.classroom.id }}" style="display: none;">
+                        <i class="fas fa-folder-open"></i>
+                        <p>Aucun fichier pour {{ subject }}</p>
+                        <p style="font-size: 0.875rem;">Créez un dossier ou uploadez des fichiers pour commencer</p>
+                    </div>
                 </div>
-            </div>
+                {% endfor %}
+            {% else %}
+                <!-- Section générale si pas de disciplines multiples -->
+                <div class="files-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fas fa-folder-open"></i> Fichiers de la classe
+                        </h2>
+                        <div class="header-actions">
+                            <button class="btn btn-primary" onclick="showNewClassFolderModal()">
+                                <i class="fas fa-folder-plus"></i> Nouveau dossier
+                            </button>
+                            <div class="btn-group">
+                                <button class="btn btn-success" onclick="document.getElementById('classFileInput').click()">
+                                    <i class="fas fa-file-upload"></i> Fichiers
+                                </button>
+                                <button class="btn btn-info" onclick="document.getElementById('classFolderInput').click()">
+                                    <i class="fas fa-folder-upload"></i> Dossier
+                                </button>
+                            </div>
+                            <input type="file" id="classFileInput" multiple accept=".pdf,.png,.jpg,.jpeg" style="display: none;" onchange="handleClassFileSelect(event)">
+                            <input type="file" id="classFolderInput" webkitdirectory directory multiple style="display: none;" onchange="handleClassFolderSelect(event)">
+                        </div>
+                    </div>
 
-            <!-- Zone de drop -->
-            <div class="drop-zone" id="classDropZone">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <p>Glissez vos fichiers ou dossiers ici</p>
-                <p style="font-size: 0.875rem; color: var(--gray-color);">
-                    PDF, PNG, JPG • Max 80 MB • Les dossiers seront importés avec leur structure
-                </p>
-            </div>
+                    <!-- Zone de drop -->
+                    <div class="drop-zone" id="classDropZone">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Glissez vos fichiers ou dossiers ici</p>
+                        <p style="font-size: 0.875rem; color: var(--gray-color);">
+                            PDF, PNG, JPG • Max 80 MB • Les dossiers seront importés avec leur structure
+                        </p>
+                    </div>
 
-            <!-- Navigation fil d'ariane -->
-            <div class="breadcrumb" id="classBreadcrumb" style="display: none;">
-                <a href="javascript:void(0)" class="breadcrumb-item" onclick="navigateToClassRoot()">
-                    <i class="fas fa-home"></i> Racine
-                </a>
-                <!-- Les éléments du breadcrumb seront ajoutés dynamiquement -->
-            </div>
+                    <!-- Navigation fil d'ariane -->
+                    <div class="breadcrumb" id="classBreadcrumb" style="display: none;">
+                        <a href="javascript:void(0)" class="breadcrumb-item" onclick="navigateToClassRoot()">
+                            <i class="fas fa-home"></i> Racine
+                        </a>
+                        <!-- Les éléments du breadcrumb seront ajoutés dynamiquement -->
+                    </div>
 
-            <!-- Grille des fichiers -->
-            <div class="file-grid" id="classFileGrid">
-                <!-- Les fichiers seront chargés dynamiquement -->
-            </div>
+                    <!-- Grille des fichiers -->
+                    <div class="file-grid" id="classFileGrid">
+                        <!-- Les fichiers seront chargés dynamiquement -->
+                    </div>
 
-            <!-- État vide -->
-            <div class="empty-state" id="classEmptyState" style="display: none;">
-                <i class="fas fa-folder-open"></i>
-                <p>Ce dossier est vide</p>
-                <p style="font-size: 0.875rem;">Créez un dossier ou uploadez des fichiers pour commencer</p>
-            </div>
+                    <!-- État vide -->
+                    <div class="empty-state" id="classEmptyState" style="display: none;">
+                        <i class="fas fa-folder-open"></i>
+                        <p>Ce dossier est vide</p>
+                        <p style="font-size: 0.875rem;">Créez un dossier ou uploadez des fichiers pour commencer</p>
+                    </div>
+                </div>
+            {% endif %}
         </div>
     </div>
 
@@ -2587,46 +2901,137 @@
                 <h2 class="section-title">
                     <i class="fas fa-exclamation-triangle"></i> Suivi des coches
                 </h2>
-                <button class="btn btn-danger" onclick="resetAllSanctions()">
-                    <i class="fas fa-undo"></i> Réinitialiser toutes les coches
-                </button>
+                <div class="header-actions">
+                    <button class="btn btn-danger" onclick="resetAllSanctions()">
+                        <i class="fas fa-undo"></i> Réinitialiser toutes les coches
+                    </button>
+                </div>
             </div>
+            
+            <div class="display-mode-selector">
+                        <label class="form-label">Mode d'affichage :</label>
+                        <div class="radio-group">
+                            <div class="radio-option">
+                                <input type="radio" id="mode-unified" name="sanctionDisplayMode" value="unified" 
+                                       {% set first_classroom = selected_group.classrooms[0] %}
+                                       {% if classroom_preferences[first_classroom.id].display_mode == 'unified' %}checked{% endif %}
+                                       {% if not classroom_preferences[first_classroom.id].can_change_mode() %}disabled{% endif %}
+                                       onclick="handleModeChange(this, '{{ first_classroom.id }}')">
+                                <label for="mode-unified">Tableau unifié (toutes disciplines)</label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" id="mode-separated" name="sanctionDisplayMode" value="separated"
+                                       {% if classroom_preferences[first_classroom.id].display_mode == 'separated' %}checked{% endif %}
+                                       {% if not classroom_preferences[first_classroom.id].can_change_mode() %}disabled{% endif %}
+                                       onclick="handleModeChange(this, '{{ first_classroom.id }}')">
+                                <label for="mode-separated">Tableaux séparés par discipline</label>
+                            </div>
+                            {% if classroom_preferences[first_classroom.id].is_class_master() %}
+                            <div class="radio-option">
+                                <input type="radio" id="mode-centralized" name="sanctionDisplayMode" value="centralized"
+                                       {% if classroom_preferences[first_classroom.id].display_mode == 'centralized' %}checked{% endif %}
+                                       onclick="handleModeChange(this, '{{ first_classroom.id }}')">
+                                <label for="mode-centralized">Coches centralisées (maître de classe)</label>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if not classroom_preferences[first_classroom.id].can_change_mode() %}
+                        <div class="lock-warning">
+                            <i class="fas fa-lock"></i> 
+                            Mode verrouillé par {{ classroom_preferences[first_classroom.id].locked_by_user.username if classroom_preferences[first_classroom.id].locked_by_user else 'le maître de classe' }}
+                        </div>
+                        {% endif %}
+                    </div>
 
             {% if imported_sanctions and students %}
-            <div class="sanctions-table-container">
-                <table class="sanctions-table">
-                    <thead>
-                        <tr>
-                            <th class="student-column">Élève</th>
-                            {% for sanction in imported_sanctions %}
-                            <th class="sanction-column">{{ sanction.name }}</th>
+            {% set first_classroom = selected_group.classrooms[0] %}
+            {% set current_mode = classroom_preferences[first_classroom.id].display_mode %}
+            
+            {% if current_mode == 'unified' or current_mode == 'centralized' %}
+            <!-- Mode unifié ou centralisé : un seul tableau -->
+            <div id="sanctions-unified" class="sanctions-display-mode">
+                <div class="sanctions-table-container">
+                    <table class="sanctions-table">
+                        <thead>
+                            <tr>
+                                <th class="student-column">Élève</th>
+                                {% for sanction in imported_sanctions %}
+                                <th class="sanction-column">{{ sanction.name }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr>
+                                <td class="student-name">{{ student.full_name }}</td>
+                                {% for sanction in imported_sanctions %}
+                                <td class="sanction-count">
+                                    <div class="count-controls">
+                                        <button class="count-btn decrease" onclick="updateCount({{ student.id }}, {{ sanction.id }}, -1)">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <span class="count-display" data-student="{{ student.id }}" data-sanction="{{ sanction.id }}">
+                                            {{ sanctions_data[student.id][sanction.id] }}
+                                        </span>
+                                        <button class="count-btn increase" onclick="updateCount({{ student.id }}, {{ sanction.id }}, 1)">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                {% endfor %}
+                            </tr>
                             {% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for student in students %}
-                        <tr>
-                            <td class="student-name">{{ student.full_name }}</td>
-                            {% for sanction in imported_sanctions %}
-                            <td class="sanction-count">
-                                <div class="count-controls">
-                                    <button class="count-btn decrease" onclick="updateCount({{ student.id }}, {{ sanction.id }}, -1)">
-                                        <i class="fas fa-minus"></i>
-                                    </button>
-                                    <span class="count-display" data-student="{{ student.id }}" data-sanction="{{ sanction.id }}">
-                                        {{ sanctions_data[student.id][sanction.id] }}
-                                    </span>
-                                    <button class="count-btn increase" onclick="updateCount({{ student.id }}, {{ sanction.id }}, 1)">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </div>
-                            </td>
-                            {% endfor %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             </div>
+            
+            {% elif current_mode == 'separated' %}
+            <!-- Mode séparé : un tableau par discipline -->
+            <div id="sanctions-separated" class="sanctions-display-mode">
+                {% for classroom in selected_group.classrooms %}
+                <div class="sanctions-by-subject">
+                    <h3 class="subject-title">
+                        <i class="fas fa-book"></i> {{ classroom.subject }}
+                    </h3>
+                    <div class="sanctions-table-container">
+                        <table class="sanctions-table">
+                            <thead>
+                                <tr>
+                                    <th class="student-column">Élève</th>
+                                    {% for sanction in imported_sanctions %}
+                                    <th class="sanction-column">{{ sanction.name }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in students %}
+                                <tr>
+                                    <td class="student-name">{{ student.full_name }}</td>
+                                    {% for sanction in imported_sanctions %}
+                                    <td class="sanction-count">
+                                        <div class="count-controls">
+                                            <button class="count-btn decrease" onclick="updateCount({{ student.id }}, {{ sanction.id }}, -1, {{ classroom.id }})">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                            <span class="count-display" data-student="{{ student.id }}" data-sanction="{{ sanction.id }}" data-classroom="{{ classroom.id }}">
+                                                {{ sanctions_data[student.id][sanction.id] }}
+                                            </span>
+                                            <button class="count-btn increase" onclick="updateCount({{ student.id }}, {{ sanction.id }}, 1, {{ classroom.id }})">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
             {% elif not imported_sanctions %}
             <div class="empty-state">
                 <i class="fas fa-exclamation-triangle"></i>
@@ -5329,11 +5734,21 @@ function showTab(tabName) {
     document.getElementById(tabName + '-tab').classList.add('active');
 
     // Activer le bouton correspondant
-    event.target.closest('.tab-button').classList.add('active');
+    const targetButton = document.querySelector(`[onclick="showTab('${tabName}')"]`);
+    if (targetButton) {
+        targetButton.classList.add('active');
+    }
     
     // Charger les fichiers si on est sur l'onglet fichiers
     if (tabName === 'files') {
-        loadClassFiles();
+        loadAllClassFiles();
+        // Initialiser le drag & drop pour chaque discipline
+        const classrooms = {{ classrooms_json | tojson }};
+        classrooms.forEach(classroom => {
+            initClassDragAndDrop(classroom.id);
+        });
+        // Initialiser le drag & drop général aussi (pour compatibilité)
+        initClassDragAndDrop();
     }
     
     // Charger les groupes si on est sur l'onglet groupes
@@ -5987,8 +6402,169 @@ style.textContent = `
 document.head.appendChild(style);
 
 // Fonctions pour la gestion des sanctions
-async function updateCount(studentId, sanctionId, delta) {
-    const countElement = document.querySelector(`[data-student="${studentId}"][data-sanction="${sanctionId}"]`);
+
+// Variable pour suivre le mode actuel dynamiquement
+let currentDisplayMode = '{{ classroom_preferences[selected_group.classrooms[0].id].display_mode }}';
+
+// Gérer le clic sur un bouton radio de mode
+function handleModeChange(radioElement, classroomId) {
+    const newMode = radioElement.value;
+    
+    console.log('handleModeChange:', 'current=' + currentDisplayMode, 'new=' + newMode);
+    
+    // Si c'est le même mode, ne rien faire
+    if (currentDisplayMode === newMode) {
+        console.log('Même mode, aucun changement nécessaire');
+        return;
+    }
+    
+    // Empêcher le changement visuel immédiat et remettre l'ancien mode
+    resetRadioToCurrentMode();
+    
+    // Demander la mise à jour avec confirmation
+    updateSanctionDisplayMode(newMode, classroomId, false);
+}
+
+// Mettre à jour le mode d'affichage des coches
+async function updateSanctionDisplayMode(displayMode, classroomId, confirmed = false) {
+    try {
+        const response = await fetch('{{ url_for("planning.update_sanction_display_preferences") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                display_mode: displayMode,
+                classroom_id: classroomId,
+                confirmed: confirmed
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Mettre à jour le mode actuel
+            currentDisplayMode = result.new_mode || displayMode;
+            console.log('Mode mis à jour avec succès:', currentDisplayMode);
+            
+            // Masquer tous les modes d'affichage
+            document.querySelectorAll('.sanctions-display-mode').forEach(mode => {
+                mode.style.display = 'none';
+            });
+            
+            // Afficher le mode sélectionné
+            const selectedMode = document.getElementById(`sanctions-${displayMode}`);
+            if (selectedMode) {
+                selectedMode.style.display = 'block';
+            }
+            
+            showNotification('success', result.message);
+            
+            // Recharger la page pour refléter tous les changements en restant sur l'onglet Coches
+            if (result.new_mode) {
+                setTimeout(() => {
+                    window.location.href = window.location.pathname + window.location.search + '#sanctions-tab';
+                    window.location.reload();
+                }, 1500);
+            }
+        } else if (result.requires_confirmation) {
+            // Maintenir le bouton radio sélectionné pendant la confirmation
+            document.getElementById(`mode-${displayMode}`).checked = true;
+            console.log('Confirmation requise pour passer de', currentDisplayMode, 'vers', displayMode);
+            
+            // Afficher la fenêtre de confirmation
+            showConfirmationModal(
+                'Confirmation requise',
+                result.message,
+                () => {
+                    // L'utilisateur a confirmé, relancer avec confirmation
+                    console.log('Utilisateur a confirmé le changement vers:', displayMode);
+                    updateSanctionDisplayMode(displayMode, classroomId, true);
+                },
+                () => {
+                    // L'utilisateur a annulé, remettre l'ancien bouton radio
+                    console.log('Utilisateur a annulé, retour au mode:', currentDisplayMode);
+                    resetRadioToCurrentMode();
+                }
+            );
+        } else {
+            showNotification('error', result.message || 'Erreur lors de la mise à jour');
+            resetRadioToCurrentMode();
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('error', 'Erreur lors de la communication avec le serveur');
+        resetRadioToCurrentMode();
+    }
+}
+
+function resetRadioToCurrentMode() {
+    // Remettre le bon bouton radio sélectionné
+    console.log('resetRadioToCurrentMode:', currentDisplayMode);
+    
+    // Décocher tous les boutons radio
+    document.querySelectorAll('input[name="sanctionDisplayMode"]').forEach(radio => {
+        radio.checked = false;
+    });
+    
+    // Cocher le bon bouton
+    const correctRadio = document.getElementById(`mode-${currentDisplayMode}`);
+    if (correctRadio) {
+        correctRadio.checked = true;
+    }
+}
+
+function showConfirmationModal(title, message, onConfirm, onCancel) {
+    // Créer la modal de confirmation
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>${title}</h3>
+            </div>
+            <div class="modal-body">
+                <p>${message}</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeConfirmationModal(false)">Annuler</button>
+                <button class="btn btn-danger" onclick="closeConfirmationModal(true)">Confirmer</button>
+            </div>
+        </div>
+    `;
+    
+    // Stocker les callbacks
+    modal.onConfirm = onConfirm;
+    modal.onCancel = onCancel;
+    
+    document.body.appendChild(modal);
+}
+
+function closeConfirmationModal(confirmed) {
+    const modal = document.querySelector('.modal-overlay');
+    if (modal) {
+        if (confirmed && modal.onConfirm) {
+            modal.onConfirm();
+        } else if (!confirmed && modal.onCancel) {
+            modal.onCancel();
+        }
+        document.body.removeChild(modal);
+    }
+}
+
+async function updateCount(studentId, sanctionId, delta, classroomId = null) {
+    // Sélectionner l'élément selon le mode (avec ou sans classroom_id)
+    let selector = `[data-student="${studentId}"][data-sanction="${sanctionId}"]`;
+    if (classroomId) {
+        selector += `[data-classroom="${classroomId}"]`;
+    }
+    
+    const countElement = document.querySelector(selector);
+    if (!countElement) {
+        console.error('Element not found with selector:', selector);
+        return;
+    }
+    
     const currentCount = parseInt(countElement.textContent);
     const newCount = Math.max(0, currentCount + delta); // Ne pas aller en dessous de 0
     
@@ -6099,16 +6675,18 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Variables pour la gestion des fichiers de classe
-let currentClassFolder = null;
+let currentClassFolder = null; // Pour compatibilité
+let currentClassFolderByClass = {}; // Chemin actuel par classe
 let classFolderPath = [];
 let classUploadQueue = [];
 let isClassUploading = false;
-let allClassFiles = []; // Stocker tous les fichiers pour la navigation
+let allClassFiles = []; // Pour compatibilité
+let allClassFilesByClass = {}; // Fichiers par classe
 
-// Variables pour la gestion des évaluations
-let evaluations = [];
+// Variables pour la gestion des évaluations par discipline
+let evaluationsByClassroom = {}; // Stockage des évaluations par ID de classe
 let selectedEvaluationId = null;
-let existingTAGroups = [];
+let existingTAGroupsByClassroom = {}; // Stockage des groupes TA par ID de classe
 let expandedTAGroups = new Set(); // Stocker les groupes TA dépliés
 
 // Initialiser le gestionnaire de fichiers de classe
@@ -6117,10 +6695,22 @@ function initClassFileManager() {
     initClassDragAndDrop();
 }
 
-// Charger les fichiers de la classe
-async function loadClassFiles(folderPath = '') {
-    const classroomId = "{{ primary_classroom.id }}";
-    currentClassFolder = folderPath;
+// Charger les fichiers pour toutes les disciplines
+async function loadAllClassFiles() {
+    const classrooms = {{ classrooms_json | tojson }};
+    
+    for (let classroom of classrooms) {
+        await loadClassFiles('', classroom.id);
+    }
+}
+
+// Charger les fichiers d'une classe spécifique
+async function loadClassFiles(folderPath = '', classroomId = null) {
+    if (!classroomId) {
+        classroomId = "{{ primary_classroom.id }}";
+    }
+    currentClassFolder = folderPath; // Pour compatibilité
+    currentClassFolderByClass[classroomId] = folderPath; // Spécifique à la classe
     
     try {
         const url = `/api/class-files/list/${classroomId}`;
@@ -6131,9 +6721,10 @@ async function loadClassFiles(folderPath = '') {
         console.log('Réponse API:', result);
         
         if (result.success) {
-            allClassFiles = result.files || [];
-            renderClassFiles(folderPath);
-            updateClassBreadcrumb(folderPath);
+            allClassFiles = result.files || []; // Pour compatibilité
+            allClassFilesByClass[classroomId] = result.files || []; // Spécifique à la classe
+            renderClassFiles(folderPath, classroomId);
+            updateClassBreadcrumb(folderPath, classroomId);
         } else {
             console.error('Erreur API:', result.message);
             showNotification('error', result.message || 'Erreur lors du chargement des fichiers');
@@ -6145,11 +6736,18 @@ async function loadClassFiles(folderPath = '') {
 }
 
 // Afficher les fichiers et dossiers
-function renderClassFiles(currentPath) {
-    const fileGrid = document.getElementById('classFileGrid');
-    const emptyState = document.getElementById('classEmptyState');
+function renderClassFiles(currentPath, classroomId = null) {
+    // Utiliser les conteneurs spécifiques à la classe ou les généraux
+    const fileGridId = classroomId ? `classFileGrid-${classroomId}` : 'classFileGrid';
+    const emptyStateId = classroomId ? `classEmptyState-${classroomId}` : 'classEmptyState';
     
-    console.log('Rendu des fichiers pour le chemin:', currentPath);
+    const fileGrid = document.getElementById(fileGridId);
+    const emptyState = document.getElementById(emptyStateId);
+    
+    console.log('Rendu des fichiers pour le chemin:', currentPath, 'classe:', classroomId);
+    
+    // Utiliser les fichiers spécifiques à la classe
+    const classFiles = classroomId ? (allClassFilesByClass[classroomId] || []) : allClassFiles;
     
     // Filtrer les fichiers selon le chemin actuel
     let filesToShow = [];
@@ -6157,7 +6755,7 @@ function renderClassFiles(currentPath) {
     
     if (currentPath === '') {
         // À la racine - montrer les fichiers racine et les dossiers de premier niveau
-        allClassFiles.forEach(file => {
+        classFiles.forEach(file => {
             if (!file.folder_path || file.folder_path.trim() === '') {
                 filesToShow.push(file);
             } else {
@@ -6168,7 +6766,7 @@ function renderClassFiles(currentPath) {
         });
     } else {
         // Dans un dossier - montrer les fichiers de ce dossier et les sous-dossiers
-        allClassFiles.forEach(file => {
+        classFiles.forEach(file => {
             if (file.folder_path && file.folder_path.startsWith(currentPath)) {
                 const relativePath = file.folder_path.substring(currentPath.length);
                 if (relativePath.startsWith('/')) {
@@ -6206,22 +6804,22 @@ function renderClassFiles(currentPath) {
     // Afficher les dossiers
     foldersToShow.forEach(folderName => {
         const folderPath = currentPath ? `${currentPath}/${folderName}` : folderName;
-        const filesInFolder = allClassFiles.filter(f => 
+        const filesInFolder = classFiles.filter(f => 
             f.folder_path && f.folder_path.startsWith(folderPath)
         );
         
         html += `
-            <div class="file-item folder" data-folder-path="${folderPath}" data-type="folder" ondblclick="openClassFolder('${folderPath}')">
+            <div class="file-item folder" data-folder-path="${folderPath}" data-type="folder" ondblclick="openClassFolder('${folderPath}', ${classroomId})">
                 <div class="item-icon" style="color: #F59E0B;">
                     <i class="fas fa-folder"></i>
                 </div>
                 <div class="item-name" title="${folderName}">${folderName}</div>
                 <div class="item-info">${filesInFolder.length} fichier(s)</div>
                 <div class="item-actions">
-                    <button class="action-btn" onclick="openClassFolder('${folderPath}')" title="Ouvrir">
+                    <button class="action-btn" onclick="openClassFolder('${folderPath}', ${classroomId})" title="Ouvrir">
                         <i class="fas fa-folder-open"></i>
                     </button>
-                    <button class="action-btn danger" onclick="deleteClassFolder('${folderPath}')" title="Supprimer">
+                    <button class="action-btn danger" onclick="deleteClassFolder('${folderPath}', ${classroomId})" title="Supprimer">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -6254,10 +6852,10 @@ function renderClassFiles(currentPath) {
                     <button class="action-btn" onclick="shareFileWithStudents(${file.id}, '${file.original_filename}')" title="Partager avec des élèves" style="color: #10B981;">
                         <i class="fas fa-share"></i>
                     </button>
-                    <button class="action-btn" onclick="renameClassItem('file', ${file.id}, '${file.original_filename}')" title="Renommer">
+                    <button class="action-btn" onclick="renameClassItem('file', ${file.id}, '${file.original_filename}', ${classroomId})" title="Renommer">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="action-btn danger" onclick="deleteClassFile(${file.id})" title="Supprimer">
+                    <button class="action-btn danger" onclick="deleteClassFile(${file.id}, ${classroomId})" title="Supprimer">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -6269,8 +6867,10 @@ function renderClassFiles(currentPath) {
 }
 
 // Mettre à jour le fil d'ariane
-function updateClassBreadcrumb(currentPath) {
-    const breadcrumbEl = document.getElementById('classBreadcrumb');
+function updateClassBreadcrumb(currentPath, classroomId = null) {
+    // Utiliser le breadcrumb spécifique à la classe ou le général
+    const breadcrumbId = classroomId ? `classBreadcrumb-${classroomId}` : 'classBreadcrumb';
+    const breadcrumbEl = document.getElementById(breadcrumbId);
     
     if (!currentPath || currentPath === '') {
         breadcrumbEl.style.display = 'none';
@@ -6280,7 +6880,7 @@ function updateClassBreadcrumb(currentPath) {
     breadcrumbEl.style.display = 'flex';
     
     let html = `
-        <a href="javascript:void(0)" class="breadcrumb-item" onclick="navigateToClassRoot()">
+        <a href="javascript:void(0)" class="breadcrumb-item" onclick="navigateToClassRoot(${classroomId})">
             <i class="fas fa-home"></i> Racine
         </a>
     `;
@@ -6291,19 +6891,19 @@ function updateClassBreadcrumb(currentPath) {
     pathParts.forEach((part, index) => {
         cumulativePath += (index === 0 ? '' : '/') + part;
         html += `<span class="breadcrumb-separator">/</span>`;
-        html += `<a href="javascript:void(0)" class="breadcrumb-item" onclick="openClassFolder('${cumulativePath}')">${part}</a>`;
+        html += `<a href="javascript:void(0)" class="breadcrumb-item" onclick="openClassFolder('${cumulativePath}', ${classroomId})">${part}</a>`;
     });
     
     breadcrumbEl.innerHTML = html;
 }
 
-// Navigation
-function navigateToClassRoot() {
-    loadClassFiles('');
+// Navigation - adaptée pour fonctionner par discipline
+function navigateToClassRoot(classroomId = null) {
+    loadClassFiles('', classroomId);
 }
 
-function openClassFolder(folderPath) {
-    loadClassFiles(folderPath);
+function openClassFolder(folderPath, classroomId = null) {
+    loadClassFiles(folderPath, classroomId);
 }
 
 // Drag & Drop
@@ -6515,13 +7115,92 @@ async function uploadClassFilesWithStructure(filesData) {
 }
 
 // Gérer la sélection de fichiers
-function handleClassFileSelect(e) {
+function handleClassFileSelect(e, classroomId = null) {
     const files = e.target.files;
-    handleClassFiles(files);
+    handleClassFiles(files, classroomId);
+}
+
+// Gérer la sélection de dossiers entiers
+function handleClassFolderSelect(e, classroomId = null) {
+    const files = e.target.files;
+    console.log('Upload de dossier détecté:', files.length, 'fichiers');
+    
+    if (files.length === 0) {
+        showNotification('error', 'Aucun fichier sélectionné');
+        return;
+    }
+    
+    // Organiser les fichiers par structure de dossiers
+    const fileStructure = organizeFolderStructure(files);
+    
+    // Traiter l'upload avec la structure
+    handleClassFolderUpload(fileStructure, classroomId);
+}
+
+// Organiser la structure des dossiers à partir des fichiers sélectionnés
+function organizeFolderStructure(files) {
+    const structure = {
+        folders: new Set(),
+        files: []
+    };
+    
+    Array.from(files).forEach(file => {
+        // Valider le fichier
+        if (!validateClassFile(file)) {
+            return;
+        }
+        
+        // Extraire le chemin relatif
+        const relativePath = file.webkitRelativePath || file.name;
+        const pathParts = relativePath.split('/');
+        
+        // Ajouter les dossiers intermédiaires
+        let currentPath = '';
+        for (let i = 0; i < pathParts.length - 1; i++) {
+            currentPath += (i === 0 ? '' : '/') + pathParts[i];
+            structure.folders.add(currentPath + '/');
+        }
+        
+        // Ajouter le fichier avec son chemin
+        const folderPath = pathParts.slice(0, -1).join('/');
+        structure.files.push({
+            file: file,
+            path: folderPath ? folderPath + '/' : '',
+            relativePath: relativePath
+        });
+    });
+    
+    return structure;
+}
+
+// Gérer l'upload de dossiers avec structure
+async function handleClassFolderUpload(fileStructure, classroomId = null) {
+    if (!classroomId) {
+        classroomId = "{{ primary_classroom.id }}";
+    }
+    
+    showNotification('info', `Préparation de l'upload de ${fileStructure.files.length} fichier(s) dans ${fileStructure.folders.size} dossier(s)...`);
+    
+    try {
+        // Créer d'abord la structure de dossiers
+        if (fileStructure.folders.size > 0) {
+            await createClassFolderStructure(Array.from(fileStructure.folders), classroomId);
+        }
+        
+        // Puis uploader tous les fichiers
+        if (fileStructure.files.length > 0) {
+            await uploadClassFilesWithStructure(fileStructure.files, classroomId);
+        }
+        
+        showNotification('success', 'Dossier uploadé avec succès!');
+    } catch (error) {
+        console.error('Erreur lors de l\'upload du dossier:', error);
+        showNotification('error', 'Erreur lors de l\'upload du dossier');
+    }
 }
 
 // Traiter les fichiers sélectionnés
-function handleClassFiles(files) {
+function handleClassFiles(files, classroomId = null) {
     const validFiles = [];
     
     [...files].forEach(file => {
@@ -6531,7 +7210,7 @@ function handleClassFiles(files) {
     });
     
     if (validFiles.length > 0) {
-        uploadClassFiles(validFiles);
+        uploadClassFiles(validFiles, classroomId);
     }
 }
 
@@ -6554,7 +7233,11 @@ function validateClassFile(file) {
 }
 
 // Uploader des fichiers
-async function uploadClassFiles(files) {
+async function uploadClassFiles(files, classroomId = null) {
+    if (!classroomId) {
+        classroomId = "{{ primary_classroom.id }}";
+    }
+    
     showClassUploadProgress();
     
     let uploadedCount = 0;
@@ -6563,7 +7246,7 @@ async function uploadClassFiles(files) {
     for (const file of files) {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('classroom_id', "{{ primary_classroom.id }}");
+        formData.append('classroom_id', classroomId);
         
         if (currentClassFolder) {
             formData.append('folder_id', currentClassFolder);
@@ -6609,7 +7292,7 @@ async function uploadClassFiles(files) {
     
     if (uploadedCount > 0) {
         showNotification('success', `${uploadedCount} fichier(s) uploadé(s) avec succès`);
-        loadClassFiles(currentClassFolder);
+        loadClassFiles(currentClassFolder, classroomId);
     }
 }
 
@@ -6634,8 +7317,9 @@ function updateClassUploadProgress(percent, filename) {
     document.getElementById('classProgressInfo').textContent = filename;
 }
 
-// Modals
-function showNewClassFolderModal() {
+// Modals - adaptées pour fonctionner par discipline
+function showNewClassFolderModal(classroomId = null) {
+    window.currentFolderClassroomId = classroomId;
     document.getElementById('newClassFolderModal').classList.add('show');
     document.getElementById('classFolderName').focus();
 }
@@ -6654,7 +7338,10 @@ async function createClassFolder(e) {
     e.preventDefault();
     
     const name = document.getElementById('classFolderName').value;
-    const classroomId = "{{ primary_classroom.id }}";
+    const classroomId = window.currentFolderClassroomId || "{{ primary_classroom.id }}";
+    const folderPath = currentClassFolderByClass[classroomId] || '';
+    
+    console.log('Création dossier:', { name, classroomId, folderPath });
     
     try {
         const response = await fetch('/api/class-files/create-folder', {
@@ -6665,23 +7352,57 @@ async function createClassFolder(e) {
             body: JSON.stringify({
                 name: name,
                 classroom_id: classroomId,
-                parent_id: currentClassFolder
+                parent_id: folderPath // L'API attend parent_id même si non utilisé
             })
         });
         
         const result = await response.json();
         
         if (result.success) {
+            // Créer un fichier .keep pour que le dossier soit visible
+            await createKeepFile(name, folderPath, classroomId);
+            
             showNotification('success', 'Dossier créé avec succès');
             closeModal('newClassFolderModal');
             document.getElementById('classFolderName').value = '';
-            loadClassFiles(currentClassFolder);
+            loadClassFiles(folderPath, classroomId);
         } else {
             showNotification('error', result.message || 'Erreur lors de la création du dossier');
         }
     } catch (error) {
         console.error('Erreur:', error);
         showNotification('error', 'Erreur lors de la création du dossier');
+    }
+}
+
+// Créer un fichier .keep pour rendre un dossier vide visible
+async function createKeepFile(folderName, parentPath, classroomId) {
+    try {
+        // Créer un petit fichier texte .keep
+        const keepContent = `Ce fichier maintient le dossier "${folderName}" visible.\nVous pouvez le supprimer une fois que vous ajoutez d'autres fichiers.`;
+        const blob = new Blob([keepContent], { type: 'text/plain' });
+        const keepFile = new File([blob], '.keep', { type: 'text/plain' });
+        
+        // Déterminer le chemin complet du nouveau dossier
+        const newFolderPath = parentPath ? `${parentPath}/${folderName}` : folderName;
+        
+        // Uploader le fichier .keep dans le nouveau dossier
+        const formData = new FormData();
+        formData.append('file', keepFile);
+        formData.append('classroom_id', classroomId);
+        formData.append('folder_path', newFolderPath);
+        
+        const response = await fetch('/api/class-files/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        console.log('Fichier .keep créé:', result.success);
+        
+    } catch (error) {
+        console.error('Erreur lors de la création du fichier .keep:', error);
+        // Ne pas bloquer la création du dossier si ça échoue
     }
 }
 
@@ -6703,11 +7424,12 @@ function previewClassFile(fileId, fileType) {
 }
 
 // Renommer
-function renameClassItem(type, id, currentName) {
+function renameClassItem(type, id, currentName, classroomId = null) {
     const modal = document.getElementById('classRenameModal');
     document.getElementById('classRenameType').value = type;
     document.getElementById('classRenameId').value = id;
     document.getElementById('classRenameName').value = currentName;
+    window.currentRenameClassroomId = classroomId;
     
     modal.classList.add('show');
     document.getElementById('classRenameName').focus();
@@ -6739,7 +7461,7 @@ async function saveClassRename(e) {
         if (result.success) {
             showNotification('success', 'Renommage effectué avec succès');
             closeModal('classRenameModal');
-            loadClassFiles(currentClassFolder);
+            loadClassFiles(currentClassFolder, window.currentRenameClassroomId);
         } else {
             showNotification('error', result.message || 'Erreur lors du renommage');
         }
@@ -6750,7 +7472,7 @@ async function saveClassRename(e) {
 }
 
 // Suppression
-async function deleteClassFile(fileId) {
+async function deleteClassFile(fileId, classroomId = null) {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce fichier ?')) return;
     
     try {
@@ -6763,7 +7485,7 @@ async function deleteClassFile(fileId) {
         if (result.success) {
             showNotification('success', 'Fichier supprimé avec succès');
             // Recharger les fichiers
-            loadClassFiles(currentClassFolder);
+            loadClassFiles(currentClassFolder, classroomId);
         } else {
             showNotification('error', result.message || 'Erreur lors de la suppression');
         }
@@ -6773,7 +7495,7 @@ async function deleteClassFile(fileId) {
     }
 }
 
-async function deleteClassFolder(folderPath) {
+async function deleteClassFolder(folderPath, classroomId = null) {
     if (!confirm(`Êtes-vous sûr de vouloir supprimer le dossier "${folderPath}" et tout son contenu ?`)) return;
     
     try {
@@ -6783,7 +7505,7 @@ async function deleteClassFolder(folderPath) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                classroom_id: "{{ primary_classroom.id }}",
+                classroom_id: classroomId || "{{ primary_classroom.id }}",
                 folder_path: folderPath
             })
         });
@@ -6793,7 +7515,7 @@ async function deleteClassFolder(folderPath) {
         if (result.success) {
             showNotification('success', `Dossier "${folderPath}" supprimé avec succès`);
             // Recharger les fichiers
-            loadClassFiles(currentClassFolder);
+            loadClassFiles(currentClassFolder, classroomId);
         } else {
             showNotification('error', result.message || 'Erreur lors de la suppression');
         }
@@ -6836,28 +7558,142 @@ function formatFileSize(bytes) {
 
 // ==================== FONCTIONS ÉVALUATIONS ====================
 
-// Charger les évaluations de la classe
+// Charger les évaluations pour toutes les disciplines
 async function loadEvaluations() {
-    const classroomId = "{{ primary_classroom.id }}";
+    const classrooms = {{ classrooms_json | tojson }};
     
+    for (let classroom of classrooms) {
+        await loadEvaluationsForClassroom(classroom.id, classroom.subject);
+    }
+}
+
+// Charger les évaluations pour une discipline spécifique
+async function loadEvaluationsForClassroom(classroomId, subject) {
     try {
         const response = await fetch(`/api/evaluations/classroom/${classroomId}`);
         const result = await response.json();
         
         if (result.success) {
-            evaluations = result.evaluations || [];
-            existingTAGroups = result.ta_groups || [];
-            renderEvaluationsTable();
+            const evaluations = result.evaluations || [];
+            const existingTAGroups = result.ta_groups || [];
+            
+            // Stocker les évaluations par classe
+            evaluationsByClassroom[classroomId] = evaluations;
+            existingTAGroupsByClassroom[classroomId] = existingTAGroups;
+            
+            renderEvaluationsTableForSubject(classroomId, subject, evaluations, existingTAGroups);
         } else {
-            console.error('Erreur API évaluations:', result.message);
+            console.error(`Erreur API évaluations pour ${subject}:`, result.message);
         }
     } catch (error) {
-        console.error('Erreur lors du chargement des évaluations:', error);
+        console.error(`Erreur lors du chargement des évaluations pour ${subject}:`, error);
     }
 }
 
+// Rendre le tableau des évaluations pour une discipline spécifique
+function renderEvaluationsTableForSubject(classroomId, subject, evaluations, existingTAGroups) {
+    const container = document.getElementById(`evaluationsContainer-${classroomId}`);
+    const emptyState = document.getElementById(`evaluationsEmptyState-${classroomId}`);
+    
+    if (!evaluations || evaluations.length === 0) {
+        container.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    
+    const students = {{ students_json|tojson|safe }};
+    
+    // Organiser les évaluations par type et calcul des moyennes TA
+    const processedEvaluations = processEvaluations(evaluations);
+    
+    let html = `
+        <table class="evaluations-table">
+            <thead>
+                <tr>
+                    <th class="student-column">Élève</th>
+    `;
+    
+    // En-têtes des colonnes d'évaluations (copié de la fonction originale)
+    processedEvaluations.forEach(eval => {
+        const isTA = eval.type === 'ta';
+        const isExpandedTA = eval.isExpandedTA;
+        const isGroupedTA = isTA && !isExpandedTA;
+        
+        let title;
+        if (isExpandedTA) {
+            title = eval.title;
+        } else if (isTA) {
+            title = `TA: ${eval.ta_group_name}`;
+        } else {
+            title = eval.title;
+        }
+        
+        const isExpanded = isGroupedTA && expandedTAGroups.has(eval.ta_group_name);
+        
+        html += `
+            <th class="eval-column ${isTA || isExpandedTA ? 'ta-column' : ''} ${isExpandedTA ? 'expanded-ta-item' : ''}" data-eval-id="${eval.id}">
+                <div class="eval-header" onclick="selectEvaluation('${eval.id}')">
+                    <span class="eval-title">${title}</span>
+                    <div class="eval-actions">
+                        ${isGroupedTA ? `<button class="btn-icon expand-ta-btn" onclick="event.stopPropagation(); toggleTAExpansion('${eval.ta_group_name}')" title="${isExpanded ? 'Regrouper les tests TA' : 'Voir les tests individuels'}">
+                            <i class="fas fa-${isExpanded ? 'compress' : 'expand'}-alt"></i>
+                        </button>` : ''}
+                        <button class="btn-icon edit-eval-btn" onclick="event.stopPropagation(); editEvaluation('${eval.id}', '${classroomId}')" title="Modifier l'évaluation">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon delete-eval-btn" onclick="event.stopPropagation(); deleteEvaluation('${eval.id}', '${classroomId}')" title="Supprimer l'évaluation">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </th>
+        `;
+    });
+    
+    html += `
+                    <th class="average-column">Moyenne</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    // Lignes des élèves
+    students.forEach(student => {
+        html += `<tr><td class="student-name">${student.full_name}</td>`;
+        
+        // Notes pour chaque évaluation
+        processedEvaluations.forEach(eval => {
+            const grade = getStudentGradeForEvaluation(student.id, eval);
+            const gradeDisplay = formatGradeDisplay(grade, eval.max_points);
+            html += `<td class="grade-cell ${getGradeClass(grade, eval.max_points)}">${gradeDisplay}</td>`;
+        });
+        
+        // Moyenne générale de l'élève
+        const studentAverage = calculateStudentAverage(student.id, processedEvaluations);
+        html += `<td class="average-cell">${studentAverage.toFixed(1)}</td>`;
+        
+        html += '</tr>';
+    });
+    
+    html += `
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
 // Afficher le modal de nouvelle évaluation
-function showNewEvaluationModal() {
+function showNewEvaluationModal(classroomId = null) {
+    // Si pas de classroomId spécifié, utiliser la classe primaire
+    if (!classroomId) {
+        classroomId = "{{ primary_classroom.id }}";
+    }
+    
+    // Stocker l'ID de la classe pour l'utiliser lors de la création
+    window.currentEvaluationClassroomId = classroomId;
     document.getElementById('newEvaluationModal').classList.add('show');
     
     // Initialiser la date à aujourd'hui
@@ -6873,7 +7709,10 @@ function showNewEvaluationModal() {
     const minPointsInput = document.getElementById('evalMinPoints');
     const minPointsHelpText = document.querySelector('#evalMinPoints + small');
     
-    if (!evaluations || evaluations.length === 0) {
+    // Récupérer les évaluations pour cette classe spécifique
+    const classroomEvaluations = evaluationsByClassroom[classroomId] || [];
+    
+    if (!classroomEvaluations || classroomEvaluations.length === 0) {
         // Aucune évaluation existante : permettre la modification
         maxPointsInput.removeAttribute('readonly');
         maxPointsInput.style.backgroundColor = '';
@@ -6886,8 +7725,8 @@ function showNewEvaluationModal() {
         minPointsHelpText.style.color = '#6B7280';
     } else {
         // Des évaluations existent : verrouiller sur les valeurs existantes
-        const existingMaxPoints = evaluations[0].max_points;
-        const existingMinPoints = evaluations[0].min_points || 0;
+        const existingMaxPoints = classroomEvaluations[0].max_points;
+        const existingMinPoints = classroomEvaluations[0].min_points || 0;
         
         maxPointsInput.value = existingMaxPoints;
         maxPointsInput.setAttribute('readonly', 'readonly');
@@ -6913,9 +7752,13 @@ function loadExistingTAGroups() {
     
     select.innerHTML = '';
     
-    if (existingTAGroups.length > 0) {
+    // Utiliser les groupes TA de la classe actuelle
+    const classroomId = window.currentEvaluationClassroomId || "{{ primary_classroom.id }}";
+    const currentTAGroups = existingTAGroupsByClassroom[classroomId] || [];
+    
+    if (currentTAGroups.length > 0) {
         existingOption.style.display = 'block';
-        existingTAGroups.forEach(group => {
+        currentTAGroups.forEach(group => {
             const option = document.createElement('option');
             option.value = group;
             option.textContent = group;
@@ -7024,7 +7867,8 @@ function generateGradeInputs() {
 async function createEvaluation(event) {
     event.preventDefault();
     
-    const classroomId = "{{ primary_classroom.id }}";
+    // Utiliser l'ID de classe stocké dans le modal, ou celui par défaut
+    const classroomId = window.currentEvaluationClassroomId || "{{ primary_classroom.id }}";
     
     // Récupérer les données du formulaire
     const title = document.getElementById('evalTitle').value.trim();
@@ -7081,7 +7925,14 @@ async function createEvaluation(event) {
         if (result.success) {
             showNotification('success', 'Évaluation créée avec succès');
             closeModal('newEvaluationModal');
-            loadEvaluations(); // Recharger le tableau
+            
+            // Recharger seulement la classe concernée
+            const classroomId = window.currentEvaluationClassroomId || "{{ primary_classroom.id }}";
+            const classrooms = {{ classrooms_json | tojson }};
+            const classroom = classrooms.find(c => c.id == classroomId);
+            if (classroom) {
+                loadEvaluationsForClassroom(classroomId, classroom.subject);
+            }
         } else {
             showNotification('error', result.message || 'Erreur lors de la création');
         }
@@ -7091,7 +7942,8 @@ async function createEvaluation(event) {
     }
 }
 
-// Afficher le tableau des évaluations
+// Cette fonction est obsolète - elle a été remplacée par renderEvaluationsTableForSubject
+/*
 function renderEvaluationsTable() {
     const container = document.getElementById('evaluationsContainer');
     const emptyState = document.getElementById('evaluationsEmptyState');
@@ -7144,16 +7996,16 @@ function renderEvaluationsTable() {
                         ${isExpandedTA ? `<button class="btn-icon collapse-ta-btn" onclick="event.stopPropagation(); toggleTAExpansion('${eval.parentTAGroup}')" title="Regrouper les tests TA">
                             <i class="fas fa-compress-alt"></i>
                         </button>` : ''}
-                        ${!isTA && !isExpandedTA ? `<button class="btn-icon edit-eval-btn" onclick="event.stopPropagation(); editEvaluation(${eval.id})" title="Modifier l'évaluation">
+                        ${!isTA && !isExpandedTA ? `<button class="btn-icon edit-eval-btn" onclick="event.stopPropagation(); editEvaluation('${eval.id}')" title="Modifier l'évaluation">
                             <i class="fas fa-edit"></i>
                         </button>` : ''}
-                        ${isExpandedTA ? `<button class="btn-icon edit-eval-btn" onclick="event.stopPropagation(); editEvaluation(${eval.id})" title="Modifier l'évaluation">
+                        ${isExpandedTA ? `<button class="btn-icon edit-eval-btn" onclick="event.stopPropagation(); editEvaluation('${eval.id}')" title="Modifier l'évaluation">
                             <i class="fas fa-edit"></i>
                         </button>` : ''}
-                        ${!isTA && !isExpandedTA ? `<button class="btn-icon delete-eval-btn" onclick="event.stopPropagation(); deleteEvaluation(${eval.id})" title="Supprimer l'évaluation">
+                        ${!isTA && !isExpandedTA ? `<button class="btn-icon delete-eval-btn" onclick="event.stopPropagation(); deleteEvaluation('${eval.id}')" title="Supprimer l'évaluation">
                             <i class="fas fa-trash"></i>
                         </button>` : ''}
-                        ${isExpandedTA ? `<button class="btn-icon delete-eval-btn" onclick="event.stopPropagation(); deleteEvaluation(${eval.id})" title="Supprimer l'évaluation">
+                        ${isExpandedTA ? `<button class="btn-icon delete-eval-btn" onclick="event.stopPropagation(); deleteEvaluation('${eval.id}')" title="Supprimer l'évaluation">
                             <i class="fas fa-trash"></i>
                         </button>` : ''}
                     </div>
@@ -7199,6 +8051,7 @@ function renderEvaluationsTable() {
     html += '</tbody></table>';
     container.innerHTML = html;
 }
+*/
 
 // Traiter les évaluations (grouper les TA)
 function processEvaluations(rawEvaluations) {
@@ -7398,10 +8251,18 @@ function showEvaluationHistogram(evalId) {
     document.getElementById('gradeHistogram').style.display = 'block';
 }
 
-// Trouver une évaluation par ID
+// Trouver une évaluation par ID dans toutes les classes
 function findEvaluationById(evalId) {
-    const processedEvaluations = processEvaluations(evaluations);
-    return processedEvaluations.find(eval => eval.id == evalId);
+    // Parcourir toutes les classes pour trouver l'évaluation
+    const numericEvalId = parseInt(evalId);
+    for (const [classroomId, evaluations] of Object.entries(evaluationsByClassroom)) {
+        const processedEvaluations = processEvaluations(evaluations);
+        const evaluation = processedEvaluations.find(eval => eval.id === numericEvalId);
+        if (evaluation) {
+            return evaluation;
+        }
+    }
+    return null;
 }
 
 // Dessiner l'histogramme simple (sans Chart.js)
@@ -7470,13 +8331,32 @@ function drawHistogram(grades, maxPoints) {
 }
 
 // Éditer une évaluation existante
-async function editEvaluation(evalId) {
+async function editEvaluation(evalId, classroomId = null) {
     // Trouver l'évaluation dans la liste
-    const evaluation = evaluations.find(eval => eval.id === evalId);
+    let evaluation;
+    let currentClassroomId = classroomId;
+    
+    if (classroomId) {
+        // Rechercher dans les évaluations de la classe spécifique
+        const classroomEvaluations = evaluationsByClassroom[classroomId] || [];
+        evaluation = classroomEvaluations.find(eval => eval.id === parseInt(evalId));
+    } else {
+        // Fallback : rechercher dans toutes les classes
+        for (const [cId, evals] of Object.entries(evaluationsByClassroom)) {
+            evaluation = evals.find(eval => eval.id === parseInt(evalId));
+            if (evaluation) {
+                currentClassroomId = cId;
+                break;
+            }
+        }
+    }
     if (!evaluation) {
         showNotification('error', 'Évaluation introuvable');
         return;
     }
+    
+    // Stocker l'ID de classe pour l'utiliser lors de la mise à jour
+    window.currentEvaluationClassroomId = currentClassroomId;
     
     // Pré-remplir le formulaire avec les données existantes
     document.getElementById('evalTitle').value = evaluation.title;
@@ -7584,7 +8464,14 @@ async function updateEvaluation(event, evalId) {
         if (result.success) {
             showNotification('success', 'Évaluation modifiée avec succès');
             closeModal('newEvaluationModal');
-            loadEvaluations(); // Recharger le tableau
+            
+            // Recharger seulement la classe concernée
+            const classroomId = window.currentEvaluationClassroomId || "{{ primary_classroom.id }}";
+            const classrooms = {{ classrooms_json | tojson }};
+            const classroom = classrooms.find(c => c.id == classroomId);
+            if (classroom) {
+                loadEvaluationsForClassroom(classroomId, classroom.subject);
+            }
             
             // Remettre le formulaire en mode création
             resetEvaluationForm();
@@ -7613,9 +8500,25 @@ function resetEvaluationForm() {
 }
 
 // Supprimer une évaluation
-async function deleteEvaluation(evalId) {
+async function deleteEvaluation(evalId, classroomId = null) {
     // Trouver l'évaluation pour afficher son nom
-    const evaluation = evaluations.find(eval => eval.id === evalId);
+    let evaluation;
+    let currentClassroomId = classroomId;
+    
+    if (classroomId) {
+        // Rechercher dans les évaluations de la classe spécifique
+        const classroomEvaluations = evaluationsByClassroom[classroomId] || [];
+        evaluation = classroomEvaluations.find(eval => eval.id === parseInt(evalId));
+    } else {
+        // Fallback : rechercher dans toutes les classes
+        for (const [cId, evals] of Object.entries(evaluationsByClassroom)) {
+            evaluation = evals.find(eval => eval.id === parseInt(evalId));
+            if (evaluation) {
+                currentClassroomId = cId;
+                break;
+            }
+        }
+    }
     if (!evaluation) {
         showNotification('error', 'Évaluation introuvable');
         return;
@@ -7639,7 +8542,17 @@ async function deleteEvaluation(evalId) {
         
         if (result.success) {
             showNotification('success', 'Évaluation supprimée avec succès');
-            loadEvaluations(); // Recharger le tableau
+            
+            // Recharger seulement la classe concernée
+            if (currentClassroomId) {
+                const classrooms = {{ classrooms_json | tojson }};
+                const classroom = classrooms.find(c => c.id == currentClassroomId);
+                if (classroom) {
+                    loadEvaluationsForClassroom(currentClassroomId, classroom.subject);
+                }
+            } else {
+                loadEvaluations(); // Fallback : recharger tout
+            }
             
             // Masquer l'histogramme si l'évaluation supprimée était sélectionnée
             if (selectedEvaluationId === evalId) {
@@ -7665,8 +8578,8 @@ function toggleTAExpansion(taGroupName) {
         expandedTAGroups.add(taGroupName);
     }
     
-    // Recharger le tableau pour refléter les changements
-    renderEvaluationsTable();
+    // Recharger tous les tableaux pour refléter les changements
+    loadEvaluations();
 }
 
 // === GESTION DE L'ONGLET ABSENCES ===
@@ -8445,7 +9358,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Déclencher les actions spécifiques à l'onglet
                 if (selectedTab === 'files') {
-                    loadClassFiles();
+                    loadAllClassFiles();
+                    // Initialiser le drag & drop pour chaque discipline
+                    const classrooms = {{ classrooms_json | tojson }};
+                    classrooms.forEach(classroom => {
+                        initClassDragAndDrop(classroom.id);
+                    });
+                    initClassDragAndDrop();
                 } else if (selectedTab === 'groups') {
                     loadGroups();
                 } else if (selectedTab === 'accommodations') {
@@ -8779,6 +9698,14 @@ function closeShareFileModal() {
     document.querySelectorAll('input[name="selectedStudents"]').forEach(cb => cb.checked = false);
     updateSelectedStudentsCount();
 }
+
+// Gérer l'onglet actif au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Si l'URL contient un hash pour l'onglet sanctions, l'activer
+    if (window.location.hash === '#sanctions-tab') {
+        showTab('sanctions');
+    }
+});
 
 </script>
 {% endblock %}

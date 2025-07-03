@@ -113,6 +113,7 @@ function renderClasses() {
             <div class="class-header" onclick="toggleClassTree(${classroom.id})">
                 <div>
                     <div class="class-name">${classroom.name}</div>
+                    <div class="class-subject">${classroom.subject}</div>
                     <div class="class-info">${classroom.student_count || 0} élève(s)</div>
                 </div>
                 <i class="fas fa-chevron-right class-toggle" id="toggle-${classroom.id}"></i>

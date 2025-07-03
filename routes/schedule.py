@@ -142,7 +142,8 @@ def save_schedule():
         period_number = data.get('period_number')
         classroom_id_param = data.get('classroom_id')
         mixed_group_id_param = data.get('mixed_group_id')
-        custom_task_title = data.get('custom_task_title', '').strip()
+        custom_task_title_raw = data.get('custom_task_title', '')
+        custom_task_title = custom_task_title_raw.strip() if custom_task_title_raw else ''
         item_type = data.get('type', 'classroom')  # 'classroom', 'mixed_group' ou 'custom'
         
         # Initialiser les variables
@@ -218,6 +219,9 @@ def save_schedule():
 
     except Exception as e:
         db.session.rollback()
+        import traceback
+        print(f"❌ Erreur dans save_schedule: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @schedule_bp.route('/validate', methods=['POST'])

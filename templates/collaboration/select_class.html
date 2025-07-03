@@ -122,7 +122,18 @@
 .class-subject {
     color: var(--gray-color);
     font-size: 0.875rem;
+    margin: 0 0 0.5rem 0;
+}
+
+.class-info {
+    color: var(--primary-color);
+    font-size: 0.75rem;
     margin: 0 0 1rem 0;
+    font-weight: 500;
+}
+
+.class-info i {
+    margin-right: 0.25rem;
 }
 
 .class-year {
@@ -285,14 +296,21 @@
             {% for master_class in master_classes %}
             <div class="class-card">
                 <div class="class-header">
-                    <h3 class="class-name">{{ master_class.classroom.name }}</h3>
-                    <p class="class-subject">{{ master_class.classroom.subject }}</p>
+                    <h3 class="class-name">{{ master_class.classroom.display_name }}</h3>
+                    <p class="class-subject">{{ master_class.classroom.combined_subject }}</p>
+                    {% if master_class.classroom.is_multi_subject %}
+                    <p class="class-info"><i class="fas fa-info-circle"></i> Classe multi-disciplines</p>
+                    {% endif %}
                     <span class="class-year">{{ master_class.school_year }}</span>
                 </div>
 
                 <form action="{{ url_for('collaboration.create_shared_class') }}" method="POST" class="class-form">
                     <input type="hidden" name="collaboration_id" value="{{ collaboration.id }}">
                     <input type="hidden" name="original_classroom_id" value="{{ master_class.classroom.id }}">
+                    {% if master_class.classroom.is_multi_subject %}
+                    <input type="hidden" name="all_classroom_ids" value="{{ master_class.classroom.all_classroom_ids|join(',') }}">
+                    <input type="hidden" name="is_multi_subject" value="true">
+                    {% endif %}
 
                     <div class="form-group">
                         <label class="form-label">

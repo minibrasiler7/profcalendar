@@ -127,10 +127,12 @@ def create_evaluation():
             points = grade_data.get('points')
             
             if student_id and points is not None:
-                # Vérifier que l'élève appartient à cette classe
-                student = Student.query.filter_by(
-                    id=student_id,
-                    classroom_id=classroom_id
+                # Vérifier que l'élève appartient au même groupe de classes
+                # Pour un système multi-disciplines, on vérifie s'il appartient à une classe du même groupe
+                student = Student.query.join(Classroom).filter(
+                    Student.id == student_id,
+                    Classroom.class_group == classroom.class_group,
+                    Classroom.user_id == current_user.id
                 ).first()
                 
                 if student:
@@ -247,17 +249,26 @@ def update_evaluation(evaluation_id):
             EvaluationGrade.query.filter_by(evaluation_id=evaluation_id).delete()
             
             # Créer les nouvelles notes
+            classroom = evaluation.classroom  # Récupérer la classe de l'évaluation
             for grade_data in data['grades']:
                 student_id = grade_data.get('student_id')
                 points = grade_data.get('points')
                 
                 if student_id and points is not None:
-                    grade = EvaluationGrade(
-                        evaluation_id=evaluation_id,
-                        student_id=student_id,
-                        points=float(points)
-                    )
-                    db.session.add(grade)
+                    # Vérifier que l'élève appartient au même groupe de classes
+                    student = Student.query.join(Classroom).filter(
+                        Student.id == student_id,
+                        Classroom.class_group == classroom.class_group,
+                        Classroom.user_id == current_user.id
+                    ).first()
+                    
+                    if student:
+                        grade = EvaluationGrade(
+                            evaluation_id=evaluation_id,
+                            student_id=student_id,
+                            points=float(points)
+                        )
+                        db.session.add(grade)
         
         db.session.commit()
         

@@ -292,15 +292,33 @@ def manage_classrooms():
         if action_type == 'create':
             # Création d'une nouvelle classe
             if form.validate_on_submit():
+                # Extraire le nom de la classe (avant le tiret)
+                import re
+                match = re.match(r'^([^-]+?)(?:\s*-\s*.*)?$', form.name.data.strip())
+                class_group = match.group(1).strip() if match else form.name.data
+                
                 classroom = Classroom(
                     user_id=current_user.id,
                     name=form.name.data,
                     subject=form.subject.data,
-                    color=form.color.data or '#4F46E5'
+                    color=form.color.data or '#4F46E5',
+                    class_group=class_group
                 )
                 db.session.add(classroom)
                 try:
                     db.session.commit()
+                    
+                    # Si c'est la première classe de ce groupe, l'enseignant devient maître de classe
+                    existing_classes_in_group = Classroom.query.filter_by(
+                        user_id=current_user.id,
+                        class_group=class_group
+                    ).filter(Classroom.id != classroom.id).count()
+                    
+                    if existing_classes_in_group == 0:
+                        # C'est la première classe de ce groupe - marquer comme maître
+                        classroom.is_class_master = True
+                        db.session.commit()
+                    
                     flash(f'Classe "{classroom.name}" créée avec succès !', 'success')
                     return redirect(url_for('setup.manage_classrooms'))
                 except Exception as e:
@@ -410,13 +428,38 @@ def become_class_master(classroom_id):
     if existing_master:
         flash('Vous êtes déjà maître de cette classe.', 'info')
     else:
-        # Créer l'enregistrement de maître de classe
-        class_master = ClassMaster(
-            classroom_id=classroom_id,
-            master_teacher_id=current_user.id,
-            school_year="2024-2025"
-        )
-        db.session.add(class_master)
+        # Récupérer toutes les classes du même groupe (même class_group ou même nom)
+        group_name = classroom.class_group or classroom.name
+        
+        # Trouver toutes les classes de l'utilisateur avec le même nom de groupe
+        group_classrooms = Classroom.query.filter_by(user_id=current_user.id).filter(
+            (Classroom.class_group == group_name) if classroom.class_group 
+            else (Classroom.name == group_name)
+        ).all()
+        
+        # Créer un enregistrement de maître de classe pour TOUTES les classes du groupe
+        classes_made_master = []
+        for group_classroom in group_classrooms:
+            # Vérifier si pas déjà maître
+            existing = ClassMaster.query.filter_by(
+                classroom_id=group_classroom.id,
+                master_teacher_id=current_user.id,
+                school_year="2024-2025"
+            ).first()
+            
+            if not existing:
+                class_master = ClassMaster(
+                    classroom_id=group_classroom.id,
+                    master_teacher_id=current_user.id,
+                    school_year="2024-2025"
+                )
+                db.session.add(class_master)
+                classes_made_master.append(f"{group_classroom.name} ({group_classroom.subject})")
+        
+        if classes_made_master:
+            flash(f'Vous êtes maintenant maître de classe pour : {", ".join(classes_made_master)}', 'success')
+        else:
+            flash('Vous étiez déjà maître de toutes les classes de ce groupe.', 'info')
         
         # Créer un code d'accès pour cette classe
         access_code = TeacherAccessCode(
@@ -539,13 +582,70 @@ def delete_classroom(id):
         flash(f'Impossible de supprimer la classe "{classroom.name}" car elle est partagée avec {shared_classrooms} enseignant(s) spécialisé(s).', 'error')
         return redirect(url_for('setup.manage_classrooms'))
     
-    # Supprimer les enregistrements ClassMaster
-    ClassMaster.query.filter_by(classroom_id=classroom.id).delete()
+    # Supprimer les enregistrements ClassMaster pour toutes les classes du groupe
+    group_name = classroom.class_group or classroom.name
+    
+    # Trouver toutes les classes de l'utilisateur avec le même nom de groupe
+    group_classrooms = Classroom.query.filter_by(user_id=current_user.id).filter(
+        (Classroom.class_group == group_name) if classroom.class_group 
+        else (Classroom.name == group_name)
+    ).all()
+    
+    # Supprimer les enregistrements ClassMaster pour toutes les classes du groupe
+    for group_classroom in group_classrooms:
+        ClassMaster.query.filter_by(classroom_id=group_classroom.id).delete()
     
     # Ensuite supprimer la classe
     db.session.delete(classroom)
     db.session.commit()
     flash(f'Classe "{classroom.name}" supprimée avec succès.', 'info')
+    return redirect(url_for('setup.manage_classrooms'))
+
+@setup_bp.route('/sync-class-masters')
+@login_required
+def sync_class_masters():
+    """Synchroniser les maîtres de classe pour tous les groupes de classes"""
+    from models.class_collaboration import ClassMaster
+    
+    try:
+        # Récupérer tous les ClassMaster existants
+        existing_masters = ClassMaster.query.filter_by(school_year="2024-2025").all()
+        
+        synced_count = 0
+        for master in existing_masters:
+            classroom = master.classroom
+            group_name = classroom.class_group or classroom.name
+            
+            # Trouver toutes les classes du même groupe pour ce maître
+            group_classrooms = Classroom.query.filter_by(user_id=master.master_teacher_id).filter(
+                (Classroom.class_group == group_name) if classroom.class_group 
+                else (Classroom.name == group_name)
+            ).all()
+            
+            # Créer les enregistrements manquants
+            for group_classroom in group_classrooms:
+                existing = ClassMaster.query.filter_by(
+                    classroom_id=group_classroom.id,
+                    master_teacher_id=master.master_teacher_id,
+                    school_year="2024-2025"
+                ).first()
+                
+                if not existing:
+                    new_master = ClassMaster(
+                        classroom_id=group_classroom.id,
+                        master_teacher_id=master.master_teacher_id,
+                        school_year="2024-2025"
+                    )
+                    db.session.add(new_master)
+                    synced_count += 1
+        
+        db.session.commit()
+        flash(f'Synchronisation terminée. {synced_count} enregistrements de maître de classe créés.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erreur lors de la synchronisation : {str(e)}', 'error')
+    
     return redirect(url_for('setup.manage_classrooms'))
 
 @setup_bp.route('/holidays', methods=['GET', 'POST'])

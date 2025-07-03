@@ -867,6 +867,8 @@ def lesson_view():
     from datetime import time as time_type
     from models.student import Student
     from models.attendance import Attendance
+    from models.class_collaboration import ClassMaster
+    from models.user_preferences import UserSanctionPreferences
 
     # Obtenir l'heure actuelle et le jour de la semaine
     now = datetime.now()
@@ -1090,6 +1092,43 @@ def lesson_view():
         flash('Classe non trouvée ou non autorisée.', 'error')
         return redirect(url_for('planning.dashboard'))
 
+    # Vérifier si le groupe de cette classe est en mode centralisé
+    group_name = lesson_classroom.class_group or lesson_classroom.name
+    
+    # Trouver s'il y a un maître de classe dans le groupe
+    group_classrooms = Classroom.query.filter(
+        (Classroom.class_group == group_name) if lesson_classroom.class_group 
+        else (Classroom.name == group_name)
+    ).all()
+    
+    class_master = None
+    for classroom in group_classrooms:
+        class_master = ClassMaster.query.filter_by(classroom_id=classroom.id).first()
+        if class_master:
+            break
+    
+    # Vérifier si le groupe est en mode centralisé
+    is_centralized_mode = False
+    if class_master:
+        master_prefs = UserSanctionPreferences.query.filter_by(
+            user_id=class_master.master_teacher_id,
+            classroom_id=class_master.classroom_id
+        ).first()
+        if master_prefs and master_prefs.display_mode == 'centralized':
+            is_centralized_mode = True
+    
+    print(f"DEBUG lesson_view: Group {group_name} is in centralized mode: {is_centralized_mode}")
+    
+    # En mode centralisé, redéfinir lesson_classroom pour utiliser celle du maître de classe
+    if is_centralized_mode and class_master:
+        lesson_classroom = Classroom.query.get(class_master.classroom_id)
+        print(f"DEBUG lesson_view: Using master's classroom {class_master.classroom_id} for students in centralized mode")
+        # Aussi redéfinir lesson pour utiliser la classe du maître
+        lesson.classroom_id = class_master.classroom_id
+        lesson.classroom = lesson_classroom
+    else:
+        print(f"DEBUG lesson_view: Using original classroom for students in normal mode")
+
     # Récupérer les élèves selon le groupe de la planification
     if planning and planning.group_id:
         # Si un groupe spécifique est assigné à cette planification, récupérer seulement ses élèves
@@ -1125,13 +1164,34 @@ def lesson_view():
     # Récupérer les modèles de sanctions importés dans cette classe
     from models.sanctions import SanctionTemplate, ClassroomSanctionImport
     from models.student_sanctions import StudentSanctionCount
+    from models.user_preferences import UserSanctionPreferences
     
-    imported_sanctions = db.session.query(SanctionTemplate).join(ClassroomSanctionImport).filter(
-        ClassroomSanctionImport.classroom_id == lesson.classroom_id,
-        ClassroomSanctionImport.is_active == True,
-        SanctionTemplate.user_id == current_user.id,
-        SanctionTemplate.is_active == True
-    ).order_by(SanctionTemplate.name).all()
+    # Vérifier le mode de sanction pour cette classe
+    lesson_prefs = UserSanctionPreferences.get_or_create_for_user_classroom(current_user.id, lesson_classroom.id)
+    
+    if lesson_prefs.display_mode == 'centralized':
+        # En mode centralisé, récupérer TOUS les modèles actifs du maître de classe
+        from models.class_collaboration import ClassMaster
+        
+        # Utiliser le class_master déjà trouvé plus haut
+        # (pas besoin de le rechercher à nouveau)
+        
+        if class_master:
+            # Récupérer TOUS les modèles actifs du maître de classe (pas seulement les importés)
+            imported_sanctions = SanctionTemplate.query.filter_by(
+                user_id=class_master.master_teacher_id,
+                is_active=True
+            ).order_by(SanctionTemplate.name).all()
+        else:
+            imported_sanctions = []
+    else:
+        # Mode normal : récupérer les modèles de l'utilisateur actuel
+        imported_sanctions = db.session.query(SanctionTemplate).join(ClassroomSanctionImport).filter(
+            ClassroomSanctionImport.classroom_id == lesson.classroom_id,
+            ClassroomSanctionImport.is_active == True,
+            SanctionTemplate.user_id == current_user.id,
+            SanctionTemplate.is_active == True
+        ).order_by(SanctionTemplate.name).all()
 
     # Créer le tableau des coches pour chaque élève/sanction
     sanctions_data = {}
@@ -1187,7 +1247,7 @@ def lesson_view():
             import json
             
             seating_plan_record = SeatingPlan.query.filter_by(
-                classroom_id=lesson.classroom_id,
+                classroom_id=lesson_classroom.id,
                 user_id=current_user.id,
                 is_active=True
             ).first()
@@ -1394,6 +1454,146 @@ def toggle_pin_resource():
 
 # Ajoutez cette route après la route lesson_view dans votre fichier planning.py
 
+@planning_bp.route('/debug-centralized/<int:classroom_id>')
+@login_required
+def debug_centralized(classroom_id):
+    """Route de debug pour le mode centralisé"""
+    from models.user_preferences import UserSanctionPreferences
+    from models.class_collaboration import ClassMaster
+    from models.sanctions import SanctionTemplate
+    
+    # 1. Vérifier les préférences de l'utilisateur actuel
+    prefs = UserSanctionPreferences.get_or_create_for_user_classroom(current_user.id, classroom_id)
+    
+    # 2. Vérifier s'il y a un maître de classe (chercher dans tout le groupe)
+    class_master = None
+    target_classroom = Classroom.query.get(classroom_id)
+    group_name = target_classroom.class_group or target_classroom.name
+    
+    # Chercher le maître de classe dans toutes les classes du même groupe
+    group_classrooms = Classroom.query.filter(
+        (Classroom.class_group == group_name) if target_classroom.class_group 
+        else (Classroom.name == group_name)
+    ).all()
+    
+    for classroom in group_classrooms:
+        class_master = ClassMaster.query.filter_by(classroom_id=classroom.id).first()
+        if class_master:
+            break
+    
+    # 3. Récupérer les modèles du maître de classe (s'il existe)
+    master_templates = []
+    if class_master:
+        master_templates = SanctionTemplate.query.filter_by(
+            user_id=class_master.master_teacher_id,
+            is_active=True
+        ).all()
+    
+    # 4. Récupérer les modèles de l'utilisateur actuel
+    user_templates = SanctionTemplate.query.filter_by(
+        user_id=current_user.id,
+        is_active=True
+    ).all()
+    
+    # 5. Tester la méthode is_class_master()
+    is_master = prefs.is_class_master()
+    can_change = prefs.can_change_mode()
+    
+    debug_info = {
+        'classroom_id': classroom_id,
+        'current_user_id': current_user.id,
+        'current_user_name': current_user.username,
+        'preferences_mode': prefs.display_mode,
+        'is_locked': prefs.is_locked,
+        'locked_by_user_id': prefs.locked_by_user_id,
+        'is_class_master': is_master,
+        'can_change_mode': can_change,
+        'class_master_exists': class_master is not None,
+        'class_master_id': class_master.master_teacher_id if class_master else None,
+        'class_master_name': class_master.master_teacher.username if class_master else None,
+        'master_templates_count': len(master_templates),
+        'master_templates': [{'id': t.id, 'name': t.name} for t in master_templates],
+        'user_templates_count': len(user_templates),
+        'user_templates': [{'id': t.id, 'name': t.name} for t in user_templates]
+    }
+    
+    return jsonify(debug_info)
+
+@planning_bp.route('/debug-all-preferences')
+@login_required
+def debug_all_preferences():
+    """Debug toutes les préférences de sanctions"""
+    from models.user_preferences import UserSanctionPreferences
+    
+    all_prefs = UserSanctionPreferences.query.all()
+    
+    preferences_list = []
+    for pref in all_prefs:
+        preferences_list.append({
+            'id': pref.id,
+            'user_id': pref.user_id,
+            'user_name': pref.user.username,
+            'classroom_id': pref.classroom_id,
+            'classroom_name': f"{pref.classroom.name} {pref.classroom.subject}",
+            'display_mode': pref.display_mode,
+            'is_locked': pref.is_locked,
+            'locked_by_user_id': pref.locked_by_user_id
+        })
+    
+    return jsonify({
+        'total_preferences': len(preferences_list),
+        'preferences': preferences_list
+    })
+
+@planning_bp.route('/force-centralized/<int:classroom_id>')
+@login_required
+def force_centralized(classroom_id):
+    """Force le mode centralisé pour une classe et tout son groupe"""
+    from models.user_preferences import UserSanctionPreferences
+    
+    try:
+        # Récupérer la classe
+        classroom = Classroom.query.get(classroom_id)
+        if not classroom:
+            return jsonify({'error': 'Classe non trouvée'})
+        
+        group_name = classroom.class_group or classroom.name
+        
+        # Trouver toutes les classes du groupe
+        group_classrooms = Classroom.query.filter(
+            (Classroom.class_group == group_name) if classroom.class_group 
+            else (Classroom.name == group_name)
+        ).all()
+        
+        updated_count = 0
+        
+        # Pour chaque classe du groupe
+        for group_classroom in group_classrooms:
+            # Récupérer tous les utilisateurs qui ont accès à cette classe
+            users_with_access = [group_classroom.user_id]  # Propriétaire
+            
+            # Ajouter les utilisateurs collaborateurs si applicable
+            # ... (code de collaboration si nécessaire)
+            
+            # Mettre à jour/créer les préférences pour chaque utilisateur
+            for user_id in users_with_access:
+                pref = UserSanctionPreferences.get_or_create_for_user_classroom(user_id, group_classroom.id)
+                pref.display_mode = 'centralized'
+                updated_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Mode centralisé appliqué à {updated_count} préférences',
+            'group_classrooms': len(group_classrooms),
+            'group_name': group_name
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)})
+
 @planning_bp.route('/manage-classes')
 @login_required
 def manage_classes():
@@ -1401,6 +1601,8 @@ def manage_classes():
     from models.student import Student, Grade
     from models.sanctions import SanctionTemplate, ClassroomSanctionImport
     from models.student_sanctions import StudentSanctionCount
+    from models.user_preferences import UserSanctionPreferences
+    from models.class_collaboration import ClassMaster
 
     # Récupérer le groupe de classe sélectionné
     selected_class_group = request.args.get('classroom', '')
@@ -1443,15 +1645,14 @@ def manage_classes():
         flash('Groupe de classe non trouvé.', 'error')
         return redirect(url_for('setup.manage_classrooms'))
 
-    # Utiliser la première classe du groupe pour récupérer les élèves
-    # (les élèves sont les mêmes pour toutes les matières d'une classe)
+    # Récupérer temporairement la première classe (sera redéfinie plus tard si mode centralisé)
     primary_classroom = selected_group['classrooms'][0]
     
     # Vérifier si c'est une classe auto-créée pour un groupe mixte
     is_mixed_group_class = hasattr(primary_classroom, 'mixed_group') and primary_classroom.mixed_group is not None
     mixed_group = primary_classroom.mixed_group if is_mixed_group_class else None
     
-    # Récupérer les données de la classe sélectionnée (normale ou groupe mixte)
+    # Récupérer temporairement les données de la classe (sera redéfini plus tard si mode centralisé)
     students = primary_classroom.get_students()
     # Trier les élèves par nom
     students = sorted(students, key=lambda s: (s.last_name, s.first_name))
@@ -1467,17 +1668,108 @@ def manage_classes():
             'email': student.email
         })
 
-    # Récupérer les notes récentes de toutes les matières du groupe
+    # Convertir les classes en dictionnaires pour le JSON (utilisé en JavaScript)
+    classrooms_json = []
+    for classroom in selected_group['classrooms']:
+        classrooms_json.append({
+            'id': classroom.id,
+            'name': classroom.name,
+            'subject': classroom.subject
+        })
+
+    # Récupérer les notes groupées par discipline/matière
     classroom_ids = [c.id for c in selected_group['classrooms']]
     recent_grades = Grade.query.filter(Grade.classroom_id.in_(classroom_ids)).order_by(Grade.date.desc()).limit(10).all()
+    
+    # Grouper les notes par discipline pour l'affichage
+    grades_by_subject = {}
+    for classroom in selected_group['classrooms']:
+        subject = classroom.subject
+        grades_by_subject[subject] = {
+            'classroom': classroom,
+            'grades': Grade.query.filter(Grade.classroom_id == classroom.id).order_by(Grade.date.desc()).all()
+        }
 
     # Récupérer les modèles de sanctions importés dans toutes les matières du groupe
-    imported_sanctions = db.session.query(SanctionTemplate).join(ClassroomSanctionImport).filter(
-        ClassroomSanctionImport.classroom_id.in_(classroom_ids),
-        ClassroomSanctionImport.is_active == True,
-        SanctionTemplate.user_id == current_user.id,
-        SanctionTemplate.is_active == True
-    ).distinct().order_by(SanctionTemplate.name).all()
+    # En mode centralisé, récupérer les modèles du maître de classe pour tous les enseignants
+    
+    # D'abord, vérifier le mode de sanction pour cette classe
+    # On vérifie si le groupe est en mode centralisé en cherchant le maître de classe
+    first_classroom = Classroom.query.get(classroom_ids[0])
+    group_name = first_classroom.class_group or first_classroom.name
+    
+    # Trouver s'il y a un maître de classe dans le groupe
+    group_classrooms = Classroom.query.filter(
+        (Classroom.class_group == group_name) if first_classroom.class_group 
+        else (Classroom.name == group_name)
+    ).all()
+    
+    class_master = None
+    for classroom in group_classrooms:
+        class_master = ClassMaster.query.filter_by(classroom_id=classroom.id).first()
+        if class_master:
+            break
+    
+    # Vérifier si le groupe est en mode centralisé (en regardant les préférences du maître)
+    is_centralized_mode = False
+    if class_master:
+        master_prefs = UserSanctionPreferences.query.filter_by(
+            user_id=class_master.master_teacher_id,
+            classroom_id=class_master.classroom_id
+        ).first()
+        if master_prefs and master_prefs.display_mode == 'centralized':
+            is_centralized_mode = True
+    
+    print(f"DEBUG: Group {group_name} is in centralized mode: {is_centralized_mode}")
+    
+    # En mode centralisé, redéfinir primary_classroom et students pour utiliser ceux du maître de classe
+    if is_centralized_mode and class_master:
+        # Utiliser la classe du maître de classe pour récupérer les élèves
+        primary_classroom = Classroom.query.get(class_master.classroom_id)
+        print(f"DEBUG: Using master's classroom {class_master.classroom_id} for students in centralized mode")
+        
+        # Redéfinir les variables qui dépendent de primary_classroom
+        is_mixed_group_class = hasattr(primary_classroom, 'mixed_group') and primary_classroom.mixed_group is not None
+        mixed_group = primary_classroom.mixed_group if is_mixed_group_class else None
+        
+        # Récupérer les élèves de la classe du maître
+        students = primary_classroom.get_students()
+        students = sorted(students, key=lambda s: (s.last_name, s.first_name))
+        print(f"DEBUG: Retrieved {len(students)} students from master's classroom")
+        
+        # Redéfinir students_json avec les nouveaux élèves
+        students_json = []
+        for student in students:
+            students_json.append({
+                'id': student.id,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'full_name': student.full_name,
+                'email': student.email
+            })
+    else:
+        print(f"DEBUG: Using first classroom of group for students in normal mode")
+    
+    if is_centralized_mode:
+        # En mode centralisé, récupérer TOUS les modèles actifs du maître de classe
+        if class_master:
+            # Récupérer TOUS les modèles actifs du maître de classe (pas seulement les importés)
+            imported_sanctions = SanctionTemplate.query.filter_by(
+                user_id=class_master.master_teacher_id,
+                is_active=True
+            ).order_by(SanctionTemplate.name).all()
+            print(f"DEBUG: Found {len(imported_sanctions)} sanctions from master {class_master.master_teacher_id}")
+        else:
+            imported_sanctions = []
+            print("DEBUG: No class master found")
+    else:
+        # Mode normal : récupérer les modèles de l'utilisateur actuel
+        imported_sanctions = db.session.query(SanctionTemplate).join(ClassroomSanctionImport).filter(
+            ClassroomSanctionImport.classroom_id.in_(classroom_ids),
+            ClassroomSanctionImport.is_active == True,
+            SanctionTemplate.user_id == current_user.id,
+            SanctionTemplate.is_active == True
+        ).distinct().order_by(SanctionTemplate.name).all()
 
     # Créer le tableau des coches pour chaque élève/sanction
     sanctions_data = {}
@@ -1503,7 +1795,49 @@ def manage_classes():
     
     # Sauvegarder les nouveaux compteurs créés
     db.session.commit()
-
+    
+    # Si le groupe est en mode centralisé, s'assurer que l'utilisateur actuel a les bonnes préférences
+    if is_centralized_mode and class_master:
+        print(f"DEBUG: Ensuring user {current_user.id} has correct centralized preferences")
+        
+        # Pour chaque classe du groupe, créer/mettre à jour les préférences de l'utilisateur actuel
+        for classroom in group_classrooms:
+            user_pref = UserSanctionPreferences.query.filter_by(
+                user_id=current_user.id,
+                classroom_id=classroom.id
+            ).first()
+            
+            if not user_pref:
+                # Créer les préférences manquantes
+                print(f"DEBUG: Creating missing preferences for user {current_user.id}, classroom {classroom.id}")
+                user_pref = UserSanctionPreferences(
+                    user_id=current_user.id,
+                    classroom_id=classroom.id,
+                    display_mode='centralized',
+                    is_locked=(current_user.id != class_master.master_teacher_id),
+                    locked_by_user_id=class_master.master_teacher_id if current_user.id != class_master.master_teacher_id else None
+                )
+                db.session.add(user_pref)
+            elif user_pref.display_mode != 'centralized' and current_user.id != class_master.master_teacher_id:
+                # Mettre à jour les préférences pour qu'elles soient en mode centralisé
+                print(f"DEBUG: Updating preferences for user {current_user.id}, classroom {classroom.id}")
+                user_pref.display_mode = 'centralized'
+                user_pref.is_locked = True
+                user_pref.locked_by_user_id = class_master.master_teacher_id
+        
+        db.session.commit()
+        print("DEBUG: User preferences updated for centralized mode")
+    
+    # Récupérer les préférences de sanctions pour chaque classe du groupe
+    classroom_preferences = {}
+    is_class_master = False
+    for classroom in selected_group['classrooms']:
+        pref = UserSanctionPreferences.get_or_create_for_user_classroom(current_user.id, classroom.id)
+        classroom_preferences[classroom.id] = pref
+        
+        # Vérifier si l'utilisateur est maître de cette classe
+        if pref.is_class_master():
+            is_class_master = True
     # Récupérer les justifications d'absence pour cette classe
     from models.absence_justification import AbsenceJustification
     justifications = AbsenceJustification.query.join(
@@ -1564,7 +1898,9 @@ def manage_classes():
                          selected_tab=selected_tab,
                          students=students,
                          students_json=students_json,
+                         classrooms_json=classrooms_json,
                          recent_grades=recent_grades,
+                         grades_by_subject=grades_by_subject,
                          imported_sanctions=imported_sanctions,
                          sanctions_data=sanctions_data,
                          justifications=justifications,
@@ -1572,7 +1908,9 @@ def manage_classes():
                          available_students=available_students,
                          is_specialized_teacher=is_specialized_teacher,
                          is_mixed_group_class=is_mixed_group_class,
-                         mixed_group=mixed_group)
+                         mixed_group=mixed_group,
+                         classroom_preferences=classroom_preferences,
+                         is_class_master=is_class_master)
 
 
 @planning_bp.route('/update-sanction-count', methods=['POST'])
@@ -1593,15 +1931,59 @@ def update_sanction_count():
         if student_id is None or template_id is None or new_count is None:
             return jsonify({'success': False, 'message': 'Données manquantes'}), 400
         
-        # Vérifier que l'élève appartient à une classe de l'utilisateur
+        # Vérifier que l'élève appartient à une classe accessible par l'utilisateur
         from models.student import Student
+        from models.user_preferences import UserSanctionPreferences
+        from models.class_collaboration import ClassMaster
+        
+        # D'abord, chercher l'élève dans les classes de l'utilisateur
         student = Student.query.join(Classroom).filter(
             Student.id == student_id,
             Classroom.user_id == current_user.id
         ).first()
         
+        # Si pas trouvé, vérifier si l'utilisateur peut accéder à cet élève via le mode centralisé
         if not student:
-            return jsonify({'success': False, 'message': 'Élève non trouvé'}), 404
+            # Chercher l'élève dans toutes les classes
+            student = Student.query.get(student_id)
+            if student and student.classroom:
+                # Vérifier si la classe de l'élève fait partie d'un groupe en mode centralisé
+                classroom = student.classroom
+                group_name = classroom.class_group or classroom.name
+                
+                # Chercher s'il y a un maître de classe pour ce groupe
+                group_classrooms = Classroom.query.filter(
+                    (Classroom.class_group == group_name) if classroom.class_group 
+                    else (Classroom.name == group_name)
+                ).all()
+                
+                class_master = None
+                for gc in group_classrooms:
+                    class_master = ClassMaster.query.filter_by(classroom_id=gc.id).first()
+                    if class_master:
+                        break
+                
+                # Vérifier si le groupe est en mode centralisé ET si l'utilisateur a des préférences dans ce groupe
+                if class_master:
+                    user_has_access = False
+                    for gc in group_classrooms:
+                        user_pref = UserSanctionPreferences.query.filter_by(
+                            user_id=current_user.id,
+                            classroom_id=gc.id
+                        ).first()
+                        if user_pref and user_pref.display_mode == 'centralized':
+                            user_has_access = True
+                            break
+                    
+                    if not user_has_access:
+                        student = None  # L'utilisateur n'a pas accès à cet élève
+                else:
+                    student = None  # Pas de mode centralisé
+            else:
+                student = None
+        
+        if not student:
+            return jsonify({'success': False, 'message': 'Élève non trouvé ou accès non autorisé'}), 404
         
         # Récupérer ou créer le compteur
         count_record = StudentSanctionCount.query.filter_by(
@@ -1631,6 +2013,161 @@ def update_sanction_count():
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
+
+@planning_bp.route('/update-sanction-display-preferences', methods=['POST'])
+@login_required
+def update_sanction_display_preferences():
+    """Mettre à jour les préférences d'affichage des coches avec gestion complexe"""
+    from models.user_preferences import UserSanctionPreferences
+    from models.student_sanctions import StudentSanctionCount
+    from models.student import Student
+    
+    data = request.get_json()
+    display_mode = data.get('display_mode')
+    classroom_id = data.get('classroom_id')
+    confirmed = data.get('confirmed', False)
+    
+    print(f"DEBUG: update_sanction_display_preferences called")
+    print(f"DEBUG: user_id={current_user.id}, username={current_user.username}")
+    print(f"DEBUG: classroom_id={classroom_id}, display_mode={display_mode}, confirmed={confirmed}")
+    
+    if display_mode not in ['unified', 'separated', 'centralized']:
+        return jsonify({'success': False, 'message': 'Mode d\'affichage invalide'}), 400
+    
+    if not classroom_id:
+        return jsonify({'success': False, 'message': 'ID de classe manquant'}), 400
+    
+    try:
+        # Récupérer les préférences pour cette classe
+        preferences = UserSanctionPreferences.get_or_create_for_user_classroom(current_user.id, classroom_id)
+        
+        print(f"DEBUG: preferences found - mode={preferences.display_mode}, is_locked={preferences.is_locked}")
+        print(f"DEBUG: is_class_master={preferences.is_class_master()}, can_change_mode={preferences.can_change_mode()}")
+        
+        # Vérifier si l'utilisateur peut changer le mode
+        if not preferences.can_change_mode():
+            locked_by = preferences.locked_by_user.username if preferences.locked_by_user else "le maître de classe"
+            print(f"DEBUG: Access denied - locked by {locked_by}")
+            return jsonify({
+                'success': False, 
+                'message': f'Mode verrouillé par {locked_by}. Seul le maître de classe peut modifier ce paramètre.'
+            }), 403
+        
+        # Si mode centralisé, vérifier que l'utilisateur est maître de cette classe
+        if display_mode == 'centralized' and not preferences.is_class_master():
+            print(f"DEBUG: Access denied - not class master for centralized mode")
+            return jsonify({
+                'success': False, 
+                'message': 'Seuls les maîtres de classe peuvent utiliser le mode centralisé'
+            }), 403
+        
+        # Si pas encore confirmé, demander confirmation (sauf si même mode)
+        if not confirmed and preferences.display_mode != display_mode:
+            return jsonify({
+                'success': False, 
+                'requires_confirmation': True,
+                'message': 'Changer de mode remettra toutes les coches à zéro. Êtes-vous sûr ?'
+            })
+        
+        # Récupérer l'ancien mode pour gérer les transitions
+        old_mode = preferences.display_mode
+        
+        print(f"DEBUG: Changing mode from {old_mode} to {display_mode}")
+        
+        # Mettre à jour les préférences de base
+        preferences.display_mode = display_mode
+        
+        print(f"DEBUG: Updated preferences for user {current_user.id}, classroom {classroom_id} to {display_mode}")
+        
+        db.session.commit()
+        
+        print(f"DEBUG: Mode updated successfully")
+        
+        # Gérer les transitions complexes
+        if old_mode != display_mode:
+            if display_mode == 'centralized':
+                # Transition vers mode centralisé
+                UserSanctionPreferences.lock_classroom_for_centralized_mode(classroom_id, current_user.id)
+                UserSanctionPreferences.copy_sanction_templates_to_all_teachers(classroom_id, current_user.id)
+                message = 'Mode centralisé activé. Les modèles de sanctions ont été copiés vers tous les enseignants.'
+                
+            elif old_mode == 'centralized':
+                # Transition depuis mode centralisé
+                UserSanctionPreferences.unlock_classroom_from_centralized_mode(classroom_id, current_user.id)
+                UserSanctionPreferences.cleanup_after_centralized_mode(classroom_id, current_user.id)
+                message = 'Mode centralisé désactivé. Les autres enseignants peuvent maintenant modifier leurs préférences.'
+                
+            else:
+                # Transition entre modes non-centralisés (unified <-> separated)
+                # Remettre les coches à zéro pour toutes les classes du même groupe
+                
+                # Récupérer la classe pour trouver le groupe
+                classroom = Classroom.query.get(classroom_id)
+                if classroom:
+                    # Trouver toutes les classes du même groupe
+                    group_name = classroom.class_group or classroom.name
+                    group_classrooms = Classroom.query.filter_by(user_id=current_user.id).filter(
+                        (Classroom.class_group == group_name) if classroom.class_group 
+                        else (Classroom.name == group_name)
+                    ).all()
+                    
+                    group_classroom_ids = [c.id for c in group_classrooms]
+                    
+                    # Récupérer tous les élèves de toutes les classes du groupe
+                    student_ids = [s.id for s in Student.query.filter(Student.classroom_id.in_(group_classroom_ids)).all()]
+                    
+                    # Récupérer les sanctions importées dans toutes les classes du groupe
+                    from models.sanctions import SanctionTemplate, ClassroomSanctionImport
+                    
+                    # En mode centralisé, utiliser les modèles du maître de classe
+                    if display_mode == 'centralized' or old_mode == 'centralized':
+                        from models.class_collaboration import ClassMaster
+                        
+                        class_master = ClassMaster.query.filter_by(classroom_id=classroom_id).first()
+                        
+                        if class_master:
+                            imported_template_ids = db.session.query(SanctionTemplate.id).filter(
+                                SanctionTemplate.user_id == class_master.master_teacher_id,
+                                SanctionTemplate.is_active == True
+                            ).distinct().all()
+                        else:
+                            imported_template_ids = []
+                    else:
+                        # Mode normal
+                        imported_template_ids = db.session.query(SanctionTemplate.id).join(ClassroomSanctionImport).filter(
+                            ClassroomSanctionImport.classroom_id.in_(group_classroom_ids),
+                            ClassroomSanctionImport.is_active == True,
+                            SanctionTemplate.user_id == current_user.id,
+                            SanctionTemplate.is_active == True
+                        ).distinct().all()
+                    
+                    template_ids = [t[0] for t in imported_template_ids]
+                    
+                    if student_ids and template_ids:
+                        # Remettre à zéro tous les compteurs pour ces élèves et ces sanctions
+                        StudentSanctionCount.query.filter(
+                            StudentSanctionCount.student_id.in_(student_ids),
+                            StudentSanctionCount.template_id.in_(template_ids)
+                        ).update({'check_count': 0}, synchronize_session=False)
+                        db.session.commit()
+                
+                mode_names = {
+                    'unified': 'unifié',
+                    'separated': 'séparé par discipline'
+                }
+                message = f'Mode {mode_names.get(display_mode, display_mode)} activé. Les coches ont été remises à zéro.'
+        else:
+            message = 'Préférences mises à jour avec succès'
+        
+        return jsonify({
+            'success': True,
+            'message': message,
+            'new_mode': display_mode
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Erreur: {str(e)}'}), 500
 
 @planning_bp.route('/reset-all-sanctions', methods=['POST'])
 @login_required
@@ -2516,12 +3053,32 @@ def check_sanction_thresholds():
             return jsonify({'success': False, 'message': 'Classe non trouvée'}), 404
         
         # Récupérer les sanctions importées dans cette classe
-        imported_sanctions = db.session.query(SanctionTemplate).join(ClassroomSanctionImport).filter(
-            ClassroomSanctionImport.classroom_id == classroom_id,
-            ClassroomSanctionImport.is_active == True,
-            SanctionTemplate.user_id == current_user.id,
-            SanctionTemplate.is_active == True
-        ).all()
+        # En mode centralisé, récupérer les modèles du maître de classe
+        from models.user_preferences import UserSanctionPreferences
+        
+        classroom_prefs = UserSanctionPreferences.get_or_create_for_user_classroom(current_user.id, classroom_id)
+        
+        if classroom_prefs.display_mode == 'centralized':
+            # En mode centralisé, récupérer TOUS les modèles actifs du maître de classe
+            from models.class_collaboration import ClassMaster
+            
+            class_master = ClassMaster.query.filter_by(classroom_id=classroom_id).first()
+            
+            if class_master:
+                imported_sanctions = SanctionTemplate.query.filter_by(
+                    user_id=class_master.master_teacher_id,
+                    is_active=True
+                ).all()
+            else:
+                imported_sanctions = []
+        else:
+            # Mode normal : récupérer les modèles de l'utilisateur actuel
+            imported_sanctions = db.session.query(SanctionTemplate).join(ClassroomSanctionImport).filter(
+                ClassroomSanctionImport.classroom_id == classroom_id,
+                ClassroomSanctionImport.is_active == True,
+                SanctionTemplate.user_id == current_user.id,
+                SanctionTemplate.is_active == True
+            ).all()
         
         # Récupérer les élèves de la classe
         students = Student.query.filter_by(classroom_id=classroom_id).all()
@@ -3690,15 +4247,45 @@ def get_student_report_sanctions(student_id):
     try:
         from models.sanctions import SanctionTemplate
         from models.student_sanctions import StudentSanctionCount
+        from models.student import Student
+        from models.user_preferences import UserSanctionPreferences
         
-        sanctions = db.session.query(StudentSanctionCount, SanctionTemplate).join(
-            SanctionTemplate,
-            StudentSanctionCount.template_id == SanctionTemplate.id
-        ).filter(
-            StudentSanctionCount.student_id == student_id,
-            SanctionTemplate.user_id == current_user.id,
-            StudentSanctionCount.check_count > 0
-        ).all()
+        # Récupérer l'élève pour connaître sa classe
+        student = Student.query.get(student_id)
+        if not student:
+            return jsonify({'success': False, 'message': 'Élève non trouvé'}), 404
+        
+        # Vérifier le mode de sanction pour cette classe
+        student_prefs = UserSanctionPreferences.get_or_create_for_user_classroom(current_user.id, student.classroom_id)
+        
+        if student_prefs.display_mode == 'centralized':
+            # En mode centralisé, récupérer les modèles du maître de classe
+            from models.class_collaboration import ClassMaster
+            
+            class_master = ClassMaster.query.filter_by(classroom_id=student.classroom_id).first()
+            
+            if class_master:
+                sanctions = db.session.query(StudentSanctionCount, SanctionTemplate).join(
+                    SanctionTemplate,
+                    StudentSanctionCount.template_id == SanctionTemplate.id
+                ).filter(
+                    StudentSanctionCount.student_id == student_id,
+                    SanctionTemplate.user_id == class_master.master_teacher_id,
+                    SanctionTemplate.is_active == True,
+                    StudentSanctionCount.check_count > 0
+                ).all()
+            else:
+                sanctions = []
+        else:
+            # Mode normal : récupérer les modèles de l'utilisateur actuel
+            sanctions = db.session.query(StudentSanctionCount, SanctionTemplate).join(
+                SanctionTemplate,
+                StudentSanctionCount.template_id == SanctionTemplate.id
+            ).filter(
+                StudentSanctionCount.student_id == student_id,
+                SanctionTemplate.user_id == current_user.id,
+                StudentSanctionCount.check_count > 0
+            ).all()
         
         return jsonify({
             'success': True,

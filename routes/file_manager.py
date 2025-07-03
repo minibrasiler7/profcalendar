@@ -114,6 +114,7 @@ def get_classes():
             classes_data.append({
                 'id': classroom.id,
                 'name': classroom.name,
+                'subject': classroom.subject,
                 'student_count': classroom.students.count()
             })
 
@@ -147,7 +148,11 @@ def get_class_files(class_id):
             return jsonify({'success': False, 'message': 'Classe introuvable'}), 404
 
         # Récupérer les fichiers de la classe
-        class_files = ClassFile.query.filter_by(classroom_id=class_id).all()
+        # Exclure les fichiers partagés uniquement avec les élèves
+        class_files = ClassFile.query.filter_by(
+            classroom_id=class_id,
+            is_student_shared=False
+        ).all()
 
         files_data = []
         for file in class_files:
@@ -916,8 +921,13 @@ def serve_file(file_id):
                 print(f"[DEBUG] Accès refusé - user_id:{current_user.id} vs {class_file.classroom.user_id}")
                 return "Accès refusé", 403
         
-        # Construction du chemin simplifié
-        file_path = os.path.join(current_app.root_path, 'uploads', 'class_files', str(class_file.classroom_id), class_file.filename)
+        # Construction du chemin selon le type de fichier
+        if class_file.is_student_shared:
+            # Fichier partagé avec les élèves
+            file_path = os.path.join(current_app.root_path, 'uploads', 'student_shared', str(class_file.classroom_id), class_file.filename)
+        else:
+            # Fichier normal de classe
+            file_path = os.path.join(current_app.root_path, 'uploads', 'class_files', str(class_file.classroom_id), class_file.filename)
         print(f"[DEBUG] Chemin complet: {file_path}")
         print(f"[DEBUG] Fichier existe: {os.path.exists(file_path)}")
         
@@ -1161,8 +1171,10 @@ def delete_class_folder():
         print(f"🔍 Recherche des fichiers avec préfixe: '{folder_description_prefix}'")
         
         # Chercher les fichiers dans le dossier exact ET dans tous ses sous-dossiers
+        # Exclure les fichiers partagés uniquement avec les élèves
         class_files = ClassFile.query.filter(
             ClassFile.classroom_id == class_id,
+            ClassFile.is_student_shared == False,
             db.or_(
                 ClassFile.description == folder_description_exact,
                 ClassFile.description.like(folder_description_prefix + '%')

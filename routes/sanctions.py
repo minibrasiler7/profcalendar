@@ -28,8 +28,56 @@ def index():
             template_id=template.id
         ).order_by(SanctionThreshold.check_count).all()
     
-    # Récupérer les classes pour l'import
-    classrooms = current_user.classrooms.all()
+    # Récupérer les classes et leurs préférences de sanction pour l'import
+    from models.user_preferences import UserSanctionPreferences
+    from collections import defaultdict
+    
+    all_classrooms = current_user.classrooms.all()
+    
+    # Regrouper les classes selon leur mode de sanction
+    classroom_groups = []
+    processed_class_groups = set()
+    
+    for classroom in all_classrooms:
+        # Récupérer les préférences pour cette classe
+        prefs = UserSanctionPreferences.get_or_create_for_user_classroom(current_user.id, classroom.id)
+        
+        if prefs.display_mode in ['unified', 'centralized']:
+            # Mode unifié ou centralisé = regrouper par class_group
+            group_name = classroom.class_group or classroom.name
+            
+            if group_name not in processed_class_groups:
+                processed_class_groups.add(group_name)
+                
+                # Trouver toutes les classes de ce groupe
+                group_classrooms = [c for c in all_classrooms 
+                                   if (c.class_group or c.name) == group_name]
+                
+                # Créer un nom combiné pour le groupe
+                subjects = sorted(list(set(c.subject for c in group_classrooms if c.subject)))
+                combined_name = f"{group_name} {'/'.join(subjects)}" if len(subjects) > 1 else f"{group_name} {subjects[0] if subjects else ''}"
+                
+                classroom_groups.append({
+                    'id': group_classrooms[0].id,  # Utiliser l'ID de la première classe du groupe
+                    'name': combined_name.strip(),
+                    'display_name': combined_name.strip(),
+                    'mode': prefs.display_mode,
+                    'classrooms': group_classrooms,
+                    'is_group': len(group_classrooms) > 1
+                })
+        else:
+            # Mode séparé = afficher chaque classe individuellement
+            classroom_groups.append({
+                'id': classroom.id,
+                'name': f"{classroom.name} {classroom.subject}".strip(),
+                'display_name': f"{classroom.name} {classroom.subject}".strip(),
+                'mode': prefs.display_mode,
+                'classrooms': [classroom],
+                'is_group': False
+            })
+    
+    # Trier par nom d'affichage
+    classroom_groups.sort(key=lambda x: x['display_name'])
     
     # Statistiques
     total_templates = len(templates)
@@ -46,7 +94,7 @@ def index():
     
     return render_template('sanctions/index.html',
                          templates=templates,
-                         classrooms=classrooms,
+                         classroom_groups=classroom_groups,
                          stats=stats)
 
 @sanctions_bp.route('/create')

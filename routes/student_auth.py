@@ -399,9 +399,15 @@ def download_file(file_id):
         # Marquer comme vu
         share.mark_as_viewed()
         
-        # Construire le chemin du fichier
-        file_path = os.path.join(current_app.root_path, 'uploads', 'class_files', 
-                               str(class_file.classroom_id), class_file.filename)
+        # Construire le chemin du fichier selon le type
+        if class_file.is_student_shared:
+            # Fichier partagé avec les élèves
+            file_path = os.path.join(current_app.root_path, 'uploads', 'student_shared', 
+                                   str(class_file.classroom_id), class_file.filename)
+        else:
+            # Fichier normal de classe
+            file_path = os.path.join(current_app.root_path, 'uploads', 'class_files', 
+                                   str(class_file.classroom_id), class_file.filename)
         
         if not os.path.exists(file_path):
             flash('Fichier physique introuvable.', 'error')
@@ -470,9 +476,15 @@ def preview_file(file_id):
         # Marquer comme vu
         share.mark_as_viewed()
         
-        # Construire le chemin du fichier
-        file_path = os.path.join(current_app.root_path, 'uploads', 'class_files', 
-                               str(class_file.classroom_id), class_file.filename)
+        # Construire le chemin du fichier selon le type
+        if class_file.is_student_shared:
+            # Fichier partagé avec les élèves
+            file_path = os.path.join(current_app.root_path, 'uploads', 'student_shared', 
+                                   str(class_file.classroom_id), class_file.filename)
+        else:
+            # Fichier normal de classe
+            file_path = os.path.join(current_app.root_path, 'uploads', 'class_files', 
+                                   str(class_file.classroom_id), class_file.filename)
         
         if not os.path.exists(file_path):
             flash('Fichier physique introuvable.', 'error')

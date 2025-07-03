@@ -522,6 +522,13 @@
     margin-bottom: 0.25rem;
 }
 
+.class-subject {
+    font-size: 0.8rem;
+    color: var(--primary-color);
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
 .class-info {
     font-size: 0.75rem;
     color: var(--gray-color);

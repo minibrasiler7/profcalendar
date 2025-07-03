@@ -8,6 +8,8 @@ class Classroom(db.Model):
     name = db.Column(db.String(100), nullable=False)
     subject = db.Column(db.String(100), nullable=False)
     color = db.Column(db.String(7), nullable=False)  # Format hexadécimal #RRGGBB
+    class_group = db.Column(db.String(100))  # Nom de la classe sans la matière (ex: "6A")
+    is_class_master = db.Column(db.Boolean, default=False)  # Est maître de classe
 
     # Relations
     schedules = db.relationship('Schedule', backref='classroom', lazy='dynamic', cascade='all, delete-orphan')

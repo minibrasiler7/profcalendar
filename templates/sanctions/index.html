@@ -462,12 +462,19 @@
         <div class="form-group">
             <label class="form-label">Sélectionnez les classes :</label>
             <div class="checkbox-list" id="classroomsList">
-                {% for classroom in classrooms %}
+                {% for group in classroom_groups %}
                 <div class="checkbox-item">
-                    <input type="checkbox" id="class_{{ classroom.id }}" value="{{ classroom.id }}">
+                    <input type="checkbox" id="class_{{ group.id }}" value="{{ group.id }}" data-is-group="{{ group.is_group|lower }}" data-classrooms="{{ group.classrooms|map(attribute='id')|list|join(',') }}">
                     <div class="class-info">
-                        <div class="class-name">{{ classroom.name }}</div>
-                        <div class="class-subject">{{ classroom.subject }}</div>
+                        <div class="class-name">{{ group.display_name }}</div>
+                        <div class="class-subject">
+                            {% if group.is_group %}
+                                Mode: {{ 'Unifié' if group.mode == 'unified' else 'Centralisé' if group.mode == 'centralized' else 'Séparé' }} 
+                                ({{ group.classrooms|length }} classe(s))
+                            {% else %}
+                                Mode: Séparé par discipline
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
                 {% endfor %}
@@ -558,7 +565,20 @@ function closeImportModal() {
 async function performImport() {
     const selectedClasses = [];
     document.querySelectorAll('#classroomsList input[type="checkbox"]:checked').forEach(cb => {
-        selectedClasses.push(parseInt(cb.value));
+        const isGroup = cb.getAttribute('data-is-group') === 'true';
+        
+        if (isGroup) {
+            // Si c'est un groupe, ajouter tous les IDs de classes du groupe
+            const classroomIds = cb.getAttribute('data-classrooms').split(',');
+            classroomIds.forEach(id => {
+                if (id && !selectedClasses.includes(parseInt(id))) {
+                    selectedClasses.push(parseInt(id));
+                }
+            });
+        } else {
+            // Si c'est une classe individuelle, ajouter juste son ID
+            selectedClasses.push(parseInt(cb.value));
+        }
     });
     
     if (selectedClasses.length === 0) {

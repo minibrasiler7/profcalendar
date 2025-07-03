@@ -247,11 +247,46 @@ def select_class(collaboration_id):
         return redirect(url_for('collaboration.index'))
     
     # Récupérer les classes du maître de classe
-    master_classes = collaboration.master_teacher.get_master_classes()
+    master_classes_raw = collaboration.master_teacher.get_master_classes()
+    
+    # Grouper les classes par nom de groupe pour éviter les doublons
+    from collections import defaultdict
+    grouped_classes = defaultdict(list)
+    
+    for master_class in master_classes_raw:
+        classroom = master_class.classroom
+        group_name = classroom.class_group or classroom.name
+        grouped_classes[group_name].append(master_class)
+    
+    # Créer la structure finale pour le template
+    master_classes_grouped = []
+    for group_name, classes_in_group in grouped_classes.items():
+        if len(classes_in_group) > 1:
+            # Groupe multi-disciplines : combiner les matières
+            subjects = sorted([c.classroom.subject for c in classes_in_group if c.classroom.subject])
+            combined_subject = '/'.join(subjects)
+            
+            # Utiliser la première classe du groupe comme représentant
+            representative_class = classes_in_group[0]
+            representative_class.classroom.display_name = group_name
+            representative_class.classroom.combined_subject = combined_subject
+            representative_class.classroom.is_multi_subject = True
+            representative_class.classroom.all_classroom_ids = [c.classroom.id for c in classes_in_group]
+            
+            master_classes_grouped.append(representative_class)
+        else:
+            # Classe unique
+            single_class = classes_in_group[0]
+            single_class.classroom.display_name = single_class.classroom.name
+            single_class.classroom.combined_subject = single_class.classroom.subject
+            single_class.classroom.is_multi_subject = False
+            single_class.classroom.all_classroom_ids = [single_class.classroom.id]
+            
+            master_classes_grouped.append(single_class)
     
     return render_template('collaboration/select_class.html',
                          collaboration=collaboration,
-                         master_classes=master_classes)
+                         master_classes=master_classes_grouped)
 
 @collaboration_bp.route('/create-shared-class', methods=['POST'])
 @teacher_required
@@ -261,6 +296,8 @@ def create_shared_class():
     original_classroom_id = request.form.get('original_classroom_id')
     subject = request.form.get('subject', '').strip()
     new_class_name = request.form.get('new_class_name', '').strip()
+    is_multi_subject = request.form.get('is_multi_subject') == 'true'
+    all_classroom_ids = request.form.get('all_classroom_ids', '').strip()
     
     if not all([collaboration_id, original_classroom_id, subject]):
         flash('Tous les champs sont requis', 'error')
@@ -268,6 +305,15 @@ def create_shared_class():
     
     collaboration = TeacherCollaboration.query.get_or_404(collaboration_id)
     original_classroom = Classroom.query.get_or_404(original_classroom_id)
+    
+    # Si c'est une classe multi-disciplines, récupérer toutes les classes du groupe
+    if is_multi_subject and all_classroom_ids:
+        try:
+            classroom_ids = [int(id.strip()) for id in all_classroom_ids.split(',') if id.strip()]
+        except ValueError:
+            classroom_ids = [original_classroom_id]
+    else:
+        classroom_ids = [original_classroom_id]
     
     # Vérifier les permissions
     if collaboration.specialized_teacher_id != current_user.id:
@@ -287,18 +333,24 @@ def create_shared_class():
     
     # Créer la nouvelle classe dérivée
     if not new_class_name:
-        new_class_name = f"{original_classroom.name} - {subject}"
+        if is_multi_subject:
+            # Pour les classes multi-disciplines, utiliser le nom du groupe
+            group_name = original_classroom.class_group or original_classroom.name
+            new_class_name = f"{group_name} - {subject}"
+        else:
+            new_class_name = f"{original_classroom.name} - {subject}"
     
     derived_classroom = Classroom(
         user_id=current_user.id,
         name=new_class_name,
         subject=subject,
-        color=original_classroom.color
+        color=original_classroom.color,
+        class_group=original_classroom.class_group  # Garder le même groupe
     )
     db.session.add(derived_classroom)
     db.session.flush()  # Pour obtenir l'ID
     
-    # Créer le lien de classe partagée
+    # Créer le lien de classe partagée avec la classe principale
     shared_classroom = SharedClassroom(
         collaboration_id=collaboration_id,
         original_classroom_id=original_classroom_id,
@@ -307,9 +359,18 @@ def create_shared_class():
     )
     db.session.add(shared_classroom)
     
-    # Copier les élèves de la classe originale
-    original_students = Student.query.filter_by(classroom_id=original_classroom_id).all()
-    for student in original_students:
+    # Copier les élèves de TOUTES les classes du groupe si multi-disciplines
+    all_students = set()  # Utiliser un set pour éviter les doublons
+    
+    for classroom_id in classroom_ids:
+        classroom_students = Student.query.filter_by(classroom_id=classroom_id).all()
+        for student in classroom_students:
+            # Ajouter par tuple (nom, prénom, email) pour détecter les doublons
+            student_key = (student.first_name, student.last_name, student.email or '')
+            all_students.add((student_key, student))
+    
+    # Créer les élèves dans la nouvelle classe
+    for _, student in all_students:
         # Créer une copie de l'élève pour la nouvelle classe
         derived_student = Student(
             classroom_id=derived_classroom.id,
@@ -337,7 +398,8 @@ def create_shared_class():
     
     db.session.commit()
     
-    flash(f'Classe "{new_class_name}" créée avec succès', 'success')
+    group_info = f" (groupe {original_classroom.class_group})" if is_multi_subject else ""
+    flash(f'Classe "{new_class_name}" créée avec succès{group_info}', 'success')
     return redirect(url_for('planning.manage_classes'))
 
 @collaboration_bp.route('/deactivate-code/<int:code_id>')
