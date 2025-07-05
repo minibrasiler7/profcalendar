@@ -10,6 +10,7 @@ class Classroom(db.Model):
     color = db.Column(db.String(7), nullable=False)  # Format hexadécimal #RRGGBB
     class_group = db.Column(db.String(100))  # Nom de la classe sans la matière (ex: "6A")
     is_class_master = db.Column(db.Boolean, default=False)  # Est maître de classe
+    is_temporary = db.Column(db.Boolean, default=False)  # Classe temporaire en attente d'approbation
 
     # Relations
     schedules = db.relationship('Schedule', backref='classroom', lazy='dynamic', cascade='all, delete-orphan')

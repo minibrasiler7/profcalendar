@@ -6010,6 +6010,81 @@ if (isSpecializedTeacher) {
     }
 }
 
+// Ajouter un élève au container des labels pour le plan de classe
+function addStudentToSeatingLabels(student) {
+    const studentsContainer = document.getElementById('students-labels-container');
+    if (!studentsContainer) return;
+    
+    // Vérifier si l'étudiant n'existe pas déjà
+    const existingLabel = studentsContainer.querySelector(`.student-label[data-student-id="${student.id}"]`);
+    if (existingLabel) return;
+    
+    // Supprimer le message "Aucun élève" s'il existe
+    const emptyMessage = studentsContainer.querySelector('p[style*="italic"]');
+    if (emptyMessage) {
+        emptyMessage.remove();
+    }
+    
+    // Créer le label de l'étudiant
+    const studentLabel = document.createElement('div');
+    studentLabel.className = 'student-label';
+    studentLabel.draggable = true;
+    studentLabel.dataset.studentId = student.id;
+    studentLabel.innerHTML = `
+        <i class="fas fa-user"></i>
+        <span>${student.full_name}</span>
+    `;
+    
+    studentsContainer.appendChild(studentLabel);
+    
+    // Mettre à jour le compteur
+    const studentsCountSpan = document.getElementById('sidebar-students-count');
+    if (studentsCountSpan) {
+        const currentCount = parseInt(studentsCountSpan.textContent) || 0;
+        studentsCountSpan.textContent = currentCount + 1;
+    }
+    
+    // Recharger les étudiants pour le plan de classe si on est sur cet onglet
+    const seatingTab = document.getElementById('seating-tab');
+    if (seatingTab && seatingTab.classList.contains('active')) {
+        loadStudentsForSeating();
+    }
+}
+
+// Supprimer un élève du container des labels pour le plan de classe
+function removeStudentFromSeatingLabels(studentId) {
+    const studentsContainer = document.getElementById('students-labels-container');
+    if (!studentsContainer) return;
+    
+    // Trouver et supprimer le label de l'étudiant
+    const studentLabel = studentsContainer.querySelector(`.student-label[data-student-id="${studentId}"]`);
+    if (studentLabel) {
+        studentLabel.remove();
+    }
+    
+    // Mettre à jour le compteur
+    const studentsCountSpan = document.getElementById('sidebar-students-count');
+    if (studentsCountSpan) {
+        const currentCount = parseInt(studentsCountSpan.textContent) || 0;
+        studentsCountSpan.textContent = Math.max(0, currentCount - 1);
+    }
+    
+    // Vérifier s'il ne reste plus d'élèves et ajouter le message "Aucun élève" si nécessaire
+    const remainingLabels = studentsContainer.querySelectorAll('.student-label');
+    if (remainingLabels.length === 0) {
+        const emptyMessage = document.createElement('p');
+        emptyMessage.style.cssText = 'color: #666; font-style: italic; text-align: center; padding: 20px;';
+        emptyMessage.textContent = 'Aucun élève dans cette classe pour le moment.';
+        studentsContainer.appendChild(emptyMessage);
+    }
+    
+    // Recharger les étudiants pour le plan de classe si on est sur cet onglet
+    const seatingTab = document.getElementById('seating-tab');
+    if (seatingTab && seatingTab.classList.contains('active')) {
+        loadStudentsForSeating();
+    }
+}
+
 // Ajouter une carte d'élève au DOM
 function addStudentCard(student) {
     const studentsGrid = document.querySelector('.students-grid');
@@ -6029,6 +6104,7 @@ function addStudentCard(student) {
     const studentCard = document.createElement('div');
     studentCard.className = 'student-card';
     studentCard.id = `student-${student.id}`;
+    // Animation d'apparition
     studentCard.style.animation = 'slideIn 0.3s ease';
 
     studentCard.innerHTML = `
@@ -6051,10 +6127,37 @@ function addStudentCard(student) {
         </div>
     `;
 
-    const grid = document.querySelector('.students-grid');
+    // Recréer une grille fraîche pour éviter les problèmes CSS
+    const studentsSection = document.querySelector('.students-section');
+    
+    // Sauvegarder les élèves existants avant de supprimer la grille
+    const oldGrid = document.querySelector('.students-grid');
+    let existingStudents = [];
+    
+    if (oldGrid) {
+        existingStudents = Array.from(oldGrid.querySelectorAll('.student-card'));
+        oldGrid.remove();
+    }
+    
+    // Créer une nouvelle grille
+    const grid = document.createElement('div');
+    grid.className = 'students-grid';
+    grid.id = 'studentsGrid';
+    
+    // L'ajouter à la section
+    studentsSection.appendChild(grid);
+    
+    // Remettre tous les élèves existants dans la nouvelle grille
+    existingStudents.forEach(studentElement => {
+        grid.appendChild(studentElement);
+    });
+    
     if (grid) {
         grid.appendChild(studentCard);
     }
+    
+    // Ajouter l'étudiant au container des labels pour le plan de classe
+    addStudentToSeatingLabels(student);
 }
 
 // Mettre à jour une carte d'élève existante
@@ -6194,12 +6297,15 @@ async function deleteStudent(studentId, studentName) {
 
                 setTimeout(() => {
                     studentCard.remove();
+                    
+                    // Supprimer l'élève du container des labels pour le plan de classe
+                    removeStudentFromSeatingLabels(studentId);
 
                     // Vérifier s'il reste des élèves
                     const remainingStudents = document.querySelectorAll('.student-card').length;
                     if (remainingStudents === 0) {
                         // Afficher l'état vide
-                        const studentsSection = document.querySelector('.students-section');
+                        const studentsSection_local = document.querySelector('.students-section');
                         const emptyState = document.createElement('div');
                         emptyState.className = 'empty-state';
                         if (isMixedGroupClass) {
@@ -6217,7 +6323,7 @@ async function deleteStudent(studentId, studentName) {
                                 </button>
                             `;
                         }
-                        studentsSection.appendChild(emptyState);
+                        studentsSection_local.appendChild(emptyState);
                     }
                 }, 300);
             }

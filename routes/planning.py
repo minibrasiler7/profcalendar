@@ -290,7 +290,7 @@ def dashboard():
         if not current_user.school_year_start:
             flash('Veuillez d\'abord compléter la configuration initiale.', 'warning')
             return redirect(url_for('setup.initial_setup'))
-        elif current_user.classrooms.count() == 0:
+        elif current_user.classrooms.filter_by(is_temporary=False).count() == 0:
             flash('Veuillez d\'abord ajouter au moins une classe.', 'warning')
             return redirect(url_for('setup.manage_classrooms'))
         else:
@@ -302,8 +302,8 @@ def dashboard():
         flash('Veuillez d\'abord créer votre horaire type.', 'warning')
         return redirect(url_for('schedule.weekly_schedule'))
 
-    # Statistiques pour le tableau de bord
-    classrooms_count = current_user.classrooms.count()
+    # Statistiques pour le tableau de bord (uniquement classes non temporaires)
+    classrooms_count = current_user.classrooms.filter_by(is_temporary=False).count()
     schedules_count = current_user.schedules.count()
 
     # Obtenir la semaine actuelle
@@ -324,6 +324,20 @@ def dashboard():
     # Chercher le cours actuel ou le prochain
     lesson, is_current_lesson, lesson_date = get_current_or_next_lesson(current_user)
 
+    # Récupérer les invitations reçues (en tant que maître de classe)
+    from models.teacher_invitation import TeacherInvitation
+    from models.invitation_classroom import InvitationClassroom
+    received_invitations = TeacherInvitation.query.filter_by(
+        target_master_teacher_id=current_user.id,
+        status='pending'
+    ).order_by(TeacherInvitation.created_at.desc()).all()
+    
+    # Enrichir chaque invitation avec ses disciplines
+    for invitation in received_invitations:
+        invitation.disciplines = InvitationClassroom.query.filter_by(
+            invitation_id=invitation.id
+        ).all()
+
     return render_template('planning/dashboard.html',
                          classrooms_count=classrooms_count,
                          schedules_count=schedules_count,
@@ -331,7 +345,8 @@ def dashboard():
                          today=today,
                          current_lesson=lesson if is_current_lesson else None,
                          next_lesson=lesson if not is_current_lesson else None,
-                         lesson_date=lesson_date)
+                         lesson_date=lesson_date,
+                         received_invitations=received_invitations)
 
 @planning_bp.route('/calendar')
 @login_required
@@ -358,8 +373,8 @@ def calendar_view():
     # Obtenir les dates de la semaine
     week_dates = get_week_dates(current_week)
 
-    # Récupérer toutes les données nécessaires
-    classrooms = current_user.classrooms.all()
+    # Récupérer toutes les classes non temporaires
+    classrooms = current_user.classrooms.filter_by(is_temporary=False).all()
     
     # Récupérer aussi les groupes mixtes
     from models.mixed_group import MixedGroup
@@ -476,7 +491,7 @@ def calendar_view():
     # Créer une version JSON-serializable de schedule_grid
     schedule_grid_json = {}
     for key, schedule in schedule_grid.items():
-        if schedule.classroom_id:
+        if schedule.classroom_id and schedule.classroom:
             schedule_grid_json[key] = {
                 'classroom_id': schedule.classroom_id,
                 'weekday': schedule.weekday,
@@ -486,6 +501,10 @@ def calendar_view():
                 'classroom_color': schedule.classroom.color,
                 'type': 'classroom'
             }
+        elif schedule.classroom_id and not schedule.classroom:
+            # Cas d'un planning orphelin - classe supprimée
+            print(f"WARNING: Found orphaned schedule {schedule.id} with deleted classroom_id {schedule.classroom_id} in planning calendar")
+            continue
         elif schedule.mixed_group_id:
             schedule_grid_json[key] = {
                 'mixed_group_id': schedule.mixed_group_id,
@@ -1091,6 +1110,11 @@ def lesson_view():
     if not lesson_classroom:
         flash('Classe non trouvée ou non autorisée.', 'error')
         return redirect(url_for('planning.dashboard'))
+    
+    # Vérifier si la classe est temporaire (non approuvée)
+    if lesson_classroom.is_temporary:
+        flash('Cette classe est en attente d\'approbation par le maître de classe.', 'warning')
+        return redirect(url_for('planning.dashboard'))
 
     # Vérifier si le groupe de cette classe est en mode centralisé
     group_name = lesson_classroom.class_group or lesson_classroom.name
@@ -1607,10 +1631,17 @@ def manage_classes():
     # Récupérer le groupe de classe sélectionné
     selected_class_group = request.args.get('classroom', '')
     selected_tab = request.args.get('tab', 'students')  # onglet par défaut : students
-    all_classrooms = current_user.classrooms.all()
+    
+    # Récupérer uniquement les classes non temporaires (approuvées)
+    all_classrooms = current_user.classrooms.filter_by(is_temporary=False).all()
 
     if not all_classrooms:
-        flash('Veuillez d\'abord créer au moins une classe.', 'warning')
+        # Vérifier s'il y a des classes temporaires
+        temp_classrooms = current_user.classrooms.filter_by(is_temporary=True).all()
+        if temp_classrooms:
+            flash('Vos classes sont en attente d\'approbation par le maître de classe. Vous ne pouvez pas encore accéder à la gestion.', 'warning')
+        else:
+            flash('Veuillez d\'abord créer au moins une classe.', 'warning')
         return redirect(url_for('setup.manage_classrooms'))
     
     # Regrouper les classes par class_group

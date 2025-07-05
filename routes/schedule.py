@@ -295,7 +295,7 @@ def view_schedule():
         key = f"{schedule.weekday}_{schedule.period_number}"
         schedule_grid[key] = schedule
         # Créer une version JSON-serializable pour JavaScript
-        if schedule.classroom_id:
+        if schedule.classroom_id and schedule.classroom:
             schedule_grid_json[key] = {
                 'classroom_id': schedule.classroom_id,
                 'weekday': schedule.weekday,
@@ -305,6 +305,10 @@ def view_schedule():
                 'classroom_color': schedule.classroom.color,
                 'type': 'classroom'
             }
+        elif schedule.classroom_id and not schedule.classroom:
+            # Cas d'un planning orphelin - classe supprimée
+            print(f"WARNING: Found orphaned schedule {schedule.id} with deleted classroom_id {schedule.classroom_id}")
+            continue
         elif schedule.mixed_group_id:
             schedule_grid_json[key] = {
                 'mixed_group_id': schedule.mixed_group_id,

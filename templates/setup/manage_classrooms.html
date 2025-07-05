@@ -9,6 +9,141 @@
     margin: 0 auto;
 }
 
+/* Styles pour les modaux améliorés */
+.improved-class-selection-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.improved-class-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: #fafafa;
+}
+
+.improved-class-item:hover {
+    border-color: var(--primary-color);
+    background-color: #f8fafc;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.improved-class-item.selected {
+    border-color: var(--primary-color);
+    background-color: #f0f9ff;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+.class-item-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.class-color-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.class-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.class-item-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+}
+
+.class-item-details {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.class-subject,
+.class-student-count {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.class-subject i,
+.class-student-count i {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.class-item-checkbox {
+    flex-shrink: 0;
+}
+
+.class-item-checkbox input[type="checkbox"] {
+    display: none;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #d1d5db;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: #fff;
+}
+
+.checkbox-label i {
+    font-size: 0.875rem;
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.class-item-checkbox input[type="checkbox"]:checked + .checkbox-label {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.class-item-checkbox input[type="checkbox"]:checked + .checkbox-label i {
+    opacity: 1;
+}
+
+/* Correction du style des boutons dans les modaux */
+.modal-footer .btn {
+    margin-right: 0.5rem;
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+}
+
+.modal-footer .btn:last-child {
+    margin-right: 0;
+}
+
+.modal-footer .btn-outline-secondary {
+    border-color: #d1d5db;
+    color: #6b7280;
+}
+
+.modal-footer .btn-outline-secondary:hover {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+    color: #374151;
+}
+
 .setup-progress {
     display: flex;
     justify-content: space-between;
@@ -175,7 +310,27 @@
         <div class="add-classroom-section">
             <h3><i class="fas fa-plus-circle"></i> Créer une nouvelle classe</h3>
             
-            <form method="POST" action="{{ url_for('setup.manage_classrooms') }}">
+            <!-- Sélection du type de classe -->
+            <div class="class-type-selection">
+                <div class="class-type-options">
+                    <label class="class-type-option selected" for="class-type-normal">
+                        <input type="radio" id="class-type-normal" name="class_type" value="normal" checked>
+                        <span class="class-type-icon">🎓</span>
+                        <div class="class-type-title">Classe normale</div>
+                        <div class="class-type-desc">Une classe traditionnelle avec vos propres élèves</div>
+                    </label>
+                    
+                    <label class="class-type-option" for="class-type-mixed">
+                        <input type="radio" id="class-type-mixed" name="class_type" value="mixed">
+                        <span class="class-type-icon">🔗</span>
+                        <div class="class-type-title">Classe mixte</div>
+                        <div class="class-type-desc">Mélangez des élèves de différentes classes</div>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Formulaire pour classe normale -->
+            <form method="POST" action="{{ url_for('setup.manage_classrooms') }}" id="normal-class-form">
                 {{ form.hidden_tag() }}
                 <input type="hidden" name="action_type" value="create">
                 
@@ -234,33 +389,258 @@
                     <i class="fas fa-plus"></i> Créer la classe
                 </button>
             </form>
+            
+            <!-- Configuration pour classe mixte -->
+            <div class="mixed-class-config" id="mixed-class-config">
+                <h4><i class="fas fa-cog"></i> Configuration de la classe mixte</h4>
+                <p>Configurez votre classe mixte en ajoutant des élèves de différentes classes sources.</p>
+                
+                <form method="POST" action="{{ url_for('setup.manage_classrooms') }}" id="mixed-class-form">
+                    <input type="hidden" name="action_type" value="create_mixed">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Nom de la classe mixte</label>
+                            <input type="text" name="mixed_name" class="form-control" placeholder="Ex: Groupe de soutien maths" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Matière</label>
+                            <input type="text" name="mixed_subject" class="form-control" placeholder="Ex: Mathématiques" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Couleur</label>
+                        <div class="color-palette">
+                            <input type="hidden" id="mixed_color" name="mixed_color" value="#4F46E5">
+                            <div class="color-options">
+                                <div class="color-option active" data-color="#4F46E5" style="background-color: #4F46E5;" title="Violet"></div>
+                                <div class="color-option" data-color="#EF4444" style="background-color: #EF4444;" title="Rouge"></div>
+                                <div class="color-option" data-color="#F59E0B" style="background-color: #F59E0B;" title="Orange"></div>
+                                <div class="color-option" data-color="#84CC16" style="background-color: #84CC16;" title="Vert lime"></div>
+                                <div class="color-option" data-color="#22C55E" style="background-color: #22C55E;" title="Vert"></div>
+                                <div class="color-option" data-color="#06B6D4" style="background-color: #06B6D4;" title="Cyan"></div>
+                                <div class="color-option" data-color="#3B82F6" style="background-color: #3B82F6;" title="Bleu"></div>
+                                <div class="color-option" data-color="#8B5CF6" style="background-color: #8B5CF6;" title="Violet clair"></div>
+                                <div class="color-option" data-color="#EC4899" style="background-color: #EC4899;" title="Rose"></div>
+                                <div class="color-option" data-color="#F97316" style="background-color: #F97316;" title="Orange foncé"></div>
+                                <div class="color-option" data-color="#10B981" style="background-color: #10B981;" title="Emeraude"></div>
+                                <div class="color-option" data-color="#14B8A6" style="background-color: #14B8A6;" title="Sarcelle"></div>
+                                <div class="color-option" data-color="#6366F1" style="background-color: #6366F1;" title="Indigo"></div>
+                                <div class="color-option" data-color="#A855F7" style="background-color: #A855F7;" title="Violet profond"></div>
+                                <div class="color-option" data-color="#F43F5E" style="background-color: #F43F5E;" title="Rose rouge"></div>
+                                <div class="color-option" data-color="#FDE047" style="background-color: #FDE047;" title="Jaune vif"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section d'ajout de classes sources -->
+                    <div class="source-classes-section">
+                        <h5><i class="fas fa-users"></i> Ajouter des classes sources</h5>
+                        <div class="source-classes-buttons">
+                            <button type="button" class="source-class-btn" data-modal="own-classes">
+                                <i class="fas fa-chalkboard-teacher"></i>
+                                Mes classes
+                            </button>
+                            <button type="button" class="source-class-btn" data-modal="code-classes">
+                                <i class="fas fa-key"></i>
+                                Avec code d'accès
+                            </button>
+                            <button type="button" class="source-class-btn" data-modal="invite-classes">
+                                <i class="fas fa-envelope"></i>
+                                Envoyer invitation
+                            </button>
+                            <button type="button" class="source-class-btn" data-modal="external-classes">
+                                <i class="fas fa-external-link-alt"></i>
+                                Classe externe
+                            </button>
+                        </div>
+                        
+                        <div class="added-source-classes" id="added-source-classes">
+                            <!-- Les classes ajoutées apparaîtront ici -->
+                        </div>
+                    </div>
+                    
+                    <!-- Section de sélection des élèves -->
+                    <div class="student-selection-section" id="student-selection-section">
+                        <h5><i class="fas fa-user-check"></i> Sélection des élèves</h5>
+                        <div id="student-groups">
+                            <!-- Les groupes d'élèves apparaîtront ici -->
+                        </div>
+                        
+                        <div class="mixed-class-summary" id="mixed-class-summary">
+                            <div class="summary-stats">
+                                <div class="summary-stat">
+                                    <div class="summary-stat-number" id="total-students">0</div>
+                                    <div class="summary-stat-label">Élèves sélectionnés</div>
+                                </div>
+                                <div class="summary-stat">
+                                    <div class="summary-stat-number" id="total-classes">0</div>
+                                    <div class="summary-stat-label">Classes sources</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Hidden inputs pour les données de la classe mixte -->
+                    <input type="hidden" name="selected_students" id="selected_students_input">
+                    <input type="hidden" name="source_classes" id="source_classes_input">
+                    
+                    <button type="submit" class="btn btn-primary" id="create-mixed-class-btn" disabled>
+                        <i class="fas fa-plus"></i> Créer la classe mixte
+                    </button>
+                </form>
+            </div>
         </div>
         
-        <!-- Formulaire pour rejoindre une classe -->
-        <div class="add-classroom-section" style="margin-top: 2rem;">
-            <h3><i class="fas fa-link"></i> Ou rejoindre une classe existante</h3>
+        <!-- Formulaire pour rejoindre une classe (uniquement pour classe normale) -->
+        <div class="add-classroom-section" id="join-class-section" style="margin-top: 2rem;">
+            <h3><i class="fas fa-link"></i> Rejoindre une classe existante</h3>
             <p>En tant qu'enseignant spécialisé, liez-vous à une classe d'un maître de classe.</p>
             
-            <form method="POST" action="{{ url_for('setup.manage_classrooms') }}">
-                {{ form.hidden_tag() }}
-                <input type="hidden" name="action_type" value="join">
+            <!-- Option 1: Avec code d'accès -->
+            <div class="mb-4">
+                <h4 style="font-size: 1rem; margin-bottom: 1rem;"><i class="fas fa-key"></i> Option 1: Avec code d'accès</h4>
+                <form method="POST" action="{{ url_for('setup.manage_classrooms') }}">
+                    {{ form.hidden_tag() }}
+                    <input type="hidden" name="action_type" value="join">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Code d'accès</label>
+                        <input type="text" name="access_code" class="form-control" placeholder="Entrez le code fourni par le maître de classe" maxlength="8" style="text-transform: uppercase;">
+                        <p class="form-help">Code à 8 caractères fourni par le maître de classe</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Nom du maître de classe</label>
+                        <div class="autocomplete-container">
+                            <input type="text" name="master_teacher_name" id="join_master_teacher_name" class="form-control" placeholder="Commencez à taper le nom..." autocomplete="off">
+                            <div id="join_master_teacher_suggestions" class="autocomplete-suggestions"></div>
+                        </div>
+                        <p class="form-help">Pour vérifier que vous rejoignez la bonne classe</p>
+                    </div>
+                    
+                    <div class="form-group" id="join_class_selection" style="display: none;">
+                        <label class="form-label">Classe à rejoindre</label>
+                        <select name="join_target_classroom_id" id="join_target_classroom_id" class="form-control">
+                            <option value="">Sélectionnez une classe...</option>
+                        </select>
+                        <p class="form-help">Choisissez la classe du maître que vous souhaitez rejoindre</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Vos disciplines pour cette classe</label>
+                        <div id="join_disciplines_container">
+                            <!-- La première discipline -->
+                            <div class="discipline-item" data-index="0">
+                                <div class="form-row" style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.375rem;">
+                                    <div class="form-group" style="flex: 2; margin: 0;">
+                                        <label class="form-label">Nom de votre classe</label>
+                                        <input type="text" name="join_disciplines[0][class_name]" class="form-control" placeholder="Ex: 11VG2 - Histoire" required>
+                                    </div>
+                                    <div class="form-group" style="flex: 1; margin: 0;">
+                                        <label class="form-label">Matière</label>
+                                        <input type="text" name="join_disciplines[0][subject]" class="form-control" placeholder="Ex: Histoire" required>
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label class="form-label">Couleur</label>
+                                        <div class="color-palette-small">
+                                            <input type="hidden" name="join_disciplines[0][color]" value="#4F46E5">
+                                            <div class="color-preview" style="width: 40px; height: 40px; border-radius: 0.375rem; background-color: #4F46E5; border: 2px solid #e5e7eb; cursor: pointer;" title="Cliquer pour changer"></div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-danger btn-sm remove-join-discipline" style="margin: 0; height: fit-content;" disabled>
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="button" id="add_join_discipline" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-plus"></i> Ajouter une autre discipline
+                        </button>
+                        <p class="form-help">Ajoutez toutes les matières que vous enseignez pour cette classe</p>
+                        <small style="color: #6b7280;">✨ Exemple: Histoire, Français, Géographie pour une même classe 11VG2</small>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-link"></i> Rejoindre avec le code
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Option 2: Envoyer une invitation -->
+            <div class="mb-4" style="border-top: 1px solid #e5e7eb; padding-top: 1.5rem;">
+                <h4 style="font-size: 1rem; margin-bottom: 1rem;"><i class="fas fa-envelope"></i> Option 2: Envoyer une demande d'invitation</h4>
+                <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 1rem;">Si vous n'avez pas de code, envoyez une invitation au maître de classe.</p>
                 
-                <div class="form-group">
-                    <label class="form-label">Code d'accès</label>
-                    <input type="text" name="access_code" class="form-control" placeholder="Entrez le code fourni par le maître de classe" maxlength="8" style="text-transform: uppercase;">
-                    <p class="form-help">Code à 8 caractères fourni par le maître de classe</p>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Nom du maître de classe</label>
-                    <input type="text" name="master_teacher_name" class="form-control" placeholder="Nom d'utilisateur ou email du maître">
-                    <p class="form-help">Pour vérifier que vous rejoignez la bonne classe</p>
-                </div>
-                
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-link"></i> Rejoindre la classe
-                </button>
-            </form>
+                <form method="POST" action="{{ url_for('setup.manage_classrooms') }}">
+                    {{ form.hidden_tag() }}
+                    <input type="hidden" name="action_type" value="invite">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Nom du maître de classe</label>
+                        <div class="autocomplete-container">
+                            <input type="text" name="invite_master_teacher_name" id="invite_master_teacher_name" class="form-control" placeholder="Commencez à taper le nom..." autocomplete="off">
+                            <div id="invite_master_teacher_suggestions" class="autocomplete-suggestions"></div>
+                        </div>
+                        <p class="form-help">Enseignants de votre établissement qui sont maîtres de classe</p>
+                    </div>
+                    
+                    <div class="form-group" id="target_class_selection" style="display: none;">
+                        <label class="form-label">Classe à rejoindre</label>
+                        <select name="target_classroom_id" id="target_classroom_id" class="form-control">
+                            <option value="">Sélectionnez une classe...</option>
+                        </select>
+                        <p class="form-help">Choisissez la classe du maître que vous souhaitez rejoindre</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Vos disciplines pour cette classe</label>
+                        <div id="disciplines_container">
+                            <!-- La première discipline -->
+                            <div class="discipline-item" data-index="0">
+                                <div class="form-row" style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.375rem;">
+                                    <div class="form-group" style="flex: 2; margin: 0;">
+                                        <label class="form-label">Nom de votre classe</label>
+                                        <input type="text" name="disciplines[0][class_name]" class="form-control" placeholder="Ex: 11VG2 - Histoire" required>
+                                    </div>
+                                    <div class="form-group" style="flex: 1; margin: 0;">
+                                        <label class="form-label">Matière</label>
+                                        <input type="text" name="disciplines[0][subject]" class="form-control" placeholder="Ex: Histoire" required>
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label class="form-label">Couleur</label>
+                                        <div class="color-palette-small">
+                                            <input type="hidden" name="disciplines[0][color]" value="#4F46E5">
+                                            <div class="color-preview" style="width: 40px; height: 40px; border-radius: 0.375rem; background-color: #4F46E5; border: 2px solid #e5e7eb; cursor: pointer;" title="Cliquer pour changer"></div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-danger btn-sm remove-discipline" style="margin: 0; height: fit-content;" disabled>
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="button" id="add_discipline" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-plus"></i> Ajouter une autre discipline
+                        </button>
+                        <p class="form-help">Ajoutez toutes les matières que vous enseignez pour cette classe</p>
+                        <small style="color: #6b7280;">✨ Exemple: Histoire, Français, Géographie pour une même classe 11VG2</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Message (optionnel)</label>
+                        <textarea name="invite_message" class="form-control" rows="3" placeholder="Expliquez pourquoi vous souhaitez rejoindre cette classe..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-paper-plane"></i> Envoyer la demande
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -280,8 +660,13 @@
                     </div>
                 </div>
                 
-                <div class="classroom-actions" style="display: flex; gap: 0.5rem;">
-                    {% if classroom.id in master_classroom_ids %}
+                <div class="classroom-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+                    {% if classroom.is_temporary %}
+                        <!-- Classe temporaire en attente -->
+                        <span class="badge" style="background-color: #fbbf24; color: #92400e; padding: 0.25rem 0.75rem; border-radius: 20px;">
+                            <i class="fas fa-clock"></i> En attente d'approbation
+                        </span>
+                    {% elif classroom.id in master_classroom_ids %}
                         <!-- L'utilisateur est déjà maître de cette classe -->
                         <button type="button" class="btn btn-info btn-sm master-status" disabled title="Vous êtes maître de cette classe">
                             <i class="fas fa-crown"></i> Vous êtes maître de classe
@@ -336,6 +721,94 @@
             </div>
         {% endif %}
     </div>
+
+    <!-- Section des invitations -->
+    {% if received_invitations or sent_invitations %}
+    <div class="classrooms-list" style="margin-top: 2rem;">
+        <h2><i class="fas fa-envelope"></i> Invitations</h2>
+        
+        <!-- Invitations reçues -->
+        {% if received_invitations %}
+        <h3 style="font-size: 1.1rem; margin-top: 1rem; margin-bottom: 1rem; color: var(--gray-color);">
+            <i class="fas fa-inbox"></i> Invitations reçues ({{ received_invitations|length }})
+        </h3>
+        
+        {% for invitation in received_invitations %}
+        <div class="classroom-item" style="border-left: 4px solid #10b981;">
+            <div class="classroom-info">
+                <div class="classroom-color" style="background-color: #10b981;"></div>
+                <div class="classroom-details">
+                    <h3>{{ invitation.proposed_class_name }}</h3>
+                    <p><strong>Matière:</strong> {{ invitation.proposed_subject }}</p>
+                    <p><strong>Demandeur:</strong> {{ invitation.requesting_teacher.username }} ({{ invitation.requesting_teacher.email }})</p>
+                    {% if invitation.message %}
+                    <p><strong>Message:</strong> <em>{{ invitation.message }}</em></p>
+                    {% endif %}
+                    <small style="color: var(--gray-color);">Reçu le {{ invitation.created_at.strftime('%d/%m/%Y à %H:%M') }}</small>
+                </div>
+            </div>
+            
+            <div class="invitation-actions" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <form method="POST" action="{{ url_for('setup.respond_to_invitation', invitation_id=invitation.id) }}" style="margin: 0;">
+                    <input type="hidden" name="action" value="accept">
+                    <div class="form-group" style="margin-bottom: 0.5rem;">
+                        <textarea name="response_message" class="form-control" rows="2" placeholder="Message de réponse (optionnel)" style="font-size: 0.8rem;"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button type="submit" class="btn btn-success btn-sm">
+                            <i class="fas fa-check"></i> Accepter
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="rejectInvitation({{ invitation.id }})">
+                            <i class="fas fa-times"></i> Rejeter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+        
+        <!-- Invitations envoyées -->
+        {% if sent_invitations %}
+        <h3 style="font-size: 1.1rem; margin-top: 2rem; margin-bottom: 1rem; color: var(--gray-color);">
+            <i class="fas fa-paper-plane"></i> Vos demandes envoyées
+        </h3>
+        
+        {% for invitation in sent_invitations %}
+        <div class="classroom-item" style="border-left: 4px solid {% if invitation.status == 'pending' %}#fbbf24{% elif invitation.status == 'accepted' %}#10b981{% else %}#ef4444{% endif %};">
+            <div class="classroom-info">
+                <div class="classroom-color" style="background-color: {% if invitation.status == 'pending' %}#fbbf24{% elif invitation.status == 'accepted' %}#10b981{% else %}#ef4444{% endif %};"></div>
+                <div class="classroom-details">
+                    <h3>{{ invitation.proposed_class_name }}</h3>
+                    <p><strong>Destiné à:</strong> {{ invitation.target_master_teacher.username }} ({{ invitation.target_master_teacher.email }})</p>
+                    <p><strong>Matière:</strong> {{ invitation.proposed_subject }}</p>
+                    {% if invitation.response_message %}
+                    <p><strong>Réponse:</strong> <em>{{ invitation.response_message }}</em></p>
+                    {% endif %}
+                    <small style="color: var(--gray-color);">Envoyé le {{ invitation.created_at.strftime('%d/%m/%Y à %H:%M') }}</small>
+                </div>
+            </div>
+            
+            <div class="invitation-status">
+                {% if invitation.status == 'pending' %}
+                <span class="badge" style="background-color: #fbbf24; color: #92400e; padding: 0.5rem 1rem; border-radius: 20px;">
+                    <i class="fas fa-clock"></i> En attente
+                </span>
+                {% elif invitation.status == 'accepted' %}
+                <span class="badge" style="background-color: #10b981; color: white; padding: 0.5rem 1rem; border-radius: 20px;">
+                    <i class="fas fa-check"></i> Acceptée
+                </span>
+                {% elif invitation.status == 'rejected' %}
+                <span class="badge" style="background-color: #ef4444; color: white; padding: 0.5rem 1rem; border-radius: 20px;">
+                    <i class="fas fa-times"></i> Rejetée
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+    {% endif %}
 
     <!-- Boutons de navigation -->
     <div class="action-buttons" style="margin-top: 2rem;">
@@ -415,6 +888,270 @@
     }
 }
 
+/* Styles pour les classes mixtes */
+.class-type-selection {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border: 2px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    transition: border-color 0.3s ease;
+}
+
+.class-type-selection.active {
+    border-color: var(--primary-color);
+    background-color: #f8f9ff;
+}
+
+.class-type-options {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.class-type-option {
+    flex: 1;
+    padding: 1rem;
+    border: 2px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    position: relative;
+}
+
+.class-type-option:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.class-type-option.selected {
+    border-color: var(--primary-color);
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.class-type-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.class-type-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.class-type-title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.class-type-desc {
+    font-size: 0.875rem;
+    opacity: 0.8;
+}
+
+.mixed-class-config {
+    display: none;
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    background-color: #fafbff;
+}
+
+.mixed-class-config.active {
+    display: block !important;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.source-classes-section {
+    margin-top: 1.5rem;
+}
+
+.source-classes-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.source-class-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: var(--dark-color);
+}
+
+.source-class-btn:hover {
+    border-color: var(--primary-color);
+    background-color: #f8f9ff;
+    transform: translateY(-1px);
+}
+
+.source-class-btn i {
+    color: var(--primary-color);
+}
+
+.added-source-classes {
+    margin-top: 1rem;
+}
+
+.source-class-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    background: white;
+}
+
+.source-class-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.source-class-badge {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--success-color);
+}
+
+.source-class-details h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+}
+
+.source-class-details span {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+}
+
+.source-class-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.student-selection-section {
+    display: none;
+    margin-top: 2rem;
+    padding: 1.5rem;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    background: white;
+}
+
+.student-selection-section.active {
+    display: block;
+    animation: slideDown 0.3s ease;
+}
+
+.student-group {
+    margin-bottom: 2rem;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.student-group-header {
+    background: var(--light-gray);
+    padding: 1rem;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.student-group-content {
+    padding: 1rem;
+}
+
+.student-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.5rem;
+}
+
+.student-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s;
+}
+
+.student-checkbox-item:hover {
+    background-color: var(--light-gray);
+}
+
+.student-checkbox-item input[type="checkbox"] {
+    margin: 0;
+}
+
+.group-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.mixed-class-summary {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--light-gray);
+    border-radius: var(--border-radius);
+    text-align: center;
+}
+
+.summary-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 1rem;
+}
+
+.summary-stat {
+    text-align: center;
+}
+
+.summary-stat-number {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.summary-stat-label {
+    font-size: 0.875rem;
+    color: var(--gray-color);
+}
+
+.badge-new {
+    background: var(--warning-color);
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 1rem;
+    margin-left: 0.5rem;
+}
+
 /* Style pour le bouton maître désactivé */
 .btn.master-status[disabled] {
     opacity: 0.9;
@@ -428,29 +1165,1602 @@
     background-color: #17a2b8;
     border-color: #17a2b8;
 }
+
+/* Styles pour l'autocomplétion */
+.autocomplete-container {
+    position: relative;
+}
+
+/* Styles pour les checkboxes de classes */
+.class-checkbox-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+    transition: background-color 0.2s;
+}
+
+.class-checkbox-item:last-child {
+    border-bottom: none;
+}
+
+.class-checkbox-item:hover {
+    background-color: #f9fafb;
+}
+
+.class-checkbox-item input[type="checkbox"] {
+    margin-right: 0.75rem;
+    transform: scale(1.2);
+}
+
+.class-info {
+    flex: 1;
+}
+
+.class-name {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.25rem;
+}
+
+.class-subjects {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+/* Styles pour les disciplines multiples */
+.discipline-item {
+    margin-bottom: 0.5rem;
+}
+
+.discipline-item .form-row {
+    background-color: #f9fafb;
+    transition: all 0.2s;
+}
+
+.discipline-item .form-row:hover {
+    background-color: #f3f4f6;
+    border-color: var(--primary-color);
+}
+
+.color-palette-small {
+    position: relative;
+}
+
+.color-preview {
+    transition: all 0.2s;
+    position: relative;
+}
+
+.color-preview:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.color-options-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: none;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.25rem;
+    width: 160px;
+}
+
+.color-option-small {
+    width: 30px;
+    height: 30px;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.color-option-small:hover {
+    border-color: #374151;
+    transform: scale(1.1);
+}
+
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-top: none;
+    border-radius: 0 0 0.375rem 0.375rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.autocomplete-suggestion {
+    padding: 0.75rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+    transition: background-color 0.2s;
+}
+
+.autocomplete-suggestion:hover,
+.autocomplete-suggestion.active {
+    background-color: #f3f4f6;
+}
+
+.autocomplete-suggestion:last-child {
+    border-bottom: none;
+}
+
+.suggestion-name {
+    font-weight: 600;
+    color: #374151;
+}
+
+.suggestion-email {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.suggestion-badge {
+    display: inline-block;
+    background-color: #10b981;
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 1rem;
+    margin-left: 0.5rem;
+}
+
+/* Styles pour les modals */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: var(--border-radius);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.modal-header h4 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--dark-color);
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--gray-color);
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-modal:hover {
+    color: var(--dark-color);
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-top: 1px solid var(--light-gray);
+}
+
+.class-selection-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--light-gray);
+    border-radius: var(--border-radius);
+}
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Gestionnaire pour le sélecteur de couleurs
-    const colorOptions = document.querySelectorAll('.color-option');
-    const colorInput = document.getElementById('color');
-    
-    colorOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            // Retirer la classe active de toutes les options
-            colorOptions.forEach(opt => opt.classList.remove('active'));
-            
-            // Ajouter la classe active à l'option cliquée
-            this.classList.add('active');
-            
-            // Mettre à jour la valeur de l'input caché
-            const selectedColor = this.getAttribute('data-color');
-            colorInput.value = selectedColor;
-            
-            console.log('Couleur sélectionnée:', selectedColor);
+    // Gestionnaire pour tous les sélecteurs de couleurs
+    document.querySelectorAll('.color-palette').forEach((palette, index) => {
+        const colorOptions = palette.querySelectorAll('.color-option');
+        const hiddenInput = palette.querySelector('input[type="hidden"]');
+        
+        if (!hiddenInput) return;
+        
+        colorOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                // Retirer la classe active de toutes les options de cette palette
+                colorOptions.forEach(opt => opt.classList.remove('active'));
+                
+                // Ajouter la classe active à l'option cliquée
+                this.classList.add('active');
+                
+                // Mettre à jour la valeur de l'input caché
+                const selectedColor = this.getAttribute('data-color');
+                hiddenInput.value = selectedColor;
+                
+                console.log(`Couleur sélectionnée pour ${hiddenInput.id}:`, selectedColor);
+            });
         });
     });
+    
+    // Fonction d'autocomplétion générique
+    function setupAutocomplete(inputId, suggestionsId) {
+        console.log(`Setting up autocomplete for ${inputId} -> ${suggestionsId}`);
+        const input = document.getElementById(inputId);
+        const suggestions = document.getElementById(suggestionsId);
+        let currentSelection = -1;
+        let lastQuery = '';
+        
+        console.log(`Input found for ${inputId}:`, !!input);
+        console.log(`Suggestions found for ${suggestionsId}:`, !!suggestions);
+        
+        if (!input || !suggestions) {
+            console.error(`Missing elements for autocomplete: input=${!!input}, suggestions=${!!suggestions}`);
+            return;
+        }
+        
+        let autocompleteTimeout;
+        input.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            // Utiliser un délai pour éviter les conflits avec la sélection de classe
+            clearTimeout(autocompleteTimeout);
+            autocompleteTimeout = setTimeout(() => {
+                if (query.length < 2) {
+                    suggestions.style.display = 'none';
+                    return;
+                }
+                
+                if (query === lastQuery) return;
+                lastQuery = query;
+                
+                console.log(`Searching teachers for query: "${query}"`);
+                fetch('/setup/search-teachers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                })
+                .then(response => {
+                    console.log('Search teachers response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Search teachers data:', data);
+                    suggestions.innerHTML = '';
+                    currentSelection = -1;
+                    
+                    if (data.teachers && data.teachers.length > 0) {
+                        data.teachers.forEach(teacher => {
+                            const div = document.createElement('div');
+                            div.className = 'autocomplete-suggestion';
+                            div.innerHTML = `
+                                <div class="suggestion-name">${teacher.username}${teacher.is_master ? '<span class="suggestion-badge">Maître de classe</span>' : ''}</div>
+                                <div class="suggestion-email">${teacher.email}</div>
+                            `;
+                            
+                            div.addEventListener('click', function() {
+                                input.value = teacher.username;
+                                suggestions.style.display = 'none';
+                                
+                                // Charger les classes de cet enseignant
+                                if (input.id === 'invite_master_teacher_name' || input.id === 'join_master_teacher_name') {
+                                    console.log('Loading classes for teacher:', teacher.username);
+                                    loadTeacherClasses(teacher.id, input.id);
+                                }
+                            });
+                            
+                            suggestions.appendChild(div);
+                        });
+                        
+                        suggestions.style.display = 'block';
+                    } else {
+                        suggestions.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur autocomplétion:', error);
+                    suggestions.style.display = 'none';
+                });
+            }, 300); // Délai de 300ms pour l'autocomplétion
+        });
+        
+        // Gestion clavier
+        input.addEventListener('keydown', function(e) {
+            const items = suggestions.querySelectorAll('.autocomplete-suggestion');
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                currentSelection = (currentSelection + 1) % items.length;
+                updateSelection(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                currentSelection = (currentSelection - 1 + items.length) % items.length;
+                updateSelection(items);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (currentSelection >= 0 && items[currentSelection]) {
+                    items[currentSelection].click();
+                }
+            } else if (e.key === 'Escape') {
+                suggestions.style.display = 'none';
+            }
+        });
+        
+        function updateSelection(items) {
+            items.forEach((item, index) => {
+                item.classList.toggle('active', index === currentSelection);
+            });
+        }
+        
+        // Fermer quand on clique ailleurs
+        document.addEventListener('click', function(e) {
+            if (!input.contains(e.target) && !suggestions.contains(e.target)) {
+                suggestions.style.display = 'none';
+            }
+        });
+    }
+    
+    // Configuration de l'autocomplétion pour les formulaires de classe normale
+    console.log('Setting up autocomplete for normal class forms...');
+    setupAutocomplete('join_master_teacher_name', 'join_master_teacher_suggestions');
+    setupAutocomplete('invite_master_teacher_name', 'invite_master_teacher_suggestions');
+    
+    // Gestion des disciplines pour les formulaires de classe normale
+    setupDisciplineManagement();
+    
+    function setupDisciplineManagement() {
+        // Bouton d'ajout de discipline pour le formulaire avec code d'accès
+        const addJoinDisciplineBtn = document.getElementById('add_join_discipline');
+        if (addJoinDisciplineBtn) {
+            addJoinDisciplineBtn.addEventListener('click', function() {
+                addDiscipline('join_disciplines_container', 'join_disciplines');
+            });
+        }
+        
+        // Bouton d'ajout de discipline pour le formulaire d'invitation
+        const addDisciplineBtn = document.getElementById('add_discipline');
+        if (addDisciplineBtn) {
+            addDisciplineBtn.addEventListener('click', function() {
+                addDiscipline('disciplines_container', 'disciplines');
+            });
+        }
+        
+        // Configuration initiale des boutons de suppression
+        setupRemoveButtons('join_disciplines_container');
+        setupRemoveButtons('disciplines_container');
+        
+        // Configuration des sélecteurs de couleur
+        setupColorPickers();
+    }
+    
+    function addDiscipline(containerId, prefix) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        const items = container.querySelectorAll('.discipline-item');
+        const nextIndex = items.length;
+        
+        const newItem = document.createElement('div');
+        newItem.className = 'discipline-item';
+        newItem.setAttribute('data-index', nextIndex);
+        
+        newItem.innerHTML = `
+            <div class="form-row" style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.375rem;">
+                <div class="form-group" style="flex: 2; margin: 0;">
+                    <label class="form-label">Nom de votre classe</label>
+                    <input type="text" name="${prefix}[${nextIndex}][class_name]" class="form-control" placeholder="Ex: 11VG2 - Histoire" required>
+                </div>
+                <div class="form-group" style="flex: 1; margin: 0;">
+                    <label class="form-label">Matière</label>
+                    <input type="text" name="${prefix}[${nextIndex}][subject]" class="form-control" placeholder="Ex: Histoire" required>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label">Couleur</label>
+                    <div class="color-palette-small">
+                        <input type="hidden" name="${prefix}[${nextIndex}][color]" value="#4F46E5">
+                        <div class="color-preview" style="width: 40px; height: 40px; border-radius: 0.375rem; background-color: #4F46E5; border: 2px solid #e5e7eb; cursor: pointer;" title="Cliquer pour changer"></div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-danger btn-sm remove-discipline-btn" style="margin: 0; height: fit-content;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(newItem);
+        
+        // Configurer le sélecteur de couleur pour le nouvel élément
+        const colorPreview = newItem.querySelector('.color-preview');
+        const hiddenInput = newItem.querySelector('input[type="hidden"]');
+        setupColorPicker(colorPreview, hiddenInput);
+        
+        // Configurer le bouton de suppression
+        const removeButton = newItem.querySelector('.remove-discipline-btn');
+        removeButton.addEventListener('click', function() {
+            newItem.remove();
+            updateRemoveButtons(containerId);
+        });
+        
+        updateRemoveButtons(containerId);
+    }
+    
+    function setupRemoveButtons(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        const removeButtons = container.querySelectorAll('.remove-discipline-btn, .remove-discipline, .remove-join-discipline');
+        removeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                this.closest('.discipline-item').remove();
+                updateRemoveButtons(containerId);
+            });
+        });
+        
+        updateRemoveButtons(containerId);
+    }
+    
+    function updateRemoveButtons(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        const items = container.querySelectorAll('.discipline-item');
+        items.forEach((item, index) => {
+            const removeButton = item.querySelector('.remove-discipline-btn, .remove-discipline, .remove-join-discipline');
+            if (removeButton) {
+                removeButton.disabled = items.length <= 1;
+            }
+        });
+    }
+    
+    function setupColorPickers() {
+        document.querySelectorAll('.color-preview').forEach(preview => {
+            const hiddenInput = preview.parentElement.querySelector('input[type="hidden"]');
+            if (hiddenInput) {
+                setupColorPicker(preview, hiddenInput);
+            }
+        });
+    }
+    
+    function setupColorPicker(preview, hiddenInput) {
+        const colors = [
+            '#4F46E5', '#EF4444', '#F59E0B', '#84CC16', 
+            '#22C55E', '#06B6D4', '#3B82F6', '#8B5CF6',
+            '#EC4899', '#F97316', '#10B981', '#14B8A6',
+            '#6366F1', '#A855F7', '#F43F5E', '#FDE047'
+        ];
+        
+        preview.addEventListener('click', function() {
+            // Supprimer toute dropdown existante
+            document.querySelectorAll('.color-options-dropdown').forEach(dropdown => {
+                dropdown.remove();
+            });
+            
+            // Créer la dropdown
+            const dropdown = document.createElement('div');
+            dropdown.className = 'color-options-dropdown';
+            dropdown.style.display = 'grid';
+            
+            colors.forEach(color => {
+                const colorOption = document.createElement('div');
+                colorOption.className = 'color-option-small';
+                colorOption.style.backgroundColor = color;
+                colorOption.title = color;
+                
+                colorOption.addEventListener('click', function() {
+                    hiddenInput.value = color;
+                    preview.style.backgroundColor = color;
+                    dropdown.remove();
+                });
+                
+                dropdown.appendChild(colorOption);
+            });
+            
+            preview.parentElement.appendChild(dropdown);
+            
+            // Fermer en cliquant ailleurs
+            setTimeout(() => {
+                document.addEventListener('click', function closeDropdown(e) {
+                    if (!preview.parentElement.contains(e.target)) {
+                        dropdown.remove();
+                        document.removeEventListener('click', closeDropdown);
+                    }
+                });
+            }, 10);
+        });
+    }
+    
+    
+    
+    // Fermer les dropdowns de couleur quand on clique ailleurs
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.color-palette-small')) {
+            document.querySelectorAll('.color-options-dropdown').forEach(dropdown => {
+                dropdown.style.display = 'none';
+            });
+        }
+    });
+    
+    // DEBUG: Vérifier que les éléments existent
+    console.log('=== DEBUG CLASS TYPE SELECTION ===');
+    
+    const classTypeOptions = document.querySelectorAll('input[name="class_type"]');
+    const mixedClassConfig = document.getElementById('mixed-class-config');
+    const normalClassForm = document.getElementById('normal-class-form');
+    
+    console.log('classTypeOptions found:', classTypeOptions.length);
+    console.log('mixedClassConfig found:', !!mixedClassConfig);
+    console.log('normalClassForm found:', !!normalClassForm);
+    
+    // Trouver la section "Rejoindre une classe" avec son ID spécifique
+    const joinClassSection = document.getElementById('join-class-section');
+    console.log('joinClassSection found:', !!joinClassSection);
+    
+    // DEBUG: Lister toutes les sections add-classroom-section
+    console.log('=== ALL ADD-CLASSROOM-SECTIONS ===');
+    document.querySelectorAll('.add-classroom-section').forEach((section, index) => {
+        console.log(`Section ${index}:`, section.querySelector('h3') ? section.querySelector('h3').textContent : 'No title');
+    });
+    
+    function updateClassTypeDisplay() {
+        console.log('updateClassTypeDisplay called');
+        const selectedOption = document.querySelector('input[name="class_type"]:checked');
+        console.log('selectedOption:', selectedOption ? selectedOption.value : 'none');
+        
+        if (!selectedOption) {
+            console.log('No selected option found');
+            return;
+        }
+        
+        // Mettre à jour les styles des options
+        document.querySelectorAll('.class-type-option').forEach(opt => {
+            opt.classList.remove('selected');
+        });
+        selectedOption.parentElement.classList.add('selected');
+        
+        // Afficher/masquer les sections appropriées
+        if (selectedOption.value === 'mixed') {
+            console.log('Switching to MIXED class mode');
+            if (mixedClassConfig) {
+                // D'abord s'assurer que TOUS les parents sont visibles
+                const parentSection = mixedClassConfig.closest('.add-classroom-section');
+                if (parentSection) {
+                    parentSection.style.display = 'block';
+                    parentSection.style.visibility = 'visible';
+                    console.log('Ensured parent section is visible');
+                }
+                
+                // Puis activer la section mixte
+                mixedClassConfig.classList.add('active');
+                mixedClassConfig.style.display = 'block';
+                mixedClassConfig.style.visibility = 'visible';
+                console.log('Added active class to mixedClassConfig');
+            }
+            if (normalClassForm) {
+                normalClassForm.style.display = 'none';
+                console.log('Hidden normalClassForm');
+            }
+            if (joinClassSection && joinClassSection !== mixedClassConfig.closest('.add-classroom-section')) {
+                joinClassSection.style.display = 'none';
+                console.log('Hidden joinClassSection');
+            }
+        } else {
+            console.log('Switching to NORMAL class mode');
+            if (mixedClassConfig) {
+                mixedClassConfig.classList.remove('active');
+                console.log('Removed active class from mixedClassConfig');
+            }
+            if (normalClassForm) {
+                normalClassForm.style.display = 'block';
+                console.log('Shown normalClassForm');
+            }
+            if (joinClassSection) {
+                joinClassSection.style.display = 'block';
+                console.log('Shown joinClassSection');
+            }
+        }
+    }
+    
+    if (classTypeOptions.length > 0) {
+        classTypeOptions.forEach((option, index) => {
+            console.log(`Setting up event listener for option ${index}:`, option.value);
+            option.addEventListener('change', function() {
+                console.log('Change event triggered for:', this.value);
+                updateClassTypeDisplay();
+            });
+            option.addEventListener('click', function() {
+                console.log('Click event triggered for:', this.value);
+                updateClassTypeDisplay();
+            });
+        });
+        
+        // Appliquer l'état initial
+        console.log('Applying initial state');
+        updateClassTypeDisplay();
+    } else {
+        console.error('No class type options found!');
+    }
+    
+    // TEST DIRECT: Forcer l'affichage de la section mixte pour voir si le problème vient du CSS
+    console.log('=== MANUAL TEST ===');
+    window.testMixedClass = function() {
+        console.log('Manual test: showing mixed class section');
+        if (mixedClassConfig) {
+            mixedClassConfig.style.display = 'block';
+            mixedClassConfig.classList.add('active');
+            console.log('Forced mixedClassConfig to display');
+        }
+    };
+    console.log('Run testMixedClass() in console to manually show the section');
+    
+    // Fonction pour charger les classes d'un enseignant
+    function loadTeacherClasses(teacherId, inputId) {
+        console.log(`Loading classes for teacher ID: ${teacherId}, input: ${inputId}`);
+        
+        fetch(`/setup/api/teacher-classes/${teacherId}`)
+        .then(response => {
+            console.log('Teacher classes response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Teacher classes data:', data);
+            
+            // Déterminer quel select utiliser selon l'input
+            let selectId, containerId;
+            if (inputId === 'join_master_teacher_name') {
+                selectId = 'join_target_classroom_id';
+                containerId = 'join_class_selection';
+            } else if (inputId === 'invite_master_teacher_name') {
+                selectId = 'target_classroom_id';
+                containerId = 'target_class_selection';
+            }
+            
+            const select = document.getElementById(selectId);
+            const container = document.getElementById(containerId);
+            
+            if (select && container) {
+                // Vider et remplir le select
+                select.innerHTML = '<option value="">Sélectionnez une classe...</option>';
+                
+                if (data.classes && data.classes.length > 0) {
+                    data.classes.forEach(classroom => {
+                        const option = document.createElement('option');
+                        option.value = classroom.id;
+                        option.textContent = classroom.name + ' - ' + classroom.subject;
+                        select.appendChild(option);
+                    });
+                    
+                    // Afficher le conteneur
+                    container.style.display = 'block';
+                    console.log(`Displayed ${data.classes.length} classes`);
+                } else {
+                    console.log('No classes found for this teacher');
+                    container.style.display = 'none';
+                }
+            } else {
+                console.error('Select or container not found:', selectId, containerId);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading teacher classes:', error);
+        });
+    }
+    
+    // Gestionnaire pour les boutons de classe source
+    const sourceClassButtons = document.querySelectorAll('.source-class-btn');
+    sourceClassButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const modalType = this.dataset.modal;
+            handleSourceClassModal(modalType);
+        });
+    });
+    
+    // Variables pour gérer les classes sources
+    let sourceClasses = [];
+    let selectedStudents = new Set();
+    
+    // Fonction pour gérer les modals de classe source
+    function handleSourceClassModal(modalType) {
+        switch(modalType) {
+            case 'own-classes':
+                showOwnClassesModal();
+                break;
+            case 'code-classes':
+                showCodeClassesModal();
+                break;
+            case 'invite-classes':
+                showInviteClassesModal();
+                break;
+            case 'external-classes':
+                showExternalClassesModal();
+                break;
+        }
+    }
+    
+    // Fonction pour afficher le modal des classes propres
+    function showOwnClassesModal() {
+        // Récupérer les classes de l'utilisateur
+        fetch('/setup/api/own-classes')
+            .then(response => response.json())
+            .then(data => {
+                if (data.classes && data.classes.length > 0) {
+                    showImprovedClassSelectionModal('Mes classes', data.classes, 'own');
+                } else {
+                    showEmptyStateModal('Aucune classe trouvée', 'Vous n\'avez pas encore de classes créées. Créez d\'abord une classe normale pour pouvoir l\'utiliser dans une classe mixte.');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showEmptyStateModal('Erreur', 'Erreur lors de la récupération de vos classes.');
+            });
+    }
+    
+    // Fonction pour afficher le modal avec code d'accès
+    function showCodeClassesModal() {
+        // Récupérer le token CSRF du formulaire existant
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        
+        // Créer le contenu du modal sans template literals pour éviter les conflits avec Jinja
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+        modalContent.style.maxWidth = '600px';
+        
+        modalContent.innerHTML = 
+            '<div class="modal-header">' +
+                '<h4><i class="fas fa-key"></i> Rejoindre avec code d\'accès</h4>' +
+                '<button type="button" class="close-modal">&times;</button>' +
+            '</div>' +
+            '<div class="modal-body">' +
+                '<form method="POST" action="/setup/classrooms" id="join-code-form">' +
+                    '<input type="hidden" name="csrf_token" value="' + csrfToken + '">' +
+                    '<input type="hidden" name="action_type" value="join">' +
+                    
+                    '<div class="form-group">' +
+                        '<label class="form-label">Code d\'accès</label>' +
+                        '<input type="text" name="access_code" class="form-control" placeholder="Entrez le code fourni par le maître de classe" maxlength="8" style="text-transform: uppercase;" required>' +
+                        '<p class="form-help">Code à 8 caractères fourni par le maître de classe</p>' +
+                    '</div>' +
+                    
+                    '<div class="form-group">' +
+                        '<label class="form-label">Nom du maître de classe</label>' +
+                        '<div class="autocomplete-container">' +
+                            '<input type="text" name="master_teacher_name" class="form-control" placeholder="Commencez à taper le nom..." autocomplete="off" required>' +
+                            '<div class="autocomplete-suggestions"></div>' +
+                        '</div>' +
+                        '<p class="form-help">Pour vérifier que vous rejoignez la bonne classe</p>' +
+                    '</div>' +
+                    
+                    '<div class="form-group" style="display: none;">' +
+                        '<label class="form-label">Classe à rejoindre</label>' +
+                        '<select name="join_target_classroom_id" class="form-control">' +
+                            '<option value="">Sélectionnez une classe...</option>' +
+                        '</select>' +
+                        '<p class="form-help">Choisissez la classe du maître que vous souhaitez rejoindre</p>' +
+                    '</div>' +
+                    
+                    '<div class="form-group">' +
+                        '<label class="form-label">Vos disciplines pour cette classe</label>' +
+                        '<div class="join-disciplines-container">' +
+                            '<div class="discipline-item" data-index="0">' +
+                                '<div class="form-row" style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.375rem;">' +
+                                    '<div class="form-group" style="flex: 2; margin: 0;">' +
+                                        '<label class="form-label">Nom de votre classe</label>' +
+                                        '<input type="text" name="join_disciplines[0][class_name]" class="form-control" placeholder="Ex: 11VG2 - Histoire" required>' +
+                                    '</div>' +
+                                    '<div class="form-group" style="flex: 1; margin: 0;">' +
+                                        '<label class="form-label">Matière</label>' +
+                                        '<input type="text" name="join_disciplines[0][subject]" class="form-control" placeholder="Ex: Histoire" required>' +
+                                    '</div>' +
+                                    '<div class="form-group" style="margin: 0;">' +
+                                        '<label class="form-label">Couleur</label>' +
+                                        '<div class="color-palette-small">' +
+                                            '<input type="hidden" name="join_disciplines[0][color]" value="#4F46E5">' +
+                                            '<div class="color-preview" style="width: 40px; height: 40px; border-radius: 0.375rem; background-color: #4F46E5; border: 2px solid #e5e7eb; cursor: pointer;" title="Cliquer pour changer"></div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                    '<button type="button" class="btn btn-danger btn-sm remove-join-discipline" style="margin: 0; height: fit-content;" disabled>' +
+                                        '<i class="fas fa-trash"></i>' +
+                                    '</button>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                        
+                        '<button type="button" class="btn btn-secondary btn-sm add-join-discipline">' +
+                            '<i class="fas fa-plus"></i> Ajouter une autre discipline' +
+                        '</button>' +
+                        '<p class="form-help">Ajoutez toutes les matières que vous enseignez pour cette classe</p>' +
+                    '</div>' +
+                '</form>' +
+            '</div>' +
+            '<div class="modal-footer">' +
+                '<button type="button" class="btn btn-secondary close-modal">Annuler</button>' +
+                '<button type="submit" form="join-code-form" class="btn btn-primary">' +
+                    '<i class="fas fa-link"></i> Rejoindre avec le code' +
+                '</button>' +
+            '</div>';
+        
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+        
+        // Gestionnaire pour fermer le modal
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+        });
+        
+        // Fermer le modal en cliquant à l'extérieur
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+        
+        // Configurer l'autocomplétion dans le modal
+        setupModalAutocomplete(modal);
+    }
+    
+    // Fonction pour afficher le modal d'invitation
+    function showInviteClassesModal() {
+        // Récupérer le token CSRF du formulaire existant
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        
+        // Créer le contenu du modal sans template literals pour éviter les conflits avec Jinja
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+        modalContent.style.maxWidth = '600px';
+        
+        modalContent.innerHTML = 
+            '<div class="modal-header">' +
+                '<h4><i class="fas fa-envelope"></i> Envoyer une demande d\'invitation</h4>' +
+                '<button type="button" class="close-modal">&times;</button>' +
+            '</div>' +
+            '<div class="modal-body">' +
+                '<p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 1rem;">Si vous n\'avez pas de code, envoyez une invitation au maître de classe.</p>' +
+                
+                '<form method="POST" action="/setup/classrooms" id="invite-form">' +
+                    '<input type="hidden" name="csrf_token" value="' + csrfToken + '">' +
+                    '<input type="hidden" name="action_type" value="invite">' +
+                    
+                    '<div class="form-group">' +
+                        '<label class="form-label">Nom du maître de classe</label>' +
+                        '<div class="autocomplete-container">' +
+                            '<input type="text" name="invite_master_teacher_name" class="form-control" placeholder="Commencez à taper le nom..." autocomplete="off" required>' +
+                            '<div class="autocomplete-suggestions"></div>' +
+                        '</div>' +
+                        '<p class="form-help">Enseignants de votre établissement qui sont maîtres de classe</p>' +
+                    '</div>' +
+                    
+                    '<div class="form-group" style="display: none;">' +
+                        '<label class="form-label">Classe à rejoindre</label>' +
+                        '<select name="target_classroom_id" class="form-control">' +
+                            '<option value="">Sélectionnez une classe...</option>' +
+                        '</select>' +
+                        '<p class="form-help">Choisissez la classe du maître que vous souhaitez rejoindre</p>' +
+                    '</div>' +
+                    
+                    '<div class="form-group">' +
+                        '<label class="form-label">Vos disciplines pour cette classe</label>' +
+                        '<div class="disciplines-container">' +
+                            '<div class="discipline-item" data-index="0">' +
+                                '<div class="form-row" style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.375rem;">' +
+                                    '<div class="form-group" style="flex: 2; margin: 0;">' +
+                                        '<label class="form-label">Nom de votre classe</label>' +
+                                        '<input type="text" name="disciplines[0][class_name]" class="form-control" placeholder="Ex: 11VG2 - Histoire" required>' +
+                                    '</div>' +
+                                    '<div class="form-group" style="flex: 1; margin: 0;">' +
+                                        '<label class="form-label">Matière</label>' +
+                                        '<input type="text" name="disciplines[0][subject]" class="form-control" placeholder="Ex: Histoire" required>' +
+                                    '</div>' +
+                                    '<div class="form-group" style="margin: 0;">' +
+                                        '<label class="form-label">Couleur</label>' +
+                                        '<div class="color-palette-small">' +
+                                            '<input type="hidden" name="disciplines[0][color]" value="#4F46E5">' +
+                                            '<div class="color-preview" style="width: 40px; height: 40px; border-radius: 0.375rem; background-color: #4F46E5; border: 2px solid #e5e7eb; cursor: pointer;" title="Cliquer pour changer"></div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                    '<button type="button" class="btn btn-danger btn-sm remove-discipline" style="margin: 0; height: fit-content;" disabled>' +
+                                        '<i class="fas fa-trash"></i>' +
+                                    '</button>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                        
+                        '<button type="button" class="btn btn-secondary btn-sm add-discipline">' +
+                            '<i class="fas fa-plus"></i> Ajouter une autre discipline' +
+                        '</button>' +
+                        '<p class="form-help">Ajoutez toutes les matières que vous enseignez pour cette classe</p>' +
+                    '</div>' +
+                    
+                    '<div class="form-group">' +
+                        '<label class="form-label">Message (optionnel)</label>' +
+                        '<textarea name="invite_message" class="form-control" rows="3" placeholder="Expliquez pourquoi vous souhaitez rejoindre cette classe..."></textarea>' +
+                    '</div>' +
+                '</form>' +
+            '</div>' +
+            '<div class="modal-footer">' +
+                '<button type="button" class="btn btn-secondary close-modal">Annuler</button>' +
+                '<button type="submit" form="invite-form" class="btn btn-success">' +
+                    '<i class="fas fa-paper-plane"></i> Envoyer la demande' +
+                '</button>' +
+            '</div>';
+        
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+        
+        // Gestionnaire pour fermer le modal
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+        });
+        
+        // Fermer le modal en cliquant à l'extérieur
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+        
+        // Configurer l'autocomplétion dans le modal
+        setupModalAutocomplete(modal);
+    }
+    
+    // Fonction pour afficher le modal de classe externe
+    function showExternalClassesModal() {
+        const className = prompt('Nom de la classe externe:');
+        if (className) {
+            // Ajouter une classe externe (sans élèves)
+            const externalClass = {
+                id: 'external_' + Date.now(),
+                name: className,
+                type: 'external',
+                students: []
+            };
+            addSourceClass(externalClass);
+        }
+    }
+    
+    // Fonction pour afficher un modal d'état vide
+    function showEmptyStateModal(title, message) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+        modalContent.style.maxWidth = '400px';
+        
+        modalContent.innerHTML = 
+            '<div class="modal-header">' +
+                '<h4><i class="fas fa-info-circle"></i> ' + title + '</h4>' +
+                '<button type="button" class="close-modal">&times;</button>' +
+            '</div>' +
+            '<div class="modal-body" style="text-align: center; padding: 2rem;">' +
+                '<div style="font-size: 3rem; color: var(--gray-color); margin-bottom: 1rem;">' +
+                    '<i class="fas fa-inbox"></i>' +
+                '</div>' +
+                '<p style="color: var(--gray-color); margin-bottom: 0;">' + message + '</p>' +
+            '</div>' +
+            '<div class="modal-footer">' +
+                '<button type="button" class="btn btn-secondary close-modal">Fermer</button>' +
+            '</div>';
+        
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+        
+        // Gestionnaire pour fermer le modal
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+        });
+        
+        // Fermer le modal en cliquant à l'extérieur
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+    }
+    
+    // Fonction pour afficher un modal de sélection de classe amélioré
+    function showImprovedClassSelectionModal(title, classes, type) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+        modalContent.style.maxWidth = '600px';
+        
+        // Créer le header
+        const modalHeader = document.createElement('div');
+        modalHeader.className = 'modal-header';
+        modalHeader.innerHTML = '<h4><i class="fas fa-chalkboard-teacher"></i> ' + title + '</h4><button type="button" class="close-modal">&times;</button>';
+        
+        // Créer le body
+        const modalBody = document.createElement('div');
+        modalBody.className = 'modal-body';
+        modalBody.style.padding = '1.5rem';
+        
+        const classList = document.createElement('div');
+        classList.className = 'improved-class-selection-list';
+        
+        // Ajouter les classes avec un design amélioré
+        classes.forEach(cls => {
+            const classItem = document.createElement('div');
+            classItem.className = 'improved-class-item';
+            classItem.innerHTML = 
+                '<div class="class-item-content">' +
+                    '<div class="class-color-indicator" style="background-color: ' + (cls.color || '#4F46E5') + ';"></div>' +
+                    '<div class="class-item-info">' +
+                        '<div class="class-item-name">' + cls.name + '</div>' +
+                        '<div class="class-item-details">' +
+                            '<span class="class-subject"><i class="fas fa-book"></i> ' + (cls.subject || 'Matière non spécifiée') + '</span>' +
+                            '<span class="class-student-count"><i class="fas fa-users"></i> ' + (cls.student_count || 0) + ' élèves</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="class-item-checkbox">' +
+                        '<input type="checkbox" id="improved_class_' + cls.id + '" value="' + cls.id + '">' +
+                        '<label for="improved_class_' + cls.id + '" class="checkbox-label">' +
+                            '<i class="fas fa-check"></i>' +
+                        '</label>' +
+                    '</div>' +
+                '</div>';
+            
+            classList.appendChild(classItem);
+        });
+        
+        modalBody.appendChild(classList);
+        
+        // Créer le footer
+        const modalFooter = document.createElement('div');
+        modalFooter.className = 'modal-footer';
+        modalFooter.innerHTML = 
+            '<button type="button" class="btn btn-outline-secondary close-modal">Annuler</button>' +
+            '<button type="button" class="btn btn-primary" onclick="addSelectedImprovedClasses(\'' + type + '\')">Ajouter les classes sélectionnées</button>';
+        
+        modalContent.appendChild(modalHeader);
+        modalContent.appendChild(modalBody);
+        modalContent.appendChild(modalFooter);
+        modal.appendChild(modalContent);
+        
+        document.body.appendChild(modal);
+        
+        // Gestionnaire pour fermer le modal
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+        });
+        
+        // Fermer le modal en cliquant à l'extérieur
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+        
+        // Gestionnaire pour les clics sur les éléments de classe
+        modal.querySelectorAll('.improved-class-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (e.target.type !== 'checkbox') {
+                    const checkbox = item.querySelector('input[type="checkbox"]');
+                    checkbox.checked = !checkbox.checked;
+                    item.classList.toggle('selected', checkbox.checked);
+                }
+            });
+        });
+        
+        // Gestionnaire pour les checkboxes
+        modal.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                this.closest('.improved-class-item').classList.toggle('selected', this.checked);
+            });
+        });
+    }
+    
+    // Fonction pour afficher le modal de sélection de classe
+    function showClassSelectionModal(title, classes, type) {
+        // Créer le modal
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+        
+        // Créer le header
+        const modalHeader = document.createElement('div');
+        modalHeader.className = 'modal-header';
+        modalHeader.innerHTML = '<h4>' + title + '</h4><button type="button" class="close-modal">&times;</button>';
+        
+        // Créer le body
+        const modalBody = document.createElement('div');
+        modalBody.className = 'modal-body';
+        
+        const classList = document.createElement('div');
+        classList.className = 'class-selection-list';
+        
+        // Ajouter les classes
+        classes.forEach(cls => {
+            const classItem = document.createElement('div');
+            classItem.className = 'class-checkbox-item';
+            classItem.innerHTML = 
+                '<input type="checkbox" id="class_' + cls.id + '" value="' + cls.id + '">' +
+                '<label for="class_' + cls.id + '" class="class-info">' +
+                    '<div class="class-name">' + cls.name + '</div>' +
+                    '<div class="class-subjects">' + (cls.subject || 'Matière non spécifiée') + '</div>' +
+                '</label>';
+            classList.appendChild(classItem);
+        });
+        
+        modalBody.appendChild(classList);
+        
+        // Créer le footer
+        const modalFooter = document.createElement('div');
+        modalFooter.className = 'modal-footer';
+        modalFooter.innerHTML = 
+            '<button type="button" class="btn btn-secondary close-modal">Annuler</button>' +
+            '<button type="button" class="btn btn-primary" onclick="addSelectedClasses(\'' + type + '\')">Ajouter</button>';
+        
+        modalContent.appendChild(modalHeader);
+        modalContent.appendChild(modalBody);
+        modalContent.appendChild(modalFooter);
+        modal.appendChild(modalContent);
+        
+        document.body.appendChild(modal);
+        
+        // Gestionnaire pour fermer le modal
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+        });
+        
+        // Fermer le modal en cliquant à l'extérieur
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+    }
+    
+    // Fonction pour ajouter les classes sélectionnées
+    function addSelectedClasses(type) {
+        const modal = document.querySelector('.modal');
+        const checkedBoxes = modal.querySelectorAll('input[type="checkbox"]:checked');
+        
+        checkedBoxes.forEach(checkbox => {
+            const classId = checkbox.value;
+            const classInfo = {
+                id: classId,
+                name: checkbox.nextElementSibling.querySelector('.class-name').textContent,
+                subject: checkbox.nextElementSibling.querySelector('.class-subjects').textContent,
+                type: type
+            };
+            
+            addSourceClass(classInfo);
+        });
+        
+        document.body.removeChild(modal);
+    }
+    
+    // Fonction pour ajouter une classe source
+    function addSourceClass(classInfo) {
+        // Vérifier si la classe n'est pas déjà ajoutée
+        if (sourceClasses.find(cls => cls.id === classInfo.id)) {
+            alert('Cette classe est déjà ajoutée.');
+            return;
+        }
+        
+        sourceClasses.push(classInfo);
+        renderSourceClasses();
+        
+        // Récupérer les élèves de la classe
+        if (classInfo.type !== 'external') {
+            fetchClassStudents(classInfo.id, classInfo.name);
+        }
+        
+        updateMixedClassSummary();
+    }
+    
+    // Fonction pour afficher les classes sources
+    function renderSourceClasses() {
+        const container = document.getElementById('added-source-classes');
+        container.innerHTML = '';
+        
+        sourceClasses.forEach(cls => {
+            const sourceItem = document.createElement('div');
+            sourceItem.className = 'source-class-item';
+            sourceItem.setAttribute('data-class-id', cls.id);
+            sourceItem.innerHTML = 
+                '<div class="source-class-info">' +
+                    '<div class="source-class-badge"></div>' +
+                    '<div class="source-class-details">' +
+                        '<h4>' + cls.name + '</h4>' +
+                        '<span>' + cls.subject + '</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="source-class-actions">' +
+                    '<button type="button" class="btn btn-sm btn-danger" onclick="removeSourceClass(\'' + cls.id + '\')">' +
+                        '<i class="fas fa-trash"></i>' +
+                    '</button>' +
+                '</div>';
+            container.appendChild(sourceItem);
+        });
+    }
+    
+    // Fonction pour supprimer une classe source
+    function removeSourceClass(classId) {
+        sourceClasses = sourceClasses.filter(cls => cls.id !== classId);
+        renderSourceClasses();
+        
+        // Supprimer les élèves de cette classe de la sélection
+        const classStudents = document.querySelectorAll('#student-groups .student-group[data-class-id="' + classId + '"]');
+        classStudents.forEach(group => group.remove());
+        
+        updateMixedClassSummary();
+        
+        // Masquer la section de sélection si plus de classes
+        if (sourceClasses.length === 0) {
+            document.getElementById('student-selection-section').classList.remove('active');
+        }
+    }
+    
+    // Fonction pour récupérer les élèves d'une classe
+    function fetchClassStudents(classId, className) {
+        fetch('/setup/api/class-students/' + classId)
+            .then(response => response.json())
+            .then(data => {
+                if (data.students) {
+                    addStudentGroup(classId, className, data.students);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+            });
+    }
+    
+    // Fonction pour ajouter un groupe d'élèves
+    function addStudentGroup(classId, className, students) {
+        const studentGroups = document.getElementById('student-groups');
+        const studentSelectionSection = document.getElementById('student-selection-section');
+        
+        // Afficher la section de sélection
+        studentSelectionSection.classList.add('active');
+        
+        const studentGroup = document.createElement('div');
+        studentGroup.className = 'student-group';
+        studentGroup.setAttribute('data-class-id', classId);
+        
+        const groupHeader = document.createElement('div');
+        groupHeader.className = 'student-group-header';
+        groupHeader.innerHTML = 
+            '<span>' + className + '</span>' +
+            '<div class="group-actions">' +
+                '<button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllStudents(\'' + classId + '\')">' +
+                    'Tout sélectionner' +
+                '</button>' +
+                '<button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllStudents(\'' + classId + '\')">' +
+                    'Tout désélectionner' +
+                '</button>' +
+            '</div>';
+        
+        const groupContent = document.createElement('div');
+        groupContent.className = 'student-group-content';
+        
+        const studentGrid = document.createElement('div');
+        studentGrid.className = 'student-grid';
+        
+        students.forEach(student => {
+            const studentItem = document.createElement('div');
+            studentItem.className = 'student-checkbox-item';
+            studentItem.innerHTML = 
+                '<input type="checkbox" id="student_' + student.id + '" value="' + student.id + '" ' +
+                       'onchange="updateStudentSelection(\'' + student.id + '\', this.checked)">' +
+                '<label for="student_' + student.id + '">' + student.full_name + '</label>';
+            studentGrid.appendChild(studentItem);
+        });
+        
+        groupContent.appendChild(studentGrid);
+        studentGroup.appendChild(groupHeader);
+        studentGroup.appendChild(groupContent);
+        studentGroups.appendChild(studentGroup);
+        
+        updateMixedClassSummary();
+    }
+    
+    // Fonction pour sélectionner tous les élèves d'une classe
+    function selectAllStudents(classId) {
+        const checkboxes = document.querySelectorAll('#student-groups .student-group[data-class-id="' + classId + '"] input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = true;
+            updateStudentSelection(checkbox.value, true);
+        });
+    }
+    
+    // Fonction pour désélectionner tous les élèves d'une classe
+    function deselectAllStudents(classId) {
+        const checkboxes = document.querySelectorAll('#student-groups .student-group[data-class-id="' + classId + '"] input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+            updateStudentSelection(checkbox.value, false);
+        });
+    }
+    
+    // Fonction pour mettre à jour la sélection d'élèves
+    function updateStudentSelection(studentId, isSelected) {
+        if (isSelected) {
+            selectedStudents.add(studentId);
+        } else {
+            selectedStudents.delete(studentId);
+        }
+        updateMixedClassSummary();
+    }
+    
+    // Fonction pour mettre à jour le résumé de la classe mixte
+    function updateMixedClassSummary() {
+        const totalStudents = selectedStudents.size;
+        const totalClasses = sourceClasses.length;
+        
+        document.getElementById('total-students').textContent = totalStudents;
+        document.getElementById('total-classes').textContent = totalClasses;
+        
+        // Mettre à jour les inputs cachés
+        document.getElementById('selected_students_input').value = JSON.stringify(Array.from(selectedStudents));
+        document.getElementById('source_classes_input').value = JSON.stringify(sourceClasses);
+        
+        // Activer/désactiver le bouton de création
+        const createButton = document.getElementById('create-mixed-class-btn');
+        createButton.disabled = totalStudents === 0 || totalClasses === 0;
+    }
+    
+    // Fonction pour configurer l'autocomplétion dans les modals
+    function setupModalAutocomplete(modal) {
+        const inputs = modal.querySelectorAll('input[name="master_teacher_name"], input[name="invite_master_teacher_name"]');
+        
+        inputs.forEach(input => {
+            const suggestions = input.nextElementSibling;
+            let currentSelection = -1;
+            let lastQuery = '';
+            
+            if (!suggestions) return;
+            
+            let autocompleteTimeout;
+            input.addEventListener('input', function() {
+                const query = this.value.trim();
+                
+                clearTimeout(autocompleteTimeout);
+                autocompleteTimeout = setTimeout(() => {
+                    if (query.length < 2) {
+                        suggestions.style.display = 'none';
+                        return;
+                    }
+                    
+                    if (query === lastQuery) return;
+                    lastQuery = query;
+                    
+                    fetch('/setup/search-teachers', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ query: query })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        suggestions.innerHTML = '';
+                        currentSelection = -1;
+                        
+                        if (data.teachers && data.teachers.length > 0) {
+                            data.teachers.forEach(teacher => {
+                                const div = document.createElement('div');
+                                div.className = 'autocomplete-suggestion';
+                                div.innerHTML = 
+                                    '<div class="suggestion-name">' + teacher.username + '</div>' +
+                                    '<div class="suggestion-email">' + teacher.email + '</div>';
+                                
+                                div.addEventListener('click', function() {
+                                    input.value = teacher.username;
+                                    suggestions.style.display = 'none';
+                                    // Déclencher l'événement pour charger les classes
+                                    input.dispatchEvent(new Event('change'));
+                                });
+                                
+                                suggestions.appendChild(div);
+                            });
+                            
+                            suggestions.style.display = 'block';
+                        } else {
+                            suggestions.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        suggestions.style.display = 'none';
+                    });
+                }, 300);
+            });
+            
+            // Gérer les touches clavier pour la navigation
+            input.addEventListener('keydown', function(e) {
+                const suggestionItems = suggestions.querySelectorAll('.autocomplete-suggestion');
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    currentSelection = Math.min(currentSelection + 1, suggestionItems.length - 1);
+                    updateSelection();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    currentSelection = Math.max(currentSelection - 1, -1);
+                    updateSelection();
+                } else if (e.key === 'Enter' && currentSelection >= 0) {
+                    e.preventDefault();
+                    suggestionItems[currentSelection].click();
+                } else if (e.key === 'Escape') {
+                    suggestions.style.display = 'none';
+                    currentSelection = -1;
+                }
+                
+                function updateSelection() {
+                    suggestionItems.forEach((item, index) => {
+                        item.classList.toggle('active', index === currentSelection);
+                    });
+                }
+            });
+        });
+        
+        // Configurer les boutons d'ajout/suppression de disciplines
+        const addButtons = modal.querySelectorAll('.add-discipline, .add-join-discipline');
+        addButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const container = this.parentElement.querySelector('.disciplines-container, .join-disciplines-container');
+                addDisciplineToModal(container);
+            });
+        });
+        
+        // Configurer les sélecteurs de couleur
+        const colorPreviews = modal.querySelectorAll('.color-preview');
+        colorPreviews.forEach(preview => {
+            const hiddenInput = preview.parentElement.querySelector('input[type="hidden"]');
+            if (hiddenInput) {
+                setupColorPicker(preview, hiddenInput);
+            }
+        });
+    }
+    
+    // Fonction pour ajouter une discipline dans un modal
+    function addDisciplineToModal(container) {
+        const items = container.querySelectorAll('.discipline-item');
+        const nextIndex = items.length;
+        const isJoin = container.classList.contains('join-disciplines-container');
+        const prefix = isJoin ? 'join_disciplines' : 'disciplines';
+        
+        const newItem = document.createElement('div');
+        newItem.className = 'discipline-item';
+        newItem.setAttribute('data-index', nextIndex);
+        
+        newItem.innerHTML = 
+            '<div class="form-row" style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.375rem;">' +
+                '<div class="form-group" style="flex: 2; margin: 0;">' +
+                    '<label class="form-label">Nom de votre classe</label>' +
+                    '<input type="text" name="' + prefix + '[' + nextIndex + '][class_name]" class="form-control" placeholder="Ex: 11VG2 - Histoire" required>' +
+                '</div>' +
+                '<div class="form-group" style="flex: 1; margin: 0;">' +
+                    '<label class="form-label">Matière</label>' +
+                    '<input type="text" name="' + prefix + '[' + nextIndex + '][subject]" class="form-control" placeholder="Ex: Histoire" required>' +
+                '</div>' +
+                '<div class="form-group" style="margin: 0;">' +
+                    '<label class="form-label">Couleur</label>' +
+                    '<div class="color-palette-small">' +
+                        '<input type="hidden" name="' + prefix + '[' + nextIndex + '][color]" value="#4F46E5">' +
+                        '<div class="color-preview" style="width: 40px; height: 40px; border-radius: 0.375rem; background-color: #4F46E5; border: 2px solid #e5e7eb; cursor: pointer;" title="Cliquer pour changer"></div>' +
+                    '</div>' +
+                '</div>' +
+                '<button type="button" class="btn btn-danger btn-sm ' + (isJoin ? 'remove-join-discipline' : 'remove-discipline') + '" style="margin: 0; height: fit-content;">' +
+                    '<i class="fas fa-trash"></i>' +
+                '</button>' +
+            '</div>';
+        
+        container.appendChild(newItem);
+        
+        // Configurer le sélecteur de couleur pour le nouvel élément
+        const colorPreview = newItem.querySelector('.color-preview');
+        const hiddenInput = newItem.querySelector('input[type="hidden"]');
+        setupColorPicker(colorPreview, hiddenInput);
+        
+        // Configurer le bouton de suppression
+        const removeButton = newItem.querySelector('.btn-danger');
+        removeButton.addEventListener('click', function() {
+            newItem.remove();
+            updateRemoveButtonsInModal(container);
+        });
+        
+        updateRemoveButtonsInModal(container);
+    }
+    
+    // Fonction pour mettre à jour les boutons de suppression dans un modal
+    function updateRemoveButtonsInModal(container) {
+        const items = container.querySelectorAll('.discipline-item');
+        items.forEach((item, index) => {
+            const removeButton = item.querySelector('.btn-danger');
+            removeButton.disabled = items.length <= 1;
+        });
+    }
+    
+    // Rendre les fonctions globales pour les onclick
+    window.addSelectedClasses = addSelectedClasses;
+    window.removeSourceClass = removeSourceClass;
+    window.selectAllStudents = selectAllStudents;
+    window.deselectAllStudents = deselectAllStudents;
+    window.updateStudentSelection = updateStudentSelection;
 });
+
+// Fonction pour rejeter une invitation
+function rejectInvitation(invitationId) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/setup/invitations/' + invitationId + '/respond';
+    
+    const actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'action';
+    actionInput.value = 'reject';
+    
+    const messageInput = document.createElement('input');
+    messageInput.type = 'hidden';
+    messageInput.name = 'response_message';
+    messageInput.value = 'Invitation rejetée';
+    
+    form.appendChild(actionInput);
+    form.appendChild(messageInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
 </script>
 {% endblock %}

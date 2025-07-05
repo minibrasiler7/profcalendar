@@ -13,6 +13,8 @@ from models.evaluation import Evaluation, EvaluationGrade
 from models.seating_plan import SeatingPlan
 from models.student_group import StudentGroup, StudentGroupMembership
 from models.class_collaboration import ClassMaster, TeacherAccessCode, TeacherCollaboration, SharedClassroom, StudentClassroomLink
+from models.teacher_invitation import TeacherInvitation
+from models.invitation_classroom import InvitationClassroom
 from models.classroom_access_code import ClassroomAccessCode
 from models.file_sharing import StudentFileShare
 from models.mixed_group import MixedGroup, MixedGroupStudent
@@ -22,5 +24,5 @@ __all__ = ['User', 'Holiday', 'Break', 'Classroom', 'Schedule', 'Planning',
            'Student', 'Grade', 'ClassFile', 'Chapter', 'ClassroomChapter', 'StudentFile', 'StudentInfoHistory', 'Attendance', 'FileFolder', 'UserFile', 'FileShare',
            'SanctionTemplate', 'SanctionThreshold', 'SanctionOption', 'ClassroomSanctionImport', 'StudentSanctionRecord', 'StudentSanctionCount',
            'Evaluation', 'EvaluationGrade', 'SeatingPlan', 'StudentGroup', 'StudentGroupMembership',
-           'ClassMaster', 'TeacherAccessCode', 'TeacherCollaboration', 'SharedClassroom', 'StudentClassroomLink',
+           'ClassMaster', 'TeacherAccessCode', 'TeacherCollaboration', 'SharedClassroom', 'StudentClassroomLink', 'TeacherInvitation', 'InvitationClassroom',
            'ClassroomAccessCode', 'StudentFileShare', 'MixedGroup', 'MixedGroupStudent', 'UserPreferences', 'UserSanctionPreferences']
