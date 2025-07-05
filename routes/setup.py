@@ -644,7 +644,10 @@ def manage_classrooms():
                                 potential_class_group = first_class_name.strip()
                             
                             # Vérifier s'il existe déjà un class_group pour cette classe dans la collaboration
-                            existing_classroom_in_group = Classroom.query.join(SharedClassroom).filter(
+                            existing_classroom_in_group = Classroom.query.join(
+                                SharedClassroom, 
+                                Classroom.id == SharedClassroom.derived_classroom_id
+                            ).filter(
                                 SharedClassroom.collaboration_id == collaboration.id,
                                 SharedClassroom.original_classroom_id == target_classroom.id,
                                 Classroom.user_id == current_user.id,

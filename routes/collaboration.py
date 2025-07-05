@@ -128,7 +128,10 @@ def become_master(classroom_id):
     is_specialized_teacher = TeacherCollaboration.query.filter_by(
         specialized_teacher_id=current_user.id,
         is_active=True
-    ).join(SharedClassroom).filter(
+    ).join(
+        SharedClassroom,
+        TeacherCollaboration.id == SharedClassroom.collaboration_id
+    ).filter(
         SharedClassroom.original_classroom_id == classroom_id
     ).first()
     
