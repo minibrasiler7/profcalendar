@@ -289,8 +289,11 @@ def search_teachers():
     if len(query) < 2:
         return jsonify({'teachers': []})
     
-    # Rechercher les enseignants du même collège qui commencent par la requête
-    teachers = User.query.filter(
+    # Rechercher seulement les enseignants qui sont maîtres de classe
+    from models.class_collaboration import ClassMaster
+    
+    # Joindre avec ClassMaster pour récupérer seulement les maîtres de classe
+    teachers = User.query.join(ClassMaster, User.id == ClassMaster.master_teacher_id).filter(
         User.id != current_user.id,  # Exclure l'utilisateur actuel
         User.college_name == current_user.college_name,  # Même collège
         (User.username.ilike(f'{query}%') | User.email.ilike(f'{query}%'))  # Commence par la requête
@@ -298,16 +301,12 @@ def search_teachers():
     
     results = []
     for teacher in teachers:
-        # Vérifier s'il est maître de classe
-        from models.class_collaboration import ClassMaster
-        is_master = ClassMaster.query.filter_by(master_teacher_id=teacher.id).first() is not None
-        
         results.append({
             'id': teacher.id,
             'username': teacher.username,
             'email': teacher.email,
             'display_name': f"{teacher.username} ({teacher.email})",
-            'is_master': is_master
+            'is_master': True  # Toujours True car on ne récupère que les maîtres
         })
     
     return jsonify({'teachers': results})
@@ -819,6 +818,205 @@ def manage_classrooms():
                             except Exception as e:
                                 db.session.rollback()
                                 flash(f'Erreur lors de l\'envoi : {str(e)}', 'error')
+        
+        elif action_type == 'create_mixed':
+            # Créer une classe mixte
+            mixed_name = request.form.get('mixed_name', '').strip()
+            mixed_subject = request.form.get('mixed_subject', '').strip()
+            mixed_color = request.form.get('mixed_color', '#4F46E5').strip()
+            
+            # Récupérer les données des classes sources et étudiants sélectionnés
+            import json
+            source_classes_json = request.form.get('source_classes', '[]')
+            selected_students_json = request.form.get('selected_students', '[]')
+            
+            try:
+                source_classes = json.loads(source_classes_json)
+                selected_students = json.loads(selected_students_json)
+                
+                print(f"DEBUG: Parsed source_classes: {source_classes}")
+                print(f"DEBUG: Type of source_classes: {type(source_classes)}")
+                print(f"DEBUG: Parsed selected_students: {selected_students}")
+                print(f"DEBUG: Type of selected_students: {type(selected_students)}")
+                print(f"DEBUG: Number of selected_students: {len(selected_students)}")
+                
+                if source_classes:
+                    print(f"DEBUG: First source class type: {type(source_classes[0])}")
+                    print(f"DEBUG: First source class: {source_classes[0]}")
+                
+                if selected_students:
+                    print(f"DEBUG: First selected student: {selected_students[0]}")
+                    selected_count = sum(1 for student in selected_students if isinstance(student, dict) and student.get('selected', False))
+                    print(f"DEBUG: Number of students marked as selected: {selected_count}")
+                    
+            except json.JSONDecodeError as e:
+                print(f"DEBUG: JSON decode error: {e}")
+                flash(f'Erreur dans les données des classes sources: {str(e)}', 'error')
+                return redirect(url_for('setup.manage_classrooms'))
+            
+            if not mixed_name or not mixed_subject or not source_classes:
+                flash('Nom, matière et au moins deux classes sources requis pour créer une classe mixte', 'error')
+            elif len(source_classes) < 2:
+                flash('Une classe mixte nécessite au moins 2 classes sources', 'error')
+            else:
+                # Traiter les classes sources avec codes d'accès et invitations
+                processed_sources = []
+                errors = []
+                
+                for source_class in source_classes:
+                    print(f"DEBUG: Processing source_class: {source_class}")
+                    print(f"DEBUG: source_class type: {type(source_class)}")
+                    
+                    if source_class.get('type') == 'code_access':
+                        # Pour les classes mixtes, on vérifie juste le code d'accès sans créer de collaboration
+                        access_code = source_class.get('access_code', '').strip().upper()
+                        target_classroom_id = source_class.get('target_classroom_id')
+                        
+                        # Convertir en entier si c'est une chaîne
+                        if isinstance(target_classroom_id, str):
+                            try:
+                                target_classroom_id = int(target_classroom_id)
+                            except ValueError:
+                                errors.append(f"ID de classe invalide pour {source_class.get('name', 'classe inconnue')}")
+                                continue
+                        
+                        if access_code and target_classroom_id:
+                            from models.class_collaboration import TeacherAccessCode
+                            
+                            # Vérifier le code d'accès
+                            code_obj = TeacherAccessCode.query.filter_by(code=access_code).first()
+                            
+                            if code_obj and code_obj.is_valid():
+                                # Vérifier que la classe cible existe
+                                target_classroom = Classroom.query.get(target_classroom_id)
+                                if target_classroom:
+                                    # Pour les classes mixtes, on ajoute juste la classe source sans créer de collaboration
+                                    print(f"DEBUG: Code d'accès valide pour classe mixte: {source_class.get('name')}")
+                                    processed_sources.append(source_class)
+                                else:
+                                    errors.append(f"Classe cible introuvable: {target_classroom_id}")
+                            else:
+                                errors.append(f"Code d'accès invalide pour {source_class.get('name', 'classe inconnue')}")
+                        else:
+                            errors.append(f"Code d'accès ou classe cible manquant pour {source_class.get('name', 'classe inconnue')}")
+                    
+                    elif source_class.get('type') == 'invitation':
+                        # Pour les classes mixtes, on vérifie juste que l'enseignant et la classe existent
+                        teacher_name = source_class.get('teacher_name', '').strip()
+                        target_classroom_id = source_class.get('target_classroom_id')
+                        
+                        # Convertir en entier si c'est une chaîne
+                        if isinstance(target_classroom_id, str):
+                            try:
+                                target_classroom_id = int(target_classroom_id)
+                            except ValueError:
+                                errors.append(f"ID de classe invalide pour invitation à {teacher_name}")
+                                continue
+                        
+                        if teacher_name and target_classroom_id:
+                            # Vérifier que l'enseignant existe
+                            master_teacher = User.query.filter(
+                                (User.username.ilike(teacher_name) | User.email.ilike(teacher_name)),
+                                User.id != current_user.id
+                            ).first()
+                            
+                            # Vérifier que la classe cible existe
+                            target_classroom = Classroom.query.get(target_classroom_id)
+                            
+                            if master_teacher and target_classroom:
+                                # Pour les classes mixtes, on ajoute juste la classe source sans créer d'invitation
+                                print(f"DEBUG: Enseignant et classe trouvés pour classe mixte: {source_class.get('name')}")
+                                processed_sources.append(source_class)
+                            else:
+                                if not master_teacher:
+                                    errors.append(f"Enseignant introuvable: {teacher_name}")
+                                if not target_classroom:
+                                    errors.append(f"Classe cible introuvable: {target_classroom_id}")
+                        else:
+                            errors.append(f"Enseignant ou classe cible manquant pour l'invitation")
+                    
+                    elif source_class.get('type') == 'own':
+                        # Classe propre - déjà accessible
+                        print(f"DEBUG: Adding own class: {source_class.get('name')}")
+                        processed_sources.append(source_class)
+                    
+                    elif source_class.get('type') == 'external':
+                        # Classe externe - ajout direct
+                        print(f"DEBUG: Adding external class: {source_class.get('name')}")
+                        processed_sources.append(source_class)
+                    
+                    else:
+                        print(f"DEBUG: Unknown source class type: {source_class.get('type')} for class {source_class.get('name')}")
+                        processed_sources.append(source_class)  # Ajouter quand même
+                
+                if errors:
+                    for error in errors:
+                        flash(error, 'error')
+                
+                if processed_sources:
+                    # Créer la classe mixte
+                    try:
+                        from models.mixed_group import MixedGroup, MixedGroupStudent
+                        
+                        # Créer d'abord une classe automatique pour le groupe mixte
+                        auto_classroom = Classroom(
+                            user_id=current_user.id,
+                            name=mixed_name,
+                            subject=mixed_subject,
+                            color=mixed_color
+                        )
+                        db.session.add(auto_classroom)
+                        db.session.flush()  # Pour obtenir l'ID de la classe
+                        
+                        # Créer le groupe mixte avec les noms des classes sources
+                        source_class_names = [source.get('name', 'Classe inconnue') for source in processed_sources]
+                        sources_description = "SOURCES:" + ",".join(source_class_names)
+                        
+                        mixed_group = MixedGroup(
+                            teacher_id=current_user.id,
+                            auto_classroom_id=auto_classroom.id,
+                            name=mixed_name,
+                            subject=mixed_subject,
+                            color=mixed_color,
+                            description=sources_description
+                        )
+                        db.session.add(mixed_group)
+                        db.session.flush()  # Pour obtenir l'ID
+                        
+                        # Ajouter les étudiants sélectionnés
+                        student_count = 0
+                        print(f"DEBUG: Processing {len(selected_students)} student entries")
+                        for i, student_data in enumerate(selected_students):
+                            print(f"DEBUG: Student {i}: {student_data}, type: {type(student_data)}")
+                            if isinstance(student_data, dict) and student_data.get('selected', False):
+                                student_id = student_data['student_id']
+                                print(f"DEBUG: Adding student {student_id} to mixed group {mixed_group.id}")
+                                
+                                # Vérifier que l'étudiant existe
+                                from models.student import Student
+                                student = Student.query.get(student_id)
+                                if not student:
+                                    print(f"ERROR: Student with ID {student_id} not found!")
+                                    continue
+                                
+                                print(f"DEBUG: Student found: {student.full_name}")
+                                mixed_student = MixedGroupStudent(
+                                    mixed_group_id=mixed_group.id,
+                                    student_id=student_id
+                                )
+                                db.session.add(mixed_student)
+                                student_count += 1
+                                print(f"DEBUG: Successfully added student {student_id} to mixed group")
+                        
+                        db.session.commit()
+                        flash(f'Classe mixte "{mixed_name}" créée avec succès avec {student_count} élève(s) !', 'success')
+                        return redirect(url_for('setup.manage_classrooms'))
+                        
+                    except Exception as e:
+                        db.session.rollback()
+                        flash(f'Erreur lors de la création de la classe mixte : {str(e)}', 'error')
+                else:
+                    flash('Aucune classe source valide pour créer la classe mixte', 'error')
     
     # Récupérer toutes les classes (propres et liées)
     classrooms = current_user.classrooms.all()
@@ -828,6 +1026,39 @@ def manage_classrooms():
     from models.teacher_invitation import TeacherInvitation
     
     master_classroom_ids = [cm.classroom_id for cm in ClassMaster.query.filter_by(master_teacher_id=current_user.id).all()]
+    
+    # Récupérer tous les maîtres de classe existants pour afficher leur nom
+    all_class_masters = {}
+    for cm in ClassMaster.query.join(User).all():
+        all_class_masters[cm.classroom_id] = {
+            'teacher_id': cm.master_teacher_id,
+            'teacher_name': cm.master_teacher.username,
+            'teacher_email': cm.master_teacher.email
+        }
+    
+    # Ajouter les maîtres des classes dérivées (classes rejointes via collaboration)
+    derived_class_masters = {}
+    shared_classrooms = SharedClassroom.query.join(
+        TeacherCollaboration, SharedClassroom.collaboration_id == TeacherCollaboration.id
+    ).filter(TeacherCollaboration.specialized_teacher_id == current_user.id).all()
+    
+    for shared in shared_classrooms:
+        # Pour chaque classe dérivée, récupérer le maître de la classe originale
+        original_master = ClassMaster.query.filter_by(
+            classroom_id=shared.original_classroom_id
+        ).join(User).first()
+        
+        if original_master:
+            derived_class_masters[shared.derived_classroom_id] = {
+                'teacher_id': original_master.master_teacher_id,
+                'teacher_name': original_master.master_teacher.username,
+                'teacher_email': original_master.master_teacher.email,
+                'is_derived': True,  # Marquer comme classe dérivée
+                'original_classroom_id': shared.original_classroom_id
+            }
+    
+    # Fusionner les deux dictionnaires
+    all_class_masters.update(derived_class_masters)
     
     # Récupérer aussi les classes liées via collaboration
     collaborations = TeacherCollaboration.query.filter_by(
@@ -862,30 +1093,42 @@ def manage_classrooms():
                          classrooms=classrooms,
                          linked_classrooms=linked_classrooms,
                          master_classroom_ids=master_classroom_ids,
+                         all_class_masters=all_class_masters,
                          received_invitations=received_invitations,
                          sent_invitations=sent_invitations)
 
 @setup_bp.route('/api/own-classes', methods=['GET'])
 @login_required
 def get_own_classes():
-    """API pour récupérer les classes de l'utilisateur connecté"""
+    """API pour récupérer les classes dont l'utilisateur est maître de classe"""
     try:
-        # Récupérer toutes les classes de l'utilisateur
-        classrooms = Classroom.query.filter_by(user_id=current_user.id).all()
+        from models.class_collaboration import ClassMaster
+        
+        # Récupérer seulement les classes dont l'utilisateur est maître de classe
+        master_classrooms = Classroom.query.join(
+            ClassMaster, Classroom.id == ClassMaster.classroom_id
+        ).filter(
+            ClassMaster.master_teacher_id == current_user.id
+        ).all()
         
         classes_data = []
-        for classroom in classrooms:
+        for classroom in master_classrooms:
+            # Compter les étudiants dans cette classe spécifique
+            student_count = len(classroom.get_students()) if hasattr(classroom, 'get_students') else len(classroom.students) if classroom.students else 0
+            
             classes_data.append({
                 'id': classroom.id,
                 'name': classroom.name,
                 'subject': classroom.subject,
                 'color': classroom.color,
-                'student_count': len(classroom.students) if classroom.students else 0
+                'student_count': student_count,
+                'is_master': True  # L'utilisateur est toujours maître pour ces classes
             })
         
+        print(f"DEBUG: Found {len(classes_data)} master classes for user {current_user.id}")
         return jsonify({'classes': classes_data})
     except Exception as e:
-        print(f"Erreur lors de la récupération des classes: {e}")
+        print(f"Erreur lors de la récupération des classes maîtres: {e}")
         return jsonify({'error': 'Erreur lors de la récupération des classes'}), 500
 
 @setup_bp.route('/api/class-students/<int:class_id>', methods=['GET'])
@@ -921,6 +1164,105 @@ def get_class_students(class_id):
         return jsonify({'students': students_data})
     except Exception as e:
         print(f"Erreur lors de la récupération des élèves: {e}")
+        return jsonify({'error': 'Erreur lors de la récupération des élèves'}), 500
+
+@setup_bp.route('/api/validate-access-code', methods=['POST'])
+@login_required
+def validate_access_code():
+    """API pour valider un code d'accès"""
+    try:
+        data = request.get_json()
+        access_code = data.get('access_code', '').strip().upper()
+        target_classroom_id = data.get('target_classroom_id')
+        
+        if not access_code or not target_classroom_id:
+            return jsonify({'valid': False, 'error': 'Code d\'accès ou classe cible manquant'})
+        
+        # Vérifier le code d'accès
+        from models.class_collaboration import TeacherAccessCode, ClassMaster
+        code_obj = TeacherAccessCode.query.filter_by(code=access_code).first()
+        
+        if not code_obj or not code_obj.is_valid():
+            return jsonify({'valid': False, 'error': 'Code d\'accès invalide ou expiré'})
+        
+        # Vérifier que la classe cible existe
+        target_classroom = Classroom.query.get(target_classroom_id)
+        if not target_classroom:
+            return jsonify({'valid': False, 'error': 'Classe cible introuvable'})
+        
+        # IMPORTANT: Vérifier que le code d'accès appartient au maître de cette classe spécifique
+        class_master = ClassMaster.query.filter_by(classroom_id=target_classroom_id).first()
+        if not class_master:
+            return jsonify({'valid': False, 'error': 'Aucun maître trouvé pour cette classe'})
+        
+        if code_obj.master_teacher_id != class_master.master_teacher_id:
+            return jsonify({'valid': False, 'error': 'Ce code d\'accès ne correspond pas à cette classe'})
+        
+        return jsonify({'valid': True, 'message': 'Code d\'accès valide pour cette classe'})
+        
+    except Exception as e:
+        print(f"Erreur lors de la validation du code d'accès: {e}")
+        return jsonify({'valid': False, 'error': 'Erreur lors de la validation'}), 500
+
+@setup_bp.route('/api/mixed-class-students/<int:class_id>', methods=['POST'])
+@login_required
+def get_mixed_class_students(class_id):
+    """API pour récupérer les élèves d'une classe pour une classe mixte (avec validation par code d'accès)"""
+    try:
+        data = request.get_json()
+        access_code = data.get('access_code', '').strip().upper() if data else None
+        print(f"DEBUG mixed-class-students: class_id={class_id}, data={data}, access_code={access_code}")
+        
+        # Vérifier que la classe existe
+        classroom = Classroom.query.get_or_404(class_id)
+        
+        # Vérifier l'accès via différents moyens
+        has_access = False
+        
+        # 1. Si l'utilisateur est propriétaire de la classe
+        if classroom.user_id == current_user.id:
+            has_access = True
+        
+        # 2. Si l'utilisateur a déjà une collaboration existante
+        if not has_access:
+            from models.class_collaboration import SharedClassroom, TeacherCollaboration
+            shared = SharedClassroom.query.filter_by(
+                original_classroom_id=class_id
+            ).join(
+                SharedClassroom.collaboration
+            ).filter_by(specialized_teacher_id=current_user.id).first()
+            
+            if shared:
+                has_access = True
+        
+        # 3. Si un code d'accès valide est fourni
+        if not has_access and access_code:
+            from models.class_collaboration import TeacherAccessCode, ClassMaster
+            code_obj = TeacherAccessCode.query.filter_by(code=access_code).first()
+            
+            if code_obj and code_obj.is_valid():
+                # Vérifier que ce code donne accès à cette classe (via le maître de classe)
+                class_master = ClassMaster.query.filter_by(classroom_id=class_id).first()
+                if class_master and class_master.master_teacher_id == code_obj.master_teacher_id:
+                    has_access = True
+        
+        if not has_access:
+            return jsonify({'error': 'Accès non autorisé à cette classe'}), 403
+        
+        # Récupérer les élèves
+        students_data = []
+        for student in classroom.students:
+            students_data.append({
+                'id': student.id,
+                'full_name': student.full_name,
+                'first_name': student.first_name,
+                'last_name': student.last_name
+            })
+        
+        print(f"DEBUG mixed-class-students: Found {len(students_data)} students for class {classroom.name}")
+        return jsonify({'students': students_data})
+    except Exception as e:
+        print(f"Erreur lors de la récupération des élèves pour classe mixte: {e}")
         return jsonify({'error': 'Erreur lors de la récupération des élèves'}), 500
 
 @setup_bp.route('/classrooms/<int:classroom_id>/become-master', methods=['GET', 'POST'])

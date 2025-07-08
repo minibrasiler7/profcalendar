@@ -1684,7 +1684,15 @@ def manage_classes():
     mixed_group = primary_classroom.mixed_group if is_mixed_group_class else None
     
     # Récupérer temporairement les données de la classe (sera redéfini plus tard si mode centralisé)
-    students = primary_classroom.get_students()
+    if is_mixed_group_class and mixed_group:
+        # Pour les classes mixtes, récupérer les élèves depuis le groupe mixte
+        students = mixed_group.get_students()
+        print(f"DEBUG: Mixed group class - found {len(students)} students")
+    else:
+        # Pour les classes normales
+        students = primary_classroom.get_students()
+        print(f"DEBUG: Normal class - found {len(students)} students")
+    
     # Trier les élèves par nom
     students = sorted(students, key=lambda s: (s.last_name, s.first_name))
     
